@@ -150,9 +150,9 @@ describe('XARFValidator Edge Cases', () => {
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'occurrence')).toBe(true);
-      expect(result.errors.some((e) => e.message.includes('start time must be before end time'))).toBe(
-        true
-      );
+      expect(
+        result.errors.some((e) => e.message.includes('start time must be before end time'))
+      ).toBe(true);
     });
 
     it('should detect occurrence without start or end', () => {
