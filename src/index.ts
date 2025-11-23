@@ -35,4 +35,5 @@ export type {
   AnyXARFReport,
 } from './types';
 
-export const VERSION = '4.0.0-alpha.1';
+export const VERSION = '1.0.0-alpha.1';
+export const SPEC_VERSION = '4.0.0';

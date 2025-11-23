@@ -1,5 +1,6 @@
 # XARF JavaScript/TypeScript Library
 
+![XARF Spec](https://img.shields.io/badge/XARF%20Spec-v4.0.0-blue)
 [![npm version](https://badge.fury.io/js/xarf.svg)](https://www.npmjs.com/package/xarf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Test](https://github.com/xarf/xarf-javascript/actions/workflows/test.yml/badge.svg)](https://github.com/xarf/xarf-javascript/actions/workflows/test.yml)
@@ -337,6 +338,7 @@ MIT License - see LICENSE file for details
 
 ## Version
 
-Current version: 4.0.0-alpha.1
+Current version: 1.0.0-alpha.1
+XARF Specification: 4.0.0
 
 This is an alpha release supporting the messaging, connection, and content categories. Additional categories (infrastructure, copyright, vulnerability, reputation, other) are defined but may have limited validation in this release.
