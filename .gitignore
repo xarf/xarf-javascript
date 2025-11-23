@@ -32,3 +32,11 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+
+# AI Flow coordination (auto-generated)
+.claude-flow/
+.swarm/
+
+# Coverage output files
+coverage.out
+*.out
