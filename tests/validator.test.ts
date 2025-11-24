@@ -289,7 +289,7 @@ describe('XARFValidator', () => {
       report.on_behalf_of = {
         org: 'Client Org',
         contact: 'client@example.com',
-        type: 'manual',
+        domain: 'client.example.com',
       };
 
       const result = validator.validate(report);

@@ -149,7 +149,7 @@ describe('XARFParser', () => {
         on_behalf_of: {
           org: 'Client Org',
           contact: 'client@example.com',
-          type: 'manual',
+          domain: 'client.example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',

@@ -14,7 +14,7 @@ import type {
   EvidenceSource,
   SeverityLevel,
   XARFEvidence,
-  XARFReporter,
+  ContactInfo,
   TimeOccurrence,
   Target,
 } from './types';
@@ -37,7 +37,7 @@ export interface GeneratorOptions {
     domain: string;
   };
   evidenceSource?: EvidenceSource;
-  onBehalfOf?: XARFReporter;
+  onBehalfOf?: ContactInfo;
   description?: string;
   evidence?: XARFEvidence[];
   severity?: SeverityLevel;
@@ -324,10 +324,14 @@ export class XARFGenerator {
 
     // Add on_behalf_of if provided
     if (onBehalfOf) {
-      if (!onBehalfOf.contact) {
-        throw new XARFError("on_behalf_of must contain 'contact' field");
+      if (!onBehalfOf.org || !onBehalfOf.contact || !onBehalfOf.domain) {
+        throw new XARFError("on_behalf_of must contain 'org', 'contact', and 'domain' fields");
       }
-      report.on_behalf_of = onBehalfOf;
+      report.on_behalf_of = {
+        org: onBehalfOf.org,
+        contact: onBehalfOf.contact,
+        domain: onBehalfOf.domain,
+      };
     }
 
     // Add optional fields

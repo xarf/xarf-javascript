@@ -105,7 +105,7 @@ export interface XARFReport {
   evidence_source: EvidenceSource;
 
   // Optional base fields
-  on_behalf_of?: XARFReporter;
+  on_behalf_of?: ContactInfo;
   description?: string;
   evidence?: XARFEvidence[];
   tags?: string[];

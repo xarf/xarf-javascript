@@ -140,7 +140,7 @@ describe('XARFGenerator', () => {
         onBehalfOf: {
           org: 'Client Org',
           contact: 'client@example.com',
-          type: 'manual',
+          domain: 'client.example.com',
         },
       });
 
