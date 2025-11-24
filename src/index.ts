@@ -35,5 +35,14 @@ export type {
   AnyXARFReport,
 } from './types';
 
+export {
+  isXARFv3,
+  convertV3toV4,
+  getV3DeprecationWarning,
+  type XARFv3Report,
+  type XARFv3ReporterInfo,
+  type XARFv3Attachment,
+} from './v3-legacy';
+
 export const VERSION = '1.0.0-alpha.1';
 export const SPEC_VERSION = '4.0.0';

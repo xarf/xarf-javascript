@@ -13,6 +13,7 @@ A comprehensive JavaScript/TypeScript library for parsing, validating, and gener
 - **Generator**: Create XARF-compliant reports programmatically
 - **Validator**: Comprehensive validation with detailed error reporting
 - **TypeScript Support**: Full type definitions for all XARF structures
+- **Backward Compatibility**: Automatic v3 to v4 conversion with deprecation warnings
 - **All Categories**: Support for all 8 XARF categories
   - Messaging
   - Connection
@@ -336,9 +337,91 @@ MIT License - see LICENSE file for details
 - [npm Package](https://www.npmjs.com/package/xarf)
 - [Issue Tracker](https://github.com/xarf/xarf-javascript/issues)
 
+## Backward Compatibility (v3 Legacy Support)
+
+This library automatically detects and converts XARF v3 format reports to v4:
+
+```typescript
+import { XARFParser } from 'xarf';
+
+const parser = new XARFParser();
+
+// v3 format report
+const v3Report = {
+  Version: '3',
+  ReporterInfo: {
+    ReporterOrg: 'Security Team',
+    ReporterOrgEmail: 'abuse@example.com'
+  },
+  Report: {
+    ReportType: 'Spam',
+    Date: '2024-01-15T10:00:00Z',
+    SourceIp: '192.0.2.100',
+    Protocol: 'smtp',
+    SmtpMailFromAddress: 'spammer@evil.example'
+  }
+};
+
+// Automatically converted to v4 format
+const report = parser.parse(v3Report);
+console.log(report.xarf_version); // '4.0.0'
+console.log(report.category); // 'messaging'
+console.log(report.type); // 'spam'
+console.log(report._internal?.legacy_version); // '3'
+
+// Get deprecation warnings
+const warnings = parser.getWarnings();
+console.log(warnings); // Contains deprecation notice
+```
+
+### v3 Format Detection
+
+The parser automatically detects v3 reports by checking for the `Version` field:
+
+```typescript
+import { isXARFv3 } from 'xarf';
+
+if (isXARFv3(jsonData)) {
+  console.log('This is a legacy v3 report');
+}
+```
+
+### Manual v3 Conversion
+
+You can also manually convert v3 reports:
+
+```typescript
+import { convertV3toV4, getV3DeprecationWarning } from 'xarf';
+
+const warnings: string[] = [];
+const v4Report = convertV3toV4(v3Report, warnings);
+
+console.log(getV3DeprecationWarning());
+// "DEPRECATION WARNING: XARF v3 format detected..."
+```
+
+### v3 Type Mapping
+
+The following v3 report types are automatically mapped to v4 categories:
+
+| v3 ReportType | v4 Category | v4 Type |
+|---------------|-------------|---------|
+| Spam | messaging | spam |
+| Login-Attack | connection | login_attack |
+| Port-Scan | connection | port_scan |
+| DDoS | connection | ddos |
+| Phishing | content | phishing |
+| Malware | content | malware |
+| Botnet | infrastructure | botnet |
+| Copyright | copyright | copyright |
+
+Unknown v3 report types are mapped to category `other` with type `unclassified`.
+
 ## Version
 
-Current version: 1.0.0-alpha.1
+Current version: 1.0.0-alpha.2
 XARF Specification: 4.0.0
 
 This is an alpha release supporting the messaging, connection, and content categories. Additional categories (infrastructure, copyright, vulnerability, reputation, other) are defined but may have limited validation in this release.
+
+**v3 Compatibility**: Full backward compatibility with XARF v3 format with automatic conversion and deprecation warnings.

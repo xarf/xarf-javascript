@@ -4,6 +4,7 @@
 
 import { XARFParseError, XARFValidationError } from './errors';
 import type { XARFReport, MessagingReport, ConnectionReport, ContentReport } from './types';
+import { isXARFv3, convertV3toV4, getV3DeprecationWarning, type XARFv3Report } from './v3-legacy';
 
 /**
  * XARF v4 Report Parser
@@ -13,6 +14,7 @@ import type { XARFReport, MessagingReport, ConnectionReport, ContentReport } fro
 export class XARFParser {
   private strict: boolean;
   private errors: string[] = [];
+  private warnings: string[] = [];
   private readonly supportedCategories = new Set(['messaging', 'connection', 'content']);
 
   /**
@@ -28,6 +30,9 @@ export class XARFParser {
   /**
    * Parse XARF report from JSON
    *
+   * Supports both XARF v4 and v3 (legacy) formats.
+   * v3 reports are automatically converted to v4 with a deprecation warning.
+   *
    * @param jsonData - JSON string or object containing XARF report
    * @returns Parsed report object
    * @throws {XARFParseError} If parsing fails
@@ -35,6 +40,7 @@ export class XARFParser {
    */
   parse(jsonData: string | Record<string, unknown>): XARFReport {
     this.errors = [];
+    this.warnings = [];
 
     let data: Record<string, unknown>;
     try {
@@ -47,6 +53,24 @@ export class XARFParser {
       throw new XARFParseError(
         `Invalid JSON: ${error instanceof Error ? error.message : String(error)}`
       );
+    }
+
+    // Check if this is a v3 report and convert it
+    if (isXARFv3(data)) {
+      const conversionWarnings: string[] = [];
+      const v4Report = convertV3toV4(data as XARFv3Report, conversionWarnings);
+
+      // Add deprecation warning
+      this.warnings.push(getV3DeprecationWarning());
+      this.warnings.push(...conversionWarnings);
+
+      // Log warnings if not in strict mode
+      if (!this.strict && this.warnings.length > 0) {
+        console.warn('XARF Parser Warnings:', this.warnings);
+      }
+
+      // Continue processing the converted v4 report
+      data = v4Report as Record<string, unknown>;
     }
 
     // Validate basic structure
@@ -89,11 +113,14 @@ export class XARFParser {
   /**
    * Validate XARF report without parsing
    *
+   * Supports both v4 and v3 formats. v3 reports are converted before validation.
+   *
    * @param jsonData - JSON string or object containing XARF report
    * @returns True if valid, false otherwise
    */
   validate(jsonData: string | Record<string, unknown>): boolean {
     this.errors = [];
+    this.warnings = [];
 
     let data: Record<string, unknown>;
     try {
@@ -105,6 +132,15 @@ export class XARFParser {
     } catch (error) {
       this.errors.push(`Invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
       return false;
+    }
+
+    // Check if this is a v3 report and convert it
+    if (isXARFv3(data)) {
+      const conversionWarnings: string[] = [];
+      const v4Report = convertV3toV4(data as XARFv3Report, conversionWarnings);
+      this.warnings.push(getV3DeprecationWarning());
+      this.warnings.push(...conversionWarnings);
+      data = v4Report as Record<string, unknown>;
     }
 
     return this.validateStructure(data);
@@ -281,5 +317,16 @@ export class XARFParser {
    */
   getErrors(): string[] {
     return [...this.errors];
+  }
+
+  /**
+   * Get warnings from last parse/validate call
+   *
+   * Warnings include deprecation notices for v3 reports and conversion issues.
+   *
+   * @returns List of warning messages
+   */
+  getWarnings(): string[] {
+    return [...this.warnings];
   }
 }
