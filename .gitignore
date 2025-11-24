@@ -34,18 +34,12 @@ yarn-error.log*
 .env.*.local
 
 # AI Tool Coordination (auto-generated, do not commit)
+.claude/
 .claude-flow/
 .swarm/
 .aider/
 .cursor/
 .copilot/
-
-# AI Tool Databases
-*.db
-!.claude/**/*.db
-
-# Note: .claude/ directory IS tracked (for documentation)
-# Only exclude auto-generated AI coordination tools
 
 # Coverage output files
 coverage.out
