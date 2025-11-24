@@ -91,7 +91,10 @@ describe('XARFv3 Conversion', () => {
       expect(v4Report.source_identifier).toBe('192.168.1.100');
       expect(v4Report.reporter.org).toBe('Anti-Spam Service');
       expect(v4Report.reporter.contact).toBe('abuse@antispam.example');
-      expect(v4Report.reporter.type).toBe('manual');
+      expect(v4Report.reporter.domain).toBe('antispam.example');
+      expect(v4Report.sender.org).toBe('Anti-Spam Service');
+      expect(v4Report.sender.contact).toBe('abuse@antispam.example');
+      expect(v4Report.sender.domain).toBe('antispam.example');
       expect(v4Report.timestamp).toBe('2024-01-15T14:30:25Z');
       expect(v4Report.description).toBe('Spam email detected');
       expect(v4Report._internal?.legacy_version).toBe('3');

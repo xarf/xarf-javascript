@@ -96,8 +96,16 @@ describe('XARFGenerator', () => {
         category: 'connection',
         reportType: 'ddos',
         sourceIdentifier: '192.0.2.100',
-        reporterContact: 'abuse@example.com',
-        reporterOrg: 'Example Security',
+        reporter: {
+          org: 'Example Security',
+          contact: 'abuse@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Example Security',
+          contact: 'abuse@example.com',
+          domain: 'example.com',
+        },
       });
 
       expect(report.xarf_version).toBe('4.0.0');
@@ -106,6 +114,10 @@ describe('XARFGenerator', () => {
       expect(report.source_identifier).toBe('192.0.2.100');
       expect(report.reporter.contact).toBe('abuse@example.com');
       expect(report.reporter.org).toBe('Example Security');
+      expect(report.reporter.domain).toBe('example.com');
+      expect(report.sender.contact).toBe('abuse@example.com');
+      expect(report.sender.org).toBe('Example Security');
+      expect(report.sender.domain).toBe('example.com');
       expect(report.report_id).toBeDefined();
       expect(report.timestamp).toBeDefined();
     });
@@ -115,8 +127,16 @@ describe('XARFGenerator', () => {
         category: 'messaging',
         reportType: 'spam',
         sourceIdentifier: '192.0.2.100',
-        reporterContact: 'reporter@example.com',
-        reporterOrg: 'Reporter Org',
+        reporter: {
+          org: 'Reporter Org',
+          contact: 'reporter@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Reporter Org',
+          contact: 'reporter@example.com',
+          domain: 'example.com',
+        },
         onBehalfOf: {
           org: 'Client Org',
           contact: 'client@example.com',
@@ -135,7 +155,16 @@ describe('XARFGenerator', () => {
         category: 'content',
         reportType: 'phishing_site',
         sourceIdentifier: '192.0.2.100',
-        reporterContact: 'abuse@example.com',
+        reporter: {
+          org: 'Example Org',
+          contact: 'abuse@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Example Org',
+          contact: 'abuse@example.com',
+          domain: 'example.com',
+        },
         description: 'Test phishing site',
         evidence: [evidence],
         severity: 'high',
@@ -165,7 +194,16 @@ describe('XARFGenerator', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
         });
       }).toThrow(XARFError);
     });
@@ -176,7 +214,16 @@ describe('XARFGenerator', () => {
           category: 'invalid' as any,
           reportType: 'test',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
         });
       }).toThrow(XARFError);
     });
@@ -187,7 +234,16 @@ describe('XARFGenerator', () => {
           category: 'connection',
           reportType: 'spam',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
         });
       }).toThrow(XARFError);
     });
@@ -198,7 +254,16 @@ describe('XARFGenerator', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           confidence: 1.5,
         });
       }).toThrow(XARFError);
@@ -210,7 +275,16 @@ describe('XARFGenerator', () => {
           category: 'messaging',
           reportType: 'spam',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           onBehalfOf: { org: 'Test' } as any,
         });
       }).toThrow(XARFError);

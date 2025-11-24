@@ -26,9 +26,16 @@ export interface GeneratorOptions {
   category: XARFCategory;
   reportType: string;
   sourceIdentifier: string;
-  reporterContact: string;
-  reporterOrg?: string;
-  reporterType?: ReporterType;
+  reporter: {
+    org: string;
+    contact: string;
+    domain: string;
+  };
+  sender: {
+    org: string;
+    contact: string;
+    domain: string;
+  };
   evidenceSource?: EvidenceSource;
   onBehalfOf?: XARFReporter;
   description?: string;
@@ -229,9 +236,8 @@ export class XARFGenerator {
       category,
       reportType,
       sourceIdentifier,
-      reporterContact,
-      reporterOrg,
-      reporterType = 'automated',
+      reporter,
+      sender,
       evidenceSource = 'automated_scan',
       onBehalfOf,
       description,
@@ -248,9 +254,18 @@ export class XARFGenerator {
     if (!sourceIdentifier) {
       throw new XARFError('sourceIdentifier is required');
     }
-    if (!reporterContact) {
-      throw new XARFError('reporterContact is required');
+    if (!reporter) {
+      throw new XARFError('reporter is required');
     }
+    if (!sender) {
+      throw new XARFError('sender is required');
+    }
+
+    // Validate reporter ContactInfo
+    this.validateContactInfo(reporter, 'reporter');
+
+    // Validate sender ContactInfo
+    this.validateContactInfo(sender, 'sender');
 
     // Validate category
     if (!XARFGenerator.VALID_CATEGORIES.has(category)) {
@@ -264,13 +279,6 @@ export class XARFGenerator {
     if (!validTypes.includes(reportType)) {
       throw new XARFError(
         `Invalid type '${reportType}' for category '${category}'. Must be one of: ${validTypes.join(', ')}`
-      );
-    }
-
-    // Validate reporter_type
-    if (!XARFGenerator.VALID_REPORTER_TYPES.has(reporterType)) {
-      throw new XARFError(
-        `Invalid reporter_type '${reporterType}'. Must be one of: ${Array.from(XARFGenerator.VALID_REPORTER_TYPES).join(', ')}`
       );
     }
 
@@ -299,19 +307,20 @@ export class XARFGenerator {
       report_id: this.generateUUID(),
       timestamp: this.generateTimestamp(),
       reporter: {
-        contact: reporterContact,
-        type: reporterType,
+        org: reporter.org,
+        contact: reporter.contact,
+        domain: reporter.domain,
+      },
+      sender: {
+        org: sender.org,
+        contact: sender.contact,
+        domain: sender.domain,
       },
       source_identifier: sourceIdentifier,
       category,
       type: reportType,
       evidence_source: evidenceSource,
     };
-
-    // Add optional reporter fields
-    if (reporterOrg) {
-      report.reporter.org = reporterOrg;
-    }
 
     // Add on_behalf_of if provided
     if (onBehalfOf) {
@@ -343,6 +352,28 @@ export class XARFGenerator {
     }
 
     return report;
+  }
+
+  /**
+   * Validate ContactInfo structure
+   *
+   * @param contactInfo - Contact information to validate
+   * @param fieldName - Name of the field for error messages
+   * @throws {XARFError} If validation fails
+   */
+  private validateContactInfo(
+    contactInfo: { org: string; contact: string; domain: string },
+    fieldName: string
+  ): void {
+    if (!contactInfo.org || contactInfo.org.trim().length === 0) {
+      throw new XARFError(`${fieldName}.org is required and must be non-empty`);
+    }
+    if (!contactInfo.contact || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.contact)) {
+      throw new XARFError(`${fieldName}.contact must be a valid email address`);
+    }
+    if (!contactInfo.domain || !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(contactInfo.domain)) {
+      throw new XARFError(`${fieldName}.domain must be a valid hostname`);
+    }
   }
 
   /**
@@ -404,17 +435,29 @@ export class XARFGenerator {
       'SOC Team',
     ];
     const reporterOrg = sampleOrgs[Math.floor(Math.random() * sampleOrgs.length)];
+    const senderOrg = sampleOrgs[Math.floor(Math.random() * sampleOrgs.length)];
 
     const sampleDomains = ['example.com', 'security.net', 'abuse.org', 'soc.io'];
-    const reporterContact = `abuse@${sampleDomains[Math.floor(Math.random() * sampleDomains.length)]}`;
+    const reporterDomain = sampleDomains[Math.floor(Math.random() * sampleDomains.length)];
+    const senderDomain = sampleDomains[Math.floor(Math.random() * sampleDomains.length)];
+    const reporterContact = `abuse@${reporterDomain}`;
+    const senderContact = `report@${senderDomain}`;
 
     // Build report parameters
     const options: GeneratorOptions = {
       category,
       reportType,
       sourceIdentifier: sourceIp,
-      reporterContact,
-      reporterOrg,
+      reporter: {
+        org: reporterOrg,
+        contact: reporterContact,
+        domain: reporterDomain,
+      },
+      sender: {
+        org: senderOrg,
+        contact: senderContact,
+        domain: senderDomain,
+      },
       description: `Sample ${reportType} report for testing`,
     };
 

@@ -18,9 +18,14 @@ describe('XARFValidator', () => {
     report_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     timestamp: '2024-01-15T10:30:00Z',
     reporter: {
-      contact: 'abuse@example.com',
-      type: 'automated',
       org: 'Example Security',
+      contact: 'abuse@example.com',
+      domain: 'example.com',
+    },
+    sender: {
+      org: 'Example Security',
+      contact: 'abuse@example.com',
+      domain: 'example.com',
     },
     source_identifier: '192.0.2.100',
     category: 'connection',
@@ -71,14 +76,14 @@ describe('XARFValidator', () => {
       expect(result.errors.some((e) => e.field === 'category')).toBe(true);
     });
 
-    it('should detect invalid reporter type', () => {
+    it('should detect invalid reporter domain', () => {
       const report = createValidReport();
-      (report.reporter as any).type = 'invalid';
+      (report.reporter as any).domain = 'invalid domain with spaces';
 
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'reporter.type')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'reporter.domain')).toBe(true);
     });
 
     it('should detect invalid confidence', () => {
@@ -133,13 +138,14 @@ describe('XARFValidator', () => {
       expect(result.warnings.some((w) => w.field === 'report_id')).toBe(true);
     });
 
-    it('should warn about invalid email format', () => {
+    it('should error on invalid email format', () => {
       const report = createValidReport();
       report.reporter.contact = 'not-an-email';
 
       const result = validator.validate(report);
 
-      expect(result.warnings.some((w) => w.field === 'reporter.contact')).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'reporter.contact')).toBe(true);
     });
 
     it('should detect invalid timestamp', () => {

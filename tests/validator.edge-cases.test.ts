@@ -34,7 +34,7 @@ describe('XARFValidator Edge Cases', () => {
       expect(result.errors.some((e) => e.field === 'reporter.contact')).toBe(true);
     });
 
-    it('should detect missing reporter.type', () => {
+    it('should detect missing reporter.domain', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: 'test-id',
@@ -42,6 +42,11 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -52,7 +57,7 @@ describe('XARFValidator Edge Cases', () => {
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'reporter.type')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'reporter.domain')).toBe(true);
     });
   });
 
@@ -65,7 +70,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -89,7 +99,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -111,7 +126,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -134,7 +154,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -163,7 +188,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -188,7 +218,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'connection',
@@ -212,7 +247,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'manual',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'content',
@@ -235,7 +275,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'infrastructure',
@@ -259,7 +304,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'connection',
@@ -284,7 +334,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'connection',
@@ -309,7 +364,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'connection',
@@ -336,7 +396,12 @@ describe('XARFValidator Edge Cases', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'manual',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'content',

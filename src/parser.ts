@@ -158,6 +158,7 @@ export class XARFParser {
       'report_id',
       'timestamp',
       'reporter',
+      'sender',
       'source_identifier',
       'category',
       'type',
@@ -179,26 +180,12 @@ export class XARFParser {
     }
 
     // Validate reporter structure
-    const reporter = data.reporter as Record<string, unknown>;
-    if (typeof reporter !== 'object' || reporter === null) {
-      this.errors.push('Reporter must be an object');
+    if (!this.validateContactInfo(data.reporter as Record<string, unknown>, 'reporter')) {
       return false;
     }
 
-    const reporterRequired = new Set(['org', 'contact', 'type']);
-    const reporterKeys = new Set(Object.keys(reporter));
-    const missingReporter = Array.from(reporterRequired).filter(
-      (field) => !reporterKeys.has(field)
-    );
-    if (missingReporter.length > 0) {
-      this.errors.push(`Missing reporter fields: ${missingReporter.join(', ')}`);
-      return false;
-    }
-
-    // Validate reporter type
-    const validReporterTypes = new Set(['automated', 'manual', 'hybrid']);
-    if (!validReporterTypes.has(reporter.type as string)) {
-      this.errors.push(`Invalid reporter type: ${reporter.type}`);
+    // Validate sender structure
+    if (!this.validateContactInfo(data.sender as Record<string, unknown>, 'sender')) {
       return false;
     }
 
@@ -213,6 +200,49 @@ export class XARFParser {
 
     // Category-specific validation
     return this.validateCategorySpecific(data);
+  }
+
+  /**
+   * Validate ContactInfo structure (reporter or sender)
+   */
+  private validateContactInfo(contactInfo: Record<string, unknown>, fieldName: string): boolean {
+    if (typeof contactInfo !== 'object' || contactInfo === null) {
+      this.errors.push(`${fieldName} must be an object`);
+      return false;
+    }
+
+    const contactRequired = new Set(['org', 'contact', 'domain']);
+    const contactKeys = new Set(Object.keys(contactInfo));
+    const missingContact = Array.from(contactRequired).filter(
+      (field) => !contactKeys.has(field)
+    );
+    if (missingContact.length > 0) {
+      this.errors.push(`Missing ${fieldName} fields: ${missingContact.join(', ')}`);
+      return false;
+    }
+
+    // Validate email format for contact
+    const contact = contactInfo.contact as string;
+    if (typeof contact !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)) {
+      this.errors.push(`${fieldName}.contact must be a valid email address`);
+      return false;
+    }
+
+    // Validate domain format
+    const domain = contactInfo.domain as string;
+    if (typeof domain !== 'string' || !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(domain)) {
+      this.errors.push(`${fieldName}.domain must be a valid hostname`);
+      return false;
+    }
+
+    // Validate org is non-empty string
+    const org = contactInfo.org as string;
+    if (typeof org !== 'string' || org.trim().length === 0) {
+      this.errors.push(`${fieldName}.org must be a non-empty string`);
+      return false;
+    }
+
+    return true;
   }
 
   /**

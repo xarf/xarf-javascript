@@ -16,7 +16,12 @@ describe('XARFParser', () => {
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.100',
         category: 'messaging',
@@ -43,7 +48,12 @@ describe('XARFParser', () => {
         reporter: {
           org: 'Security Monitor',
           contact: 'security@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Security Monitor',
+          contact: 'security@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.200',
         category: 'connection',
@@ -71,7 +81,12 @@ describe('XARFParser', () => {
         reporter: {
           org: 'Web Security',
           contact: 'web@example.com',
-          type: 'manual',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Web Security',
+          contact: 'web@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.300',
         category: 'content',
@@ -96,7 +111,12 @@ describe('XARFParser', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -119,7 +139,12 @@ describe('XARFParser', () => {
         reporter: {
           org: 'Reporter Org',
           contact: 'reporter@example.com',
-          type: 'manual',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Reporter Org',
+          contact: 'reporter@example.com',
+          domain: 'example.com',
         },
         on_behalf_of: {
           org: 'Client Org',
@@ -170,7 +195,12 @@ describe('XARFParser', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -201,15 +231,20 @@ describe('XARFParser', () => {
       expect(errors.some((e) => e.includes('Missing required fields'))).toBe(true);
     });
 
-    it('should return false for invalid reporter type', () => {
+    it('should return false for invalid reporter contact', () => {
       const invalidData = {
         xarf_version: '4.0.0',
         report_id: 'test-id',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
+          contact: 'invalid-email',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
           contact: 'test@example.com',
-          type: 'invalid_type',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -222,7 +257,7 @@ describe('XARFParser', () => {
 
       expect(result).toBe(false);
       const errors = parser.getErrors();
-      expect(errors.some((e) => e.includes('Invalid reporter type'))).toBe(true);
+      expect(errors.some((e) => e.includes('valid email address'))).toBe(true);
     });
 
     it('should handle unsupported category in alpha', () => {
@@ -233,7 +268,12 @@ describe('XARFParser', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'vulnerability',
@@ -260,7 +300,12 @@ describe('XARFParser', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -283,7 +328,12 @@ describe('XARFParser', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'connection',
@@ -307,7 +357,12 @@ describe('XARFParser', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'manual',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'content',

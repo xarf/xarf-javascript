@@ -15,7 +15,12 @@ describe('XARFParser Edge Cases', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'infrastructure',
@@ -41,7 +46,12 @@ describe('XARFParser Edge Cases', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'other',
@@ -72,6 +82,11 @@ describe('XARFParser Edge Cases', () => {
         report_id: 'test-id',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: null,
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
         source_identifier: '192.0.2.1',
         category: 'messaging',
         type: 'spam',
@@ -82,7 +97,7 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Reporter must be an object'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('reporter must be an object'))).toBe(true);
     });
 
     it('should handle invalid timestamp format gracefully', () => {
@@ -93,7 +108,12 @@ describe('XARFParser Edge Cases', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -116,7 +136,12 @@ describe('XARFParser Edge Cases', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -149,7 +174,12 @@ describe('XARFParser Edge Cases', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -174,7 +204,12 @@ describe('XARFParser Edge Cases', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -199,7 +234,12 @@ describe('XARFParser Edge Cases', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
@@ -224,7 +264,12 @@ describe('XARFParser Edge Cases', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'connection',
@@ -248,7 +293,12 @@ describe('XARFParser Edge Cases', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'connection',
@@ -273,7 +323,12 @@ describe('XARFParser Edge Cases', () => {
         reporter: {
           org: 'Test',
           contact: 'test@example.com',
-          type: 'manual',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'content',
@@ -298,6 +353,11 @@ describe('XARFParser Edge Cases', () => {
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',

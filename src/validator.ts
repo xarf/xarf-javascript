@@ -104,6 +104,7 @@ export class XARFValidator {
       'report_id',
       'timestamp',
       'reporter',
+      'sender',
       'source_identifier',
       'category',
       'type',
@@ -119,20 +120,41 @@ export class XARFValidator {
       }
     });
 
-    // Validate reporter subfields
+    // Validate reporter ContactInfo subfields
     if (report.reporter) {
-      if (!report.reporter.contact) {
-        this.errors.push({
-          field: 'reporter.contact',
-          message: 'Reporter contact is required',
-        });
-      }
-      if (!report.reporter.type) {
-        this.errors.push({
-          field: 'reporter.type',
-          message: 'Reporter type is required',
-        });
-      }
+      this.validateContactInfoFields(report.reporter, 'reporter');
+    }
+
+    // Validate sender ContactInfo subfields
+    if (report.sender) {
+      this.validateContactInfoFields(report.sender, 'sender');
+    }
+  }
+
+  /**
+   * Validate ContactInfo fields
+   */
+  private validateContactInfoFields(
+    contactInfo: { org: string; contact: string; domain: string },
+    fieldName: string
+  ): void {
+    if (!contactInfo.org) {
+      this.errors.push({
+        field: `${fieldName}.org`,
+        message: `${fieldName} org is required`,
+      });
+    }
+    if (!contactInfo.contact) {
+      this.errors.push({
+        field: `${fieldName}.contact`,
+        message: `${fieldName} contact is required`,
+      });
+    }
+    if (!contactInfo.domain) {
+      this.errors.push({
+        field: `${fieldName}.domain`,
+        message: `${fieldName} domain is required`,
+      });
     }
   }
 
@@ -183,10 +205,37 @@ export class XARFValidator {
 
     // Validate email format for reporter contact
     if (report.reporter?.contact && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(report.reporter.contact)) {
-      this.warnings.push({
+      this.errors.push({
         field: 'reporter.contact',
-        message: 'Reporter contact does not appear to be a valid email',
+        message: 'Reporter contact must be a valid email address',
         value: report.reporter.contact,
+      });
+    }
+
+    // Validate domain format for reporter
+    if (report.reporter?.domain && !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(report.reporter.domain)) {
+      this.errors.push({
+        field: 'reporter.domain',
+        message: 'Reporter domain must be a valid hostname',
+        value: report.reporter.domain,
+      });
+    }
+
+    // Validate email format for sender contact
+    if (report.sender?.contact && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(report.sender.contact)) {
+      this.errors.push({
+        field: 'sender.contact',
+        message: 'Sender contact must be a valid email address',
+        value: report.sender.contact,
+      });
+    }
+
+    // Validate domain format for sender
+    if (report.sender?.domain && !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(report.sender.domain)) {
+      this.errors.push({
+        field: 'sender.domain',
+        message: 'Sender domain must be a valid hostname',
+        value: report.sender.domain,
       });
     }
 
@@ -234,15 +283,6 @@ export class XARFValidator {
       });
     }
 
-    // Validate reporter type
-    const validReporterTypes = new Set(['automated', 'manual', 'hybrid']);
-    if (report.reporter?.type && !validReporterTypes.has(report.reporter.type)) {
-      this.errors.push({
-        field: 'reporter.type',
-        message: `Invalid reporter type (must be one of: ${Array.from(validReporterTypes).join(', ')})`,
-        value: report.reporter.type,
-      });
-    }
 
     // Validate evidence source
     const validEvidenceSources = new Set([

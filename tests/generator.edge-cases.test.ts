@@ -13,13 +13,18 @@ describe('XARFGenerator Edge Cases', () => {
   });
 
   describe('generateReport validation edge cases', () => {
-    it('should throw error for missing reporterContact', () => {
+    it('should throw error for missing reporter', () => {
       expect(() => {
         generator.generateReport({
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: '',
+          reporter: null as any,
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
         });
       }).toThrow(XARFError);
       expect(() => {
@@ -27,19 +32,32 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: '',
+          reporter: null as any,
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
         });
-      }).toThrow('reporterContact is required');
+      }).toThrow('reporter is required');
     });
 
-    it('should throw error for invalid reporter_type', () => {
+    it('should throw error for invalid reporter contact', () => {
       expect(() => {
         generator.generateReport({
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
-          reporterType: 'invalid' as any,
+          reporter: {
+            org: 'Example Org',
+            contact: 'invalid-email',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
         });
       }).toThrow(XARFError);
       expect(() => {
@@ -47,10 +65,18 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
-          reporterType: 'invalid' as any,
+          reporter: {
+            org: 'Example Org',
+            contact: 'invalid-email',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
         });
-      }).toThrow('Invalid reporter_type');
+      }).toThrow('valid email address');
     });
 
     it('should throw error for invalid evidence_source', () => {
@@ -59,7 +85,16 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           evidenceSource: 'invalid_source' as any,
         });
       }).toThrow(XARFError);
@@ -68,7 +103,16 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           evidenceSource: 'invalid_source' as any,
         });
       }).toThrow('Invalid evidence_source');
@@ -80,7 +124,16 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           severity: 'super-critical' as any,
         });
       }).toThrow(XARFError);
@@ -89,7 +142,16 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           severity: 'super-critical' as any,
         });
       }).toThrow('Invalid severity');
@@ -101,7 +163,16 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           confidence: -0.1,
         });
       }).toThrow(XARFError);
@@ -110,7 +181,16 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           confidence: -0.1,
         });
       }).toThrow('confidence must be between 0.0 and 1.0');
@@ -122,7 +202,16 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           occurrence: {
             end: '2024-01-15T12:00:00Z',
           } as any,
@@ -133,7 +222,16 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           occurrence: {
             end: '2024-01-15T12:00:00Z',
           } as any,
@@ -147,7 +245,16 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           occurrence: {
             start: '2024-01-15T10:00:00Z',
           } as any,
@@ -158,7 +265,16 @@ describe('XARFGenerator Edge Cases', () => {
           category: 'connection',
           reportType: 'ddos',
           sourceIdentifier: '192.0.2.1',
-          reporterContact: 'abuse@example.com',
+          reporter: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
+          sender: {
+            org: 'Example Org',
+            contact: 'abuse@example.com',
+            domain: 'example.com',
+          },
           occurrence: {
             start: '2024-01-15T10:00:00Z',
           } as any,

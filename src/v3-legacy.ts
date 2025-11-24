@@ -184,15 +184,25 @@ function convertWithMapping(
   // Convert evidence
   const evidence = convertEvidence(report.Attachment || report.Samples);
 
+  // Extract contact info
+  const contact = reporterInfo.ReporterContactEmail || reporterInfo.ReporterOrgEmail;
+  const domain = contact.split('@')[1] || 'unknown.com';
+  const org = reporterInfo.ReporterOrg || 'Unknown Organization';
+
   // Build base v4 report
   const v4Report: XARFReport & { _internal?: Record<string, unknown> } = {
     xarf_version: '4.0.0',
     report_id: generateUUID(),
     timestamp: report.Date,
     reporter: {
-      org: reporterInfo.ReporterOrg,
-      contact: reporterInfo.ReporterContactEmail || reporterInfo.ReporterOrgEmail,
-      type: 'manual', // v3 reports are typically manual
+      org,
+      contact,
+      domain,
+    },
+    sender: {
+      org,
+      contact,
+      domain,
     },
     source_identifier: sourceIdentifier,
     category: mapping.category,

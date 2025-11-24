@@ -42,7 +42,17 @@ export type EvidenceSource =
 export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
 
 /**
- * Reporter information
+ * Contact information for reporter and sender
+ */
+export interface ContactInfo {
+  org: string;
+  contact: string;
+  domain: string;
+}
+
+/**
+ * Reporter information (legacy type, deprecated)
+ * @deprecated Use ContactInfo instead
  */
 export interface XARFReporter {
   org?: string;
@@ -87,7 +97,8 @@ export interface XARFReport {
   xarf_version: string;
   report_id: string;
   timestamp: string;
-  reporter: XARFReporter;
+  reporter: ContactInfo;
+  sender: ContactInfo;
   source_identifier: string;
   category: XARFCategory;
   type: string;
