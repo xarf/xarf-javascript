@@ -213,9 +213,7 @@ export class XARFParser {
 
     const contactRequired = new Set(['org', 'contact', 'domain']);
     const contactKeys = new Set(Object.keys(contactInfo));
-    const missingContact = Array.from(contactRequired).filter(
-      (field) => !contactKeys.has(field)
-    );
+    const missingContact = Array.from(contactRequired).filter((field) => !contactKeys.has(field));
     if (missingContact.length > 0) {
       this.errors.push(`Missing ${fieldName} fields: ${missingContact.join(', ')}`);
       return false;
@@ -230,7 +228,12 @@ export class XARFParser {
 
     // Validate domain format
     const domain = contactInfo.domain as string;
-    if (typeof domain !== 'string' || !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(domain)) {
+    if (
+      typeof domain !== 'string' ||
+      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
+        domain
+      )
+    ) {
       this.errors.push(`${fieldName}.domain must be a valid hostname`);
       return false;
     }

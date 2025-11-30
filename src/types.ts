@@ -3,7 +3,7 @@
  */
 
 /**
- * Valid XARF categories
+ * Valid XARF categories (7 total as per XARF v4.0.0 specification)
  */
 export type XARFCategory =
   | 'messaging'
@@ -12,8 +12,7 @@ export type XARFCategory =
   | 'infrastructure'
   | 'copyright'
   | 'vulnerability'
-  | 'reputation'
-  | 'other';
+  | 'reputation';
 
 /**
  * Valid reporter types
@@ -211,13 +210,6 @@ export interface ReputationReport extends XARFReport {
 }
 
 /**
- * Other category report
- */
-export interface OtherReport extends XARFReport {
-  category: 'other';
-}
-
-/**
  * Union type for all report types
  */
 export type AnyXARFReport =
@@ -227,5 +219,4 @@ export type AnyXARFReport =
   | InfrastructureReport
   | CopyrightReport
   | VulnerabilityReport
-  | ReputationReport
-  | OtherReport;
+  | ReputationReport;

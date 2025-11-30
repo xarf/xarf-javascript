@@ -284,15 +284,15 @@ describe('XARFGenerator Edge Cases', () => {
   });
 
   describe('generateRandomEvidence edge cases', () => {
-    it('should handle unknown category by using text/plain', () => {
-      const evidence = generator.generateRandomEvidence('other');
+    it('should handle reputation category with application/json', () => {
+      const evidence = generator.generateRandomEvidence('reputation');
 
       expect(evidence.content_type).toBeDefined();
-      expect(['text/plain', 'application/json']).toContain(evidence.content_type);
-      expect(evidence.description).toContain('other');
+      expect(['text/plain', 'application/json', 'text/csv']).toContain(evidence.content_type);
+      expect(evidence.description).toContain('reputation');
     });
 
-    it('should generate evidence for all categories', () => {
+    it('should generate evidence for all 7 categories', () => {
       const categories: Array<
         | 'messaging'
         | 'connection'
@@ -301,7 +301,6 @@ describe('XARFGenerator Edge Cases', () => {
         | 'copyright'
         | 'vulnerability'
         | 'reputation'
-        | 'other'
       > = [
         'messaging',
         'connection',
@@ -310,7 +309,6 @@ describe('XARFGenerator Edge Cases', () => {
         'copyright',
         'vulnerability',
         'reputation',
-        'other',
       ];
 
       categories.forEach((category) => {
@@ -344,8 +342,7 @@ describe('XARFGenerator Edge Cases', () => {
           | 'infrastructure'
           | 'copyright'
           | 'vulnerability'
-          | 'reputation'
-          | 'other';
+          | 'reputation';
         type: string;
       }> = [
         { category: 'messaging', type: 'spam' },
@@ -355,7 +352,6 @@ describe('XARFGenerator Edge Cases', () => {
         { category: 'copyright', type: 'infringement' },
         { category: 'vulnerability', type: 'cve' },
         { category: 'reputation', type: 'blocklist' },
-        { category: 'other', type: 'unclassified' },
       ];
 
       testCases.forEach(({ category, type }) => {

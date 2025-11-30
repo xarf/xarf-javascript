@@ -4,7 +4,9 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 4.0.0-alpha.1 | :white_check_mark: |
+| 1.0.0   | :white_check_mark: |
+| 1.0.0-alpha.2 | :x: (upgrade to 1.0.0) |
+| 1.0.0-alpha.1 | :x: (upgrade to 1.0.0) |
 
 ## Reporting a Vulnerability
 

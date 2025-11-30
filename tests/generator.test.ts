@@ -352,8 +352,8 @@ describe('XARFGenerator', () => {
       expect(XARFGenerator.XARF_VERSION).toBe('4.0.0');
     });
 
-    it('should have all 8 valid categories', () => {
-      expect(XARFGenerator.VALID_CATEGORIES.size).toBe(8);
+    it('should have all 7 valid categories per XARF v4.0.0 spec', () => {
+      expect(XARFGenerator.VALID_CATEGORIES.size).toBe(7);
       expect(XARFGenerator.VALID_CATEGORIES.has('messaging')).toBe(true);
       expect(XARFGenerator.VALID_CATEGORIES.has('connection')).toBe(true);
       expect(XARFGenerator.VALID_CATEGORIES.has('content')).toBe(true);
@@ -361,7 +361,7 @@ describe('XARFGenerator', () => {
       expect(XARFGenerator.VALID_CATEGORIES.has('copyright')).toBe(true);
       expect(XARFGenerator.VALID_CATEGORIES.has('vulnerability')).toBe(true);
       expect(XARFGenerator.VALID_CATEGORIES.has('reputation')).toBe(true);
-      expect(XARFGenerator.VALID_CATEGORIES.has('other')).toBe(true);
+      // Note: 'other' removed in v1.0.0 for spec compliance (only 7 categories)
     });
 
     it('should have event types for all categories', () => {

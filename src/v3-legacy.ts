@@ -143,9 +143,10 @@ export function convertV3toV4(v3Report: XARFv3Report, warnings?: string[]): XARF
   // Map v3 ReportType to v4 category and type
   const typeMapping = V3_TYPE_MAPPING[report.ReportType];
   if (!typeMapping) {
-    const defaultMapping = { category: 'other' as XARFCategory, type: 'unclassified' };
+    // Unknown v3 types map to 'content' category with 'unclassified' type
+    const defaultMapping = { category: 'content' as XARFCategory, type: 'unclassified' };
     warnings?.push(
-      `Unknown v3 ReportType '${report.ReportType}', mapping to category='other', type='unclassified'`
+      `Unknown v3 ReportType '${report.ReportType}', mapping to category='content', type='unclassified'`
     );
     return convertWithMapping(v3Report, defaultMapping, warnings);
   }

@@ -54,7 +54,7 @@ describe('XARFParser Edge Cases', () => {
           domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
-        category: 'other',
+        category: 'content',
         type: 'unclassified',
         evidence_source: 'manual_analysis',
       };
@@ -62,7 +62,7 @@ describe('XARFParser Edge Cases', () => {
       const parser = new XARFParser(false);
       const report = parser.parse(reportData);
 
-      expect(report.category).toBe('other');
+      expect(report.category).toBe('content');
     });
 
     it('should handle invalid JSON string parse error', () => {

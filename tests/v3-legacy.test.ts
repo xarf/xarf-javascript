@@ -348,7 +348,7 @@ describe('XARFv3 Conversion', () => {
       const warnings: string[] = [];
       const v4Report = convertV3toV4(v3Report, warnings);
 
-      expect(v4Report.category).toBe('other');
+      expect(v4Report.category).toBe('content');
       expect(v4Report.type).toBe('unclassified');
       expect(warnings.length).toBeGreaterThan(0);
       expect(warnings[0]).toContain('Unknown v3 ReportType');

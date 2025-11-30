@@ -213,7 +213,12 @@ export class XARFValidator {
     }
 
     // Validate domain format for reporter
-    if (report.reporter?.domain && !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(report.reporter.domain)) {
+    if (
+      report.reporter?.domain &&
+      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
+        report.reporter.domain
+      )
+    ) {
       this.errors.push({
         field: 'reporter.domain',
         message: 'Reporter domain must be a valid hostname',
@@ -231,7 +236,12 @@ export class XARFValidator {
     }
 
     // Validate domain format for sender
-    if (report.sender?.domain && !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(report.sender.domain)) {
+    if (
+      report.sender?.domain &&
+      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
+        report.sender.domain
+      )
+    ) {
       this.errors.push({
         field: 'sender.domain',
         message: 'Sender domain must be a valid hostname',
@@ -264,7 +274,7 @@ export class XARFValidator {
       });
     }
 
-    // Validate category
+    // Validate category (7 total per XARF v4.0.0 spec)
     const validCategories = new Set<XARFCategory>([
       'messaging',
       'connection',
@@ -273,7 +283,6 @@ export class XARFValidator {
       'copyright',
       'vulnerability',
       'reputation',
-      'other',
     ]);
     if (report.category && !validCategories.has(report.category)) {
       this.errors.push({
@@ -282,7 +291,6 @@ export class XARFValidator {
         value: report.category,
       });
     }
-
 
     // Validate evidence source
     const validEvidenceSources = new Set([

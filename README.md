@@ -14,7 +14,7 @@ A comprehensive JavaScript/TypeScript library for parsing, validating, and gener
 - **Validator**: Comprehensive validation with detailed error reporting
 - **TypeScript Support**: Full type definitions for all XARF structures
 - **Backward Compatibility**: Automatic v3 to v4 conversion with deprecation warnings
-- **All Categories**: Support for all 8 XARF categories
+- **All Categories**: Support for all 7 XARF categories
   - Messaging
   - Connection
   - Content
@@ -22,7 +22,6 @@ A comprehensive JavaScript/TypeScript library for parsing, validating, and gener
   - Copyright
   - Vulnerability
   - Reputation
-  - Other
 
 ## Installation
 
@@ -173,9 +172,6 @@ Returns:
 
 ### Reputation
 - `blocklist`, `threat_intelligence`
-
-### Other
-- `unclassified`
 
 ## On-Behalf-Of Reporting
 
@@ -415,13 +411,13 @@ The following v3 report types are automatically mapped to v4 categories:
 | Botnet | infrastructure | botnet |
 | Copyright | copyright | copyright |
 
-Unknown v3 report types are mapped to category `other` with type `unclassified`.
+Unknown v3 report types are mapped to category `content` with type `unclassified`.
 
 ## Version
 
-Current version: 1.0.0-alpha.2
+Current version: 1.0.0
 XARF Specification: 4.0.0
 
-This is an alpha release supporting the messaging, connection, and content categories. Additional categories (infrastructure, copyright, vulnerability, reputation, other) are defined but may have limited validation in this release.
+Production release with full support for all 7 XARF categories: messaging, connection, content, infrastructure, copyright, vulnerability, and reputation.
 
 **v3 Compatibility**: Full backward compatibility with XARF v3 format with automatic conversion and deprecation warnings.

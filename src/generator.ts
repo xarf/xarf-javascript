@@ -52,13 +52,13 @@ export interface GeneratorOptions {
  * Generator for creating XARF v4.0.0 compliant reports
  *
  * This class provides methods to generate complete XARF reports with all
- * required fields, proper validation, and support for all 8 report categories.
+ * required fields, proper validation, and support for all 7 report categories.
  */
 export class XARFGenerator {
   // XARF v4.0.0 specification constants
   static readonly XARF_VERSION = '4.0.0';
 
-  // Valid categories as per XARF spec
+  // Valid categories as per XARF spec (7 total)
   static readonly VALID_CATEGORIES = new Set<XARFCategory>([
     'messaging',
     'connection',
@@ -67,7 +67,6 @@ export class XARFGenerator {
     'copyright',
     'vulnerability',
     'reputation',
-    'other',
   ]);
 
   // Valid types per category
@@ -121,7 +120,6 @@ export class XARFGenerator {
     ],
     vulnerability: ['cve', 'misconfiguration', 'open_service'],
     reputation: ['blocklist', 'threat_intelligence'],
-    other: ['unclassified'],
   };
 
   // Valid evidence sources
@@ -375,7 +373,12 @@ export class XARFGenerator {
     if (!contactInfo.contact || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.contact)) {
       throw new XARFError(`${fieldName}.contact must be a valid email address`);
     }
-    if (!contactInfo.domain || !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(contactInfo.domain)) {
+    if (
+      !contactInfo.domain ||
+      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
+        contactInfo.domain
+      )
+    ) {
       throw new XARFError(`${fieldName}.domain must be a valid hostname`);
     }
   }

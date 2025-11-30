@@ -5,13 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2025-11-30
+
+### Breaking Changes
+- **Category Correction**: Removed "other" category to align with XARF v4.0.0 specification
+  - XARF spec defines exactly 7 categories (not 8)
+  - Unknown v3 report types now map to `content` category with type `unclassified`
+  - Migration: Replace any usage of `category: 'other'` with `category: 'content'`
+
+### Added
+- **Production Release**: Full production-quality v1.0.0 release
+- **Complete Category Support**: All 7 XARF categories fully implemented and validated
+  - messaging, connection, content, infrastructure, copyright, vulnerability, reputation
+- **Security Enhancements**: Enhanced input validation and XSS prevention
+- **Comprehensive Documentation**: Complete migration guides and security policies
+- **CI/CD Improvements**: Enhanced GitHub Actions workflows with security scanning
 
 ### Changed
-- **Field Naming**: Updated XARF v3 legacy support to use `ReportCategory` instead of `ReportClass` in type definitions
-  - This aligns with XARF v4 specification which uses `category` instead of `class`
-  - Improves JavaScript/TypeScript compatibility by avoiding reserved keyword `class`
-  - No breaking changes - existing code continues to work
+- **Version**: Updated from v1.0.0-alpha.2 to v1.0.0 (production release)
+- **Category Validation**: Stricter validation for all 7 official categories
+- **v3 Legacy Mapping**: Unknown v3 types now map to `content/unclassified` instead of `other/unclassified`
+- **Documentation**: Updated all references from 8 to 7 categories
+
+### Fixed
+- **Specification Compliance**: Corrected category count to match XARF v4.0.0 specification exactly
 
 ## [1.0.0-alpha.2] - 2025-01-23
 
@@ -59,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - XARFGenerator for creating XARF-compliant reports
 - XARFValidator for comprehensive validation with error/warning reporting
 - Full TypeScript type definitions for all XARF structures
-- Support for all 8 XARF categories:
+- Support for all 7 XARF categories:
   - Messaging (spam, phishing, social_engineering)
   - Connection (ddos, port_scan, login_attack, etc.)
   - Content (phishing_site, malware_distribution, defacement, etc.)
@@ -67,7 +84,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Copyright (infringement, dmca, trademark, etc.)
   - Vulnerability (cve, misconfiguration, open_service)
   - Reputation (blocklist, threat_intelligence)
-  - Other (unclassified)
 - Support for `on_behalf_of` field for delegated reporting
 - Evidence generation with automatic hashing (SHA256, SHA512, SHA1, MD5)
 - Sample report generation for testing

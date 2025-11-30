@@ -31,7 +31,6 @@ export type {
   CopyrightReport,
   VulnerabilityReport,
   ReputationReport,
-  OtherReport,
   AnyXARFReport,
 } from './types';
 
@@ -44,5 +43,5 @@ export {
   type XARFv3Attachment,
 } from './v3-legacy';
 
-export const VERSION = '1.0.0-alpha.1';
+export const VERSION = '1.0.0';
 export const SPEC_VERSION = '4.0.0';
