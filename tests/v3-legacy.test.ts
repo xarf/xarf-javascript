@@ -45,7 +45,16 @@ describe('XARFv3 Detection', () => {
       xarf_version: '4.0.0',
       report_id: 'test-id',
       timestamp: '2024-01-15T10:00:00Z',
-      reporter: { contact: 'test@example.com', type: 'manual' },
+      reporter: {
+        org: 'Test Org',
+        contact: 'test@example.com',
+        domain: 'example.com',
+      },
+      sender: {
+        org: 'Test Org',
+        contact: 'test@example.com',
+        domain: 'example.com',
+      },
       source_identifier: '192.0.2.1',
       category: 'messaging',
       type: 'spam',

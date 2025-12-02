@@ -14,10 +14,6 @@ export type XARFCategory =
   | 'vulnerability'
   | 'reputation';
 
-/**
- * Valid reporter types
- */
-export type ReporterType = 'automated' | 'manual' | 'hybrid';
 
 /**
  * Valid evidence sources
@@ -47,16 +43,6 @@ export interface ContactInfo {
   org: string;
   contact: string;
   domain: string;
-}
-
-/**
- * Reporter information (legacy type, deprecated)
- * @deprecated Use ContactInfo instead
- */
-export interface XARFReporter {
-  org?: string;
-  contact: string;
-  type: ReporterType;
 }
 
 /**

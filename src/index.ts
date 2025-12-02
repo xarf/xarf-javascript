@@ -17,10 +17,9 @@ export { XARFError, XARFValidationError, XARFParseError, XARFSchemaError } from 
 export type {
   XARFReport,
   XARFCategory,
-  ReporterType,
   EvidenceSource,
   SeverityLevel,
-  XARFReporter,
+  ContactInfo,
   XARFEvidence,
   TimeOccurrence,
   Target,

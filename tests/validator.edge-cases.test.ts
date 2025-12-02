@@ -20,7 +20,12 @@ describe('XARFValidator Edge Cases', () => {
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
-          type: 'automated',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',

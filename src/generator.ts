@@ -10,7 +10,6 @@ import { XARFError } from './errors';
 import type {
   XARFReport,
   XARFCategory,
-  ReporterType,
   EvidenceSource,
   SeverityLevel,
   XARFEvidence,
@@ -136,9 +135,6 @@ export class XARFGenerator {
     'ids_ips',
     'siem',
   ]);
-
-  // Valid reporter types
-  static readonly VALID_REPORTER_TYPES = new Set<ReporterType>(['automated', 'manual', 'hybrid']);
 
   // Valid severity levels
   static readonly VALID_SEVERITIES = new Set<SeverityLevel>(['low', 'medium', 'high', 'critical']);
