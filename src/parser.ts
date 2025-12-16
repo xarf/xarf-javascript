@@ -64,10 +64,8 @@ export class XARFParser {
       this.warnings.push(getV3DeprecationWarning());
       this.warnings.push(...conversionWarnings);
 
-      // Log warnings if not in strict mode
-      if (!this.strict && this.warnings.length > 0) {
-        console.warn('XARF Parser Warnings:', this.warnings);
-      }
+      // Warnings are collected and can be retrieved via getWarnings()
+      // In non-strict mode, warnings don't stop processing
 
       // Continue processing the converted v4 report
       data = v4Report as Record<string, unknown>;
@@ -198,8 +196,98 @@ export class XARFParser {
       return false;
     }
 
+    // Check for unknown properties and emit warnings
+    this.checkForUnknownProperties(data);
+
     // Category-specific validation
     return this.validateCategorySpecific(data);
+  }
+
+  /**
+   * Check for unknown or potentially misspelled properties
+   */
+  private checkForUnknownProperties(data: Record<string, unknown>): void {
+    // Known base fields
+    const knownBaseFields = new Set([
+      'xarf_version',
+      'report_id',
+      'timestamp',
+      'reporter',
+      'sender',
+      'source_identifier',
+      'category',
+      'type',
+      'evidence_source',
+      'on_behalf_of',
+      'description',
+      'evidence',
+      'tags',
+      'severity',
+      'confidence',
+      'occurrence',
+      'target',
+      '_internal',
+    ]);
+
+    // Known category-specific fields
+    const knownCategoryFields = new Set([
+      // Messaging
+      'protocol',
+      'smtp_from',
+      'smtp_to',
+      'subject',
+      'message_id',
+      'sender_display_name',
+      'target_victim',
+      'message_content',
+      // Connection
+      'destination_ip',
+      'destination_port',
+      'source_port',
+      'attack_type',
+      'duration_minutes',
+      'packet_count',
+      'byte_count',
+      'attempt_count',
+      'successful_logins',
+      'usernames_attempted',
+      'attack_pattern',
+      // Content
+      'url',
+      'content_type',
+      'affected_pages',
+      'cms_platform',
+      'vulnerability_exploited',
+      'affected_parameters',
+      'payload_detected',
+      'data_exposed',
+      'database_type',
+      'records_potentially_affected',
+      // Infrastructure
+      'infrastructure_type',
+      'affected_services',
+      // Copyright
+      'copyright_holder',
+      'infringing_content',
+      'original_content',
+      // Vulnerability
+      'cve_id',
+      'vulnerability_type',
+      'affected_software',
+      'affected_version',
+      // Reputation
+      'reputation_score',
+      'blocklists',
+    ]);
+
+    const allKnownFields = new Set([...knownBaseFields, ...knownCategoryFields]);
+    const dataKeys = Object.keys(data);
+
+    for (const key of dataKeys) {
+      if (!allKnownFields.has(key)) {
+        this.warnings.push(`Unknown property '${key}' - may be ignored or misspelled`);
+      }
+    }
   }
 
   /**

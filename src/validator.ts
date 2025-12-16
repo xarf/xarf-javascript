@@ -333,14 +333,55 @@ export class XARFValidator {
           value: report.occurrence,
         });
       } else {
-        const start = new Date(report.occurrence.start);
-        const end = new Date(report.occurrence.end);
-        if (start > end) {
+        // Validate start timestamp format
+        try {
+          const start = new Date(report.occurrence.start);
+          if (isNaN(start.getTime())) {
+            this.errors.push({
+              field: 'occurrence.start',
+              message: 'Invalid timestamp format for occurrence start',
+              value: report.occurrence.start,
+            });
+          }
+        } catch {
           this.errors.push({
-            field: 'occurrence',
-            message: 'Occurrence start time must be before end time',
-            value: report.occurrence,
+            field: 'occurrence.start',
+            message: 'Invalid timestamp format for occurrence start',
+            value: report.occurrence.start,
           });
+        }
+
+        // Validate end timestamp format
+        try {
+          const end = new Date(report.occurrence.end);
+          if (isNaN(end.getTime())) {
+            this.errors.push({
+              field: 'occurrence.end',
+              message: 'Invalid timestamp format for occurrence end',
+              value: report.occurrence.end,
+            });
+          }
+        } catch {
+          this.errors.push({
+            field: 'occurrence.end',
+            message: 'Invalid timestamp format for occurrence end',
+            value: report.occurrence.end,
+          });
+        }
+
+        // Only check start < end if both are valid dates
+        try {
+          const start = new Date(report.occurrence.start);
+          const end = new Date(report.occurrence.end);
+          if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start > end) {
+            this.errors.push({
+              field: 'occurrence',
+              message: 'Occurrence start time must be before end time',
+              value: report.occurrence,
+            });
+          }
+        } catch {
+          // Already handled above
         }
       }
     }

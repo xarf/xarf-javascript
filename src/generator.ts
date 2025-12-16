@@ -299,6 +299,9 @@ export class XARFGenerator {
       throw new XARFError('confidence must be between 0.0 and 1.0');
     }
 
+    // Validate category-specific required fields
+    this.validateCategoryRequirements(category, reportType, additionalFields);
+
     // Build base report structure
     const report: XARFReport = {
       xarf_version: XARFGenerator.XARF_VERSION,
@@ -380,6 +383,66 @@ export class XARFGenerator {
       )
     ) {
       throw new XARFError(`${fieldName}.domain must be a valid hostname`);
+    }
+  }
+
+  /**
+   * Validate category-specific required fields
+   *
+   * @param category - Report category
+   * @param reportType - Report type
+   * @param additionalFields - Additional fields to check
+   * @throws {XARFError} If required fields are missing
+   */
+  private validateCategoryRequirements(
+    category: XARFCategory,
+    reportType: string,
+    additionalFields?: Record<string, unknown>
+  ): void {
+    const fields = additionalFields || {};
+
+    switch (category) {
+      case 'connection':
+        if (!fields.destination_ip) {
+          throw new XARFError('destination_ip is required for connection reports');
+        }
+        if (!fields.protocol) {
+          throw new XARFError('protocol is required for connection reports');
+        }
+        break;
+
+      case 'content':
+        if (!fields.url) {
+          throw new XARFError('url is required for content reports');
+        }
+        break;
+
+      case 'messaging':
+        // For SMTP messaging, smtp_from is required
+        if (fields.protocol === 'smtp' && !fields.smtp_from) {
+          throw new XARFError('smtp_from is required for SMTP messaging reports');
+        }
+        // For spam/phishing with SMTP, subject is required
+        if (
+          fields.protocol === 'smtp' &&
+          (reportType === 'spam' || reportType === 'phishing') &&
+          !fields.subject
+        ) {
+          throw new XARFError(`subject is required for ${reportType} reports with SMTP protocol`);
+        }
+        break;
+
+      // Other categories don't have strict required fields beyond base XARF fields
+      case 'infrastructure':
+      case 'copyright':
+      case 'vulnerability':
+      case 'reputation':
+        // No additional required fields
+        break;
+
+      default:
+        // Unknown category already validated earlier
+        break;
     }
   }
 
@@ -496,6 +559,49 @@ export class XARFGenerator {
         end: now.toISOString(),
       };
     }
+
+    // Add category-specific required fields
+    const additionalFields: Record<string, unknown> = {};
+
+    switch (category) {
+      case 'connection':
+        additionalFields.destination_ip = `203.0.113.${Math.floor(Math.random() * 256)}`;
+        additionalFields.protocol = ['tcp', 'udp', 'icmp'][Math.floor(Math.random() * 3)];
+        if (includeOptional) {
+          additionalFields.destination_port = [80, 443, 22, 25, 53][Math.floor(Math.random() * 5)];
+        }
+        break;
+
+      case 'content':
+        additionalFields.url = `http://malicious${Math.floor(Math.random() * 1000)}.example.com`;
+        if (includeOptional) {
+          additionalFields.content_type = 'text/html';
+        }
+        break;
+
+      case 'messaging':
+        additionalFields.protocol = ['smtp', 'http'][Math.floor(Math.random() * 2)];
+        if (additionalFields.protocol === 'smtp') {
+          additionalFields.smtp_from = `spammer${Math.floor(Math.random() * 100)}@evil.example.com`;
+          if (reportType === 'spam' || reportType === 'phishing') {
+            additionalFields.subject = `Sample ${reportType} subject`;
+          }
+          if (includeOptional) {
+            additionalFields.smtp_to = `victim@example.com`;
+          }
+        }
+        break;
+
+      // Other categories don't have strict required fields
+      case 'infrastructure':
+      case 'copyright':
+      case 'vulnerability':
+      case 'reputation':
+        // Optional fields only
+        break;
+    }
+
+    options.additionalFields = additionalFields;
 
     return this.generateReport(options);
   }

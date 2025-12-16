@@ -212,6 +212,10 @@ describe('XARFGenerator Edge Cases', () => {
             contact: 'abuse@example.com',
             domain: 'example.com',
           },
+          additionalFields: {
+            destination_ip: '203.0.113.10',
+            protocol: 'tcp',
+          },
           occurrence: {
             end: '2024-01-15T12:00:00Z',
           } as any,
@@ -231,6 +235,10 @@ describe('XARFGenerator Edge Cases', () => {
             org: 'Example Org',
             contact: 'abuse@example.com',
             domain: 'example.com',
+          },
+          additionalFields: {
+            destination_ip: '203.0.113.10',
+            protocol: 'tcp',
           },
           occurrence: {
             end: '2024-01-15T12:00:00Z',
@@ -255,6 +263,10 @@ describe('XARFGenerator Edge Cases', () => {
             contact: 'abuse@example.com',
             domain: 'example.com',
           },
+          additionalFields: {
+            destination_ip: '203.0.113.10',
+            protocol: 'tcp',
+          },
           occurrence: {
             start: '2024-01-15T10:00:00Z',
           } as any,
@@ -274,6 +286,10 @@ describe('XARFGenerator Edge Cases', () => {
             org: 'Example Org',
             contact: 'abuse@example.com',
             domain: 'example.com',
+          },
+          additionalFields: {
+            destination_ip: '203.0.113.10',
+            protocol: 'tcp',
           },
           occurrence: {
             start: '2024-01-15T10:00:00Z',

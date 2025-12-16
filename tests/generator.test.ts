@@ -106,6 +106,10 @@ describe('XARFGenerator', () => {
           contact: 'abuse@example.com',
           domain: 'example.com',
         },
+        additionalFields: {
+          destination_ip: '203.0.113.10',
+          protocol: 'tcp',
+        },
       });
 
       expect(report.xarf_version).toBe('4.0.0');
