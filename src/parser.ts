@@ -19,7 +19,6 @@ export class XARFParser {
 
   /**
    * Initialize parser
-   *
    * @param strict - If true, raise exceptions on validation errors.
    *                 If false, collect errors for later retrieval.
    */
@@ -32,7 +31,6 @@ export class XARFParser {
    *
    * Supports both XARF v4 and v3 (legacy) formats.
    * v3 reports are automatically converted to v4 with a deprecation warning.
-   *
    * @param jsonData - JSON string or object containing XARF report
    * @returns Parsed report object
    * @throws {XARFParseError} If parsing fails
@@ -112,7 +110,6 @@ export class XARFParser {
    * Validate XARF report without parsing
    *
    * Supports both v4 and v3 formats. v3 reports are converted before validation.
-   *
    * @param jsonData - JSON string or object containing XARF report
    * @returns True if valid, false otherwise
    */
@@ -146,7 +143,6 @@ export class XARFParser {
 
   /**
    * Validate basic XARF structure
-   *
    * @param data - Parsed JSON data
    * @returns True if structure is valid
    */
@@ -205,6 +201,7 @@ export class XARFParser {
 
   /**
    * Check for unknown or potentially misspelled properties
+   * @param data
    */
   private checkForUnknownProperties(data: Record<string, unknown>): void {
     // Known base fields
@@ -292,6 +289,8 @@ export class XARFParser {
 
   /**
    * Validate ContactInfo structure (reporter or sender)
+   * @param contactInfo
+   * @param fieldName
    */
   private validateContactInfo(contactInfo: Record<string, unknown>, fieldName: string): boolean {
     if (typeof contactInfo !== 'object' || contactInfo === null) {
@@ -309,7 +308,10 @@ export class XARFParser {
 
     // Validate email format for contact
     const contact = contactInfo.contact as string;
-    if (typeof contact !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)) {
+    if (
+      typeof contact !== 'string' ||
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(contact)
+    ) {
       this.errors.push(`${fieldName}.contact must be a valid email address`);
       return false;
     }
@@ -338,7 +340,6 @@ export class XARFParser {
 
   /**
    * Validate category-specific requirements
-   *
    * @param data - Parsed JSON data
    * @returns True if category-specific validation passes
    */
@@ -359,6 +360,8 @@ export class XARFParser {
 
   /**
    * Validate messaging category reports
+   * @param data
+   * @param reportType
    */
   private validateMessaging(data: Record<string, unknown>, reportType: string): boolean {
     const validTypes = new Set(['spam', 'phishing', 'social_engineering']);
@@ -384,6 +387,8 @@ export class XARFParser {
 
   /**
    * Validate connection category reports
+   * @param data
+   * @param reportType
    */
   private validateConnection(data: Record<string, unknown>, reportType: string): boolean {
     const validTypes = new Set(['ddos', 'port_scan', 'login_attack', 'ip_spoofing']);
@@ -408,6 +413,8 @@ export class XARFParser {
 
   /**
    * Validate content category reports
+   * @param data
+   * @param reportType
    */
   private validateContent(data: Record<string, unknown>, reportType: string): boolean {
     const validTypes = new Set([
@@ -433,7 +440,6 @@ export class XARFParser {
 
   /**
    * Get validation errors from last parse/validate call
-   *
    * @returns List of validation error messages
    */
   getErrors(): string[] {
@@ -444,7 +450,6 @@ export class XARFParser {
    * Get warnings from last parse/validate call
    *
    * Warnings include deprecation notices for v3 reports and conversion issues.
-   *
    * @returns List of warning messages
    */
   getWarnings(): string[] {

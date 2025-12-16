@@ -48,7 +48,6 @@ export class XARFValidator {
 
   /**
    * Create a new XARF validator
-   *
    * @param useSchemaValidation - Enable JSON schema validation (default: false - experimental)
    */
   constructor(useSchemaValidation = false) {
@@ -58,7 +57,6 @@ export class XARFValidator {
 
   /**
    * Validate a XARF report comprehensively
-   *
    * @param report - The XARF report to validate
    * @param strict - If true, warnings are treated as errors
    * @returns Validation result with errors and warnings
@@ -123,7 +121,6 @@ export class XARFValidator {
 
   /**
    * Validate report using JSON schema
-   *
    * @param report - The XARF report to validate
    * @returns Validation result from schema validation
    */
@@ -178,6 +175,7 @@ export class XARFValidator {
 
   /**
    * Validate required fields are present
+   * @param report
    */
   private validateRequiredFields(report: XARFReport): void {
     const required = [
@@ -214,6 +212,11 @@ export class XARFValidator {
 
   /**
    * Validate ContactInfo fields
+   * @param contactInfo
+   * @param contactInfo.org
+   * @param contactInfo.contact
+   * @param contactInfo.domain
+   * @param fieldName
    */
   private validateContactInfoFields(
     contactInfo: { org: string; contact: string; domain: string },
@@ -241,6 +244,7 @@ export class XARFValidator {
 
   /**
    * Validate field formats
+   * @param report
    */
   private validateFormats(report: XARFReport): void {
     // Validate XARF version format
@@ -285,7 +289,10 @@ export class XARFValidator {
     }
 
     // Validate email format for reporter contact
-    if (report.reporter?.contact && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(report.reporter.contact)) {
+    if (
+      report.reporter?.contact &&
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(report.reporter.contact)
+    ) {
       this.errors.push({
         field: 'reporter.contact',
         message: 'Reporter contact must be a valid email address',
@@ -308,7 +315,10 @@ export class XARFValidator {
     }
 
     // Validate email format for sender contact
-    if (report.sender?.contact && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(report.sender.contact)) {
+    if (
+      report.sender?.contact &&
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(report.sender.contact)
+    ) {
       this.errors.push({
         field: 'sender.contact',
         message: 'Sender contact must be a valid email address',
@@ -344,6 +354,7 @@ export class XARFValidator {
 
   /**
    * Validate field values
+   * @param report
    */
   private validateValues(report: XARFReport): void {
     // Validate XARF version
@@ -477,6 +488,7 @@ export class XARFValidator {
 
   /**
    * Validate category-specific requirements
+   * @param report
    */
   private validateCategorySpecific(report: XARFReport): void {
     switch (report.category) {
@@ -494,6 +506,7 @@ export class XARFValidator {
 
   /**
    * Validate messaging category reports
+   * @param report
    */
   private validateMessagingReport(report: XARFReport): void {
     const validTypes = new Set(['spam', 'phishing', 'social_engineering', 'bulk_messaging']);
@@ -518,6 +531,7 @@ export class XARFValidator {
 
   /**
    * Validate connection category reports
+   * @param report
    */
   private validateConnectionReport(report: XARFReport): void {
     const validTypes = new Set([
@@ -567,6 +581,7 @@ export class XARFValidator {
 
   /**
    * Validate content category reports
+   * @param report
    */
   private validateContentReport(report: XARFReport): void {
     const validTypes = new Set([

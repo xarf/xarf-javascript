@@ -92,6 +92,7 @@ const V3_TYPE_MAPPING: Record<string, { category: XARFCategory; type: string }> 
 
 /**
  * Detect if a report is XARF v3 format
+ * @param data
  */
 export function isXARFv3(data: Record<string, unknown>): boolean {
   return (
@@ -105,6 +106,7 @@ export function isXARFv3(data: Record<string, unknown>): boolean {
 
 /**
  * Convert v3 evidence/attachment to v4 format
+ * @param v3Attachments
  */
 function convertEvidence(v3Attachments?: XARFv3Attachment[]): XARFEvidence[] | undefined {
   if (!v3Attachments || v3Attachments.length === 0) {
@@ -132,7 +134,6 @@ function generateUUID(): string {
 
 /**
  * Convert XARF v3 report to v4 format
- *
  * @param v3Report - XARF v3 report object
  * @param warnings - Array to collect conversion warnings
  * @returns Converted XARF v4 report
@@ -156,6 +157,11 @@ export function convertV3toV4(v3Report: XARFv3Report, warnings?: string[]): XARF
 
 /**
  * Internal conversion helper
+ * @param v3Report
+ * @param mapping
+ * @param mapping.category
+ * @param mapping.type
+ * @param warnings
  */
 function convertWithMapping(
   v3Report: XARFv3Report,

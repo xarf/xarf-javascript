@@ -176,7 +176,6 @@ export class XARFGenerator {
 
   /**
    * Generate a UUID v4 for report identification
-   *
    * @returns A string representation of a UUID v4
    */
   generateUUID(): string {
@@ -185,7 +184,6 @@ export class XARFGenerator {
 
   /**
    * Generate an ISO 8601 formatted timestamp with UTC timezone
-   *
    * @returns ISO 8601 formatted timestamp string with UTC timezone
    */
   generateTimestamp(): string {
@@ -194,7 +192,6 @@ export class XARFGenerator {
 
   /**
    * Generate a cryptographic hash of the provided data
-   *
    * @param data - The data to hash (string or buffer)
    * @param algorithm - Hash algorithm to use (default: "sha256")
    * @returns Hexadecimal string representation of the hash
@@ -215,7 +212,6 @@ export class XARFGenerator {
 
   /**
    * Create an evidence item with automatic hashing
-   *
    * @param contentType - MIME type of the evidence
    * @param description - Human-readable description of the evidence
    * @param payload - The evidence data
@@ -244,7 +240,6 @@ export class XARFGenerator {
 
   /**
    * Generate a complete XARF v4.0.0 report
-   *
    * @param options - Report generation options
    * @returns Complete XARF report object
    * @throws {XARFError} If validation fails or required fields are missing
@@ -386,8 +381,10 @@ export class XARFGenerator {
 
   /**
    * Validate ContactInfo structure
-   *
    * @param contactInfo - Contact information to validate
+   * @param contactInfo.org - Organization name
+   * @param contactInfo.contact - Contact email address
+   * @param contactInfo.domain - Domain name
    * @param fieldName - Name of the field for error messages
    * @throws {XARFError} If validation fails
    */
@@ -398,7 +395,10 @@ export class XARFGenerator {
     if (!contactInfo.org || contactInfo.org.trim().length === 0) {
       throw new XARFError(`${fieldName}.org is required and must be non-empty`);
     }
-    if (!contactInfo.contact || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.contact)) {
+    if (
+      !contactInfo.contact ||
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(contactInfo.contact)
+    ) {
       throw new XARFError(`${fieldName}.contact must be a valid email address`);
     }
     if (
@@ -413,7 +413,6 @@ export class XARFGenerator {
 
   /**
    * Validate category-specific required fields
-   *
    * @param category - Report category
    * @param reportType - Report type
    * @param additionalFields - Additional fields to check
@@ -473,7 +472,6 @@ export class XARFGenerator {
 
   /**
    * Generate random sample evidence for testing purposes
-   *
    * @param category - Report category to determine appropriate content type
    * @param description - Custom description (auto-generated if not provided)
    * @returns Sample evidence item
@@ -495,7 +493,6 @@ export class XARFGenerator {
 
   /**
    * Generate a sample XARF report with randomized data for testing
-   *
    * @param category - Report category
    * @param reportType - Specific type within category
    * @param includeEvidence - Whether to include sample evidence (default: true)

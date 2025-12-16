@@ -42,6 +42,9 @@ export class SchemaValidator {
   private masterSchemaLoaded = false;
   private schemasDir: string;
 
+  /**
+   *
+   */
   constructor() {
     // Initialize AJV with strict mode and all errors
     this.ajv = new Ajv({
@@ -64,6 +67,7 @@ export class SchemaValidator {
   /**
    * Load a schema file from the schemas directory
    * Helper method to load schemas synchronously
+   * @param relativePath
    */
   private loadSchemaFile(relativePath: string): object {
     const schemaPath = path.join(this.schemasDir, relativePath);
@@ -79,6 +83,8 @@ export class SchemaValidator {
   /**
    * Recursively load all referenced schemas from a base schema
    * This manually handles $ref resolution for nested schemas
+   * @param schema
+   * @param basePath
    */
   private loadReferencedSchemas(schema: unknown, basePath: string = ''): void {
     // Check for $ref in schema
@@ -242,6 +248,7 @@ export class SchemaValidator {
    * Extract type-specific schema part, removing the $ref to core schema
    * Type schemas have structure: { allOf: [{ $ref: "../xarf-core.json" }, { type-specific }] }
    * We only need the type-specific part since master schema already includes core
+   * @param schema
    */
   private extractTypeSpecificSchema(schema: Record<string, unknown>): Record<string, unknown> {
     // If schema has allOf array with 2 elements
@@ -311,6 +318,7 @@ export class SchemaValidator {
   /**
    * Filter out references to missing type-specific schemas
    * This handles cases where the master schema references schemas that don't exist
+   * @param schema
    */
   private filterMissingSchemas(schema: Record<string, unknown>): Record<string, unknown> {
     // Clone the schema
@@ -350,10 +358,8 @@ export class SchemaValidator {
 
   /**
    * Validate a XARF report against the appropriate schema
-   *
    * @param report - The XARF report to validate
    * @returns ValidationResult with status and any error messages
-   *
    * @example
    * ```typescript
    * const validator = new SchemaValidator();
@@ -404,7 +410,6 @@ export class SchemaValidator {
   /**
    * Validate only against core schema (without type-specific validation)
    * Useful for partial validation or testing
-   *
    * @param report - The XARF report to validate
    * @returns ValidationResult with status and any error messages
    */
@@ -446,6 +451,7 @@ export class SchemaValidator {
 
   /**
    * Format AJV validation errors into human-readable messages
+   * @param ajvErrors
    */
   private formatValidationErrors(ajvErrors: unknown[]): string[] {
     return ajvErrors.map((error: unknown) => {
@@ -476,7 +482,6 @@ export class SchemaValidator {
 
   /**
    * Check if a specific category+type combination is supported
-   *
    * @param category - XARF category
    * @param type - XARF type
    * @returns true if the combination has a specific schema
@@ -489,7 +494,6 @@ export class SchemaValidator {
 
   /**
    * Get list of all supported category+type combinations
-   *
    * @returns Array of {category, type} objects
    */
   getSupportedTypes(): Array<{ category: string; type: string }> {
@@ -520,7 +524,6 @@ export class SchemaValidator {
 
 /**
  * Singleton instance for easy import and use
- *
  * @example
  * ```typescript
  * import { validator } from './schema-validator';
