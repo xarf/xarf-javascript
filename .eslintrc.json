@@ -4,9 +4,10 @@
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
     "plugin:prettier/recommended",
-    "plugin:sonarjs/recommended-legacy"
+    "plugin:sonarjs/recommended-legacy",
+    "plugin:jsdoc/recommended-typescript"
   ],
-  "plugins": ["complexity", "sonarjs"],
+  "plugins": ["complexity", "sonarjs", "jsdoc"],
   "parserOptions": {
     "ecmaVersion": 2020,
     "sourceType": "module"
@@ -26,7 +27,27 @@
     "sonarjs/pseudo-random": "off",
     "sonarjs/slow-regex": "warn",
     "sonarjs/no-ignored-exceptions": "warn",
-    "sonarjs/void-use": "off"
+    "sonarjs/void-use": "off",
+    "jsdoc/require-jsdoc": [
+      "warn",
+      {
+        "require": {
+          "FunctionDeclaration": true,
+          "MethodDefinition": true,
+          "ClassDeclaration": true,
+          "ArrowFunctionExpression": false,
+          "FunctionExpression": false
+        },
+        "publicOnly": true
+      }
+    ],
+    "jsdoc/require-description": "warn",
+    "jsdoc/require-param-description": "warn",
+    "jsdoc/require-returns-description": "warn",
+    "jsdoc/check-alignment": "warn",
+    "jsdoc/check-param-names": "warn",
+    "jsdoc/check-tag-names": "warn",
+    "jsdoc/check-types": "warn"
   },
   "overrides": [
     {
@@ -34,7 +55,8 @@
       "rules": {
         "@typescript-eslint/no-explicit-any": "off",
         "sonarjs/no-hardcoded-ip": "off",
-        "sonarjs/no-nested-conditional": "off"
+        "sonarjs/no-nested-conditional": "off",
+        "jsdoc/require-jsdoc": "off"
       }
     },
     {

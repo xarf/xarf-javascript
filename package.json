@@ -19,6 +19,8 @@
     "dead-code:check": "ts-prune",
     "complexity": "eslint src --ext .ts --no-eslintrc --plugin complexity --rule 'complexity: [error, 10]'",
     "complexity:check": "eslint src --ext .ts --no-eslintrc --plugin complexity --rule 'complexity: [warn, 10]'",
+    "jsdoc": "eslint src --ext .ts --no-eslintrc --plugin jsdoc --parser @typescript-eslint/parser --rule 'jsdoc/require-jsdoc: error'",
+    "jsdoc:check": "eslint src --ext .ts",
     "prepublishOnly": "npm run build && npm test",
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
@@ -60,6 +62,7 @@
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-complexity": "^1.0.2",
+    "eslint-plugin-jsdoc": "^61.5.0",
     "eslint-plugin-prettier": "^5.1.2",
     "eslint-plugin-sonarjs": "^3.0.5",
     "husky": "^9.1.7",

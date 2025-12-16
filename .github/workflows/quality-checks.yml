@@ -55,6 +55,12 @@ jobs:
             warning: 'High complexity detected (not blocking - consider refactoring)'
             blocking: false
 
+          - name: 'JSDoc Coverage (eslint-plugin-jsdoc)'
+            tool: jsdoc
+            command: 'npm run jsdoc:check'
+            warning: 'Missing or incomplete JSDoc comments (not blocking - documentation improvement needed)'
+            blocking: false
+
       fail-fast: false
 
     steps:
