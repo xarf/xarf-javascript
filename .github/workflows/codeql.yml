@@ -1,14 +1,16 @@
 name: "CodeQL"
 
 on:
-  push:
-    branches: [ main ]
+  # CodeQL requires GitHub Advanced Security for private repositories
+  # Enable these triggers when Advanced Security is enabled or repository is public
   pull_request:
     branches: [ main ]
-  schedule:
-    # Run twice weekly (Monday and Thursday) for comprehensive coverage
-    - cron: '0 6 * * 1,4'
   workflow_dispatch:
+  # Uncomment when Advanced Security is enabled:
+  # push:
+  #   branches: [ main ]
+  # schedule:
+  #   - cron: '0 6 * * 1,4'
 
 permissions:
   actions: read

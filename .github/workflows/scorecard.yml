@@ -1,14 +1,15 @@
 name: OpenSSF Scorecard
 
 on:
-  # Run weekly on Monday at 10:00 UTC
-  schedule:
-    - cron: '0 10 * * 1'
-  # Allow manual trigger
+  # Allow manual trigger only
+  # Note: OSSF Scorecard requires special permissions for private repositories
+  # Enable this workflow when repository is public
   workflow_dispatch:
-  # Run on main branch pushes
-  push:
-    branches: [ main ]
+  # Uncomment when repository is public:
+  # schedule:
+  #   - cron: '0 10 * * 1'
+  # push:
+  #   branches: [ main ]
 
 # Restrict permissions for security
 permissions: read-all

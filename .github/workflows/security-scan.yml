@@ -19,6 +19,9 @@ jobs:
   secret-scanning:
     name: Secret Scanning
     runs-on: ubuntu-latest
+    # TruffleHog GitHub Action works best on pull requests
+    # For private repos on push events, consider using TruffleHog CLI directly or enable only for PRs
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,7 +32,7 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          extra_args: --only-verified --since-commit HEAD~1
+          extra_args: --only-verified
 
   dependency-check:
     name: OWASP Dependency Check
