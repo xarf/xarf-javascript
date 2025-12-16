@@ -1,0 +1,3 @@
+{
+  "ignore": "index.ts|types.ts|errors.ts"
+}
