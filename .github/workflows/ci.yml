@@ -11,6 +11,10 @@ permissions:
   contents: read
 
 jobs:
+  quality:
+    name: Quality Checks
+    uses: ./.github/workflows/quality-checks.yml
+
   test:
     name: Test Node.js ${{ matrix.node-version }}
     runs-on: ubuntu-latest
@@ -40,27 +44,7 @@ jobs:
           files: ./coverage/coverage-final.json
           fail_ci_if_error: false
 
-  lint:
-    name: Lint and Format
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run lint
-        run: npm run lint
-
-      - name: Check types
-        run: npm run typecheck
+  # Lint and format checks are now handled by the quality-checks workflow
 
   security:
     name: Security Audit
@@ -103,9 +87,6 @@ jobs:
             echo "npm-audit-resolver not available, skipping"
           fi
         continue-on-error: true
-
-      - name: Format check
-        run: npm run format:check
 
       - name: License compliance check
         run: |
