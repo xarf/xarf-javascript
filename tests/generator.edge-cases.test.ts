@@ -382,19 +382,19 @@ describe('XARFGenerator Edge Cases', () => {
     it('should create evidence with sha512', () => {
       const evidence = generator.addEvidence('text/plain', 'Test', 'data', 'sha512');
 
-      expect(evidence.hash).toHaveLength(128);
+      expect(evidence.hash).toMatch(/^sha512:[0-9a-f]{128}$/); // Format: algorithm:hexvalue
     });
 
     it('should create evidence with sha1', () => {
       const evidence = generator.addEvidence('text/plain', 'Test', 'data', 'sha1');
 
-      expect(evidence.hash).toHaveLength(40);
+      expect(evidence.hash).toMatch(/^sha1:[0-9a-f]{40}$/); // Format: algorithm:hexvalue
     });
 
     it('should create evidence with md5', () => {
       const evidence = generator.addEvidence('text/plain', 'Test', 'data', 'md5');
 
-      expect(evidence.hash).toHaveLength(32);
+      expect(evidence.hash).toMatch(/^md5:[0-9a-f]{32}$/); // Format: algorithm:hexvalue
     });
   });
 });

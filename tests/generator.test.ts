@@ -78,7 +78,7 @@ describe('XARFGenerator', () => {
       expect(evidence.description).toBe('Test evidence');
       expect(evidence.payload).toBe('Sample data');
       expect(evidence.hash).toBeDefined();
-      expect(evidence.hash).toHaveLength(64);
+      expect(evidence.hash).toMatch(/^sha256:[0-9a-f]{64}$/); // Format: algorithm:hexvalue
     });
 
     it('should handle buffer payloads', () => {
