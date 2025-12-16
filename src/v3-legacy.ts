@@ -159,6 +159,78 @@ export function convertV3toV4(v3Report: XARFv3Report, warnings?: string[]): XARF
 }
 
 /**
+ * Extract source identifier from v3 report
+ * @param report - V3 report data
+ * @param warnings - Optional warnings array
+ * @returns Source identifier string
+ */
+function extractSourceIdentifier(report: XARFv3Report['Report'], warnings?: string[]): string {
+  if (report.Source?.IP) {
+    return report.Source.IP;
+  }
+  if (report.SourceIp) {
+    return report.SourceIp;
+  }
+  warnings?.push('No source IP found in v3 report, using "unknown" as source_identifier');
+  return 'unknown';
+}
+
+/**
+ * Extract contact info from v3 reporter info
+ * @param reporterInfo - V3 reporter info
+ * @returns Contact info object
+ */
+function extractContactInfo(reporterInfo: XARFv3ReporterInfo): {
+  org: string;
+  contact: string;
+  domain: string;
+} {
+  const contact = reporterInfo.ReporterContactEmail || reporterInfo.ReporterOrgEmail;
+  const domain = contact.split('@')[1] || 'unknown.com';
+  const org = reporterInfo.ReporterOrg || 'Unknown Organization';
+  return { org, contact, domain };
+}
+
+/**
+ * Add category-specific fields to v4 report
+ * @param v4Report - V4 report to modify
+ * @param category - Report category
+ * @param v3Report - Original v3 report
+ * @param sourceIdentifier - Source identifier
+ * @param evidence - Converted evidence array
+ */
+function addCategorySpecificFields(
+  v4Report: XARFReport,
+  category: XARFCategory,
+  v3Report: XARFv3Report['Report'],
+  sourceIdentifier: string,
+  evidence?: XARFEvidence[]
+): void {
+  if (category === 'messaging') {
+    Object.assign(v4Report, {
+      protocol: v3Report.Protocol || v3Report.AdditionalInfo?.Protocol || 'smtp',
+      smtp_from: v3Report.SmtpMailFromAddress || v3Report.AdditionalInfo?.SMTPFrom,
+      smtp_to: v3Report.SmtpRcptToAddress,
+      subject: v3Report.SmtpMessageSubject || v3Report.AdditionalInfo?.Subject,
+      source_port: v3Report.Source?.Port || v3Report.SourcePort,
+    });
+  } else if (category === 'connection') {
+    Object.assign(v4Report, {
+      destination_ip: v3Report.DestinationIp || 'unknown',
+      protocol: v3Report.Protocol || 'tcp',
+      source_port: v3Report.Source?.Port || v3Report.SourcePort,
+      destination_port: v3Report.DestinationPort,
+      attempt_count: v3Report.AttackCount,
+    });
+  } else if (category === 'content') {
+    Object.assign(v4Report, {
+      url: v3Report.Url || `http://${sourceIdentifier}`,
+      content_type: evidence?.[0]?.content_type || 'text/html',
+    });
+  }
+}
+
+/**
  * Internal conversion helper
  * @param v3Report - XARF v3 report object to convert
  * @param mapping - Category and type mapping configuration
@@ -175,46 +247,17 @@ function convertWithMapping(
   const report = v3Report.Report;
   const reporterInfo = v3Report.ReporterInfo;
 
-  // Determine source identifier
-  let sourceIdentifier: string;
-  if (report.Source?.IP) {
-    sourceIdentifier = report.Source.IP;
-  } else if (report.SourceIp) {
-    sourceIdentifier = report.SourceIp;
-  } else {
-    sourceIdentifier = 'unknown';
-    warnings?.push('No source IP found in v3 report, using "unknown" as source_identifier');
-  }
-
-  // Determine evidence source based on v3 fields
-  let evidenceSource: string = 'manual_analysis'; // Default for v3
-  if (report.AdditionalInfo?.DetectionMethod) {
-    evidenceSource = String(report.AdditionalInfo.DetectionMethod);
-  }
-
-  // Convert evidence
+  const sourceIdentifier = extractSourceIdentifier(report, warnings);
+  const evidenceSource = (report.AdditionalInfo?.DetectionMethod as string) || 'manual_analysis';
   const evidence = convertEvidence(report.Attachment || report.Samples);
+  const contactInfo = extractContactInfo(reporterInfo);
 
-  // Extract contact info
-  const contact = reporterInfo.ReporterContactEmail || reporterInfo.ReporterOrgEmail;
-  const domain = contact.split('@')[1] || 'unknown.com';
-  const org = reporterInfo.ReporterOrg || 'Unknown Organization';
-
-  // Build base v4 report
   const v4Report: XARFReport & { _internal?: Record<string, unknown> } = {
     xarf_version: '4.0.0',
     report_id: generateUUID(),
     timestamp: report.Date,
-    reporter: {
-      org,
-      contact,
-      domain,
-    },
-    sender: {
-      org,
-      contact,
-      domain,
-    },
+    reporter: contactInfo,
+    sender: contactInfo,
     source_identifier: sourceIdentifier,
     category: mapping.category,
     type: mapping.type,
@@ -228,29 +271,7 @@ function convertWithMapping(
     },
   };
 
-  // Add category-specific fields
-  if (mapping.category === 'messaging') {
-    Object.assign(v4Report, {
-      protocol: report.Protocol || report.AdditionalInfo?.Protocol || 'smtp',
-      smtp_from: report.SmtpMailFromAddress || report.AdditionalInfo?.SMTPFrom,
-      smtp_to: report.SmtpRcptToAddress,
-      subject: report.SmtpMessageSubject || report.AdditionalInfo?.Subject,
-      source_port: report.Source?.Port || report.SourcePort,
-    });
-  } else if (mapping.category === 'connection') {
-    Object.assign(v4Report, {
-      destination_ip: report.DestinationIp || 'unknown',
-      protocol: report.Protocol || 'tcp',
-      source_port: report.Source?.Port || report.SourcePort,
-      destination_port: report.DestinationPort,
-      attempt_count: report.AttackCount,
-    });
-  } else if (mapping.category === 'content') {
-    Object.assign(v4Report, {
-      url: report.Url || `http://${sourceIdentifier}`,
-      content_type: evidence?.[0]?.content_type || 'text/html',
-    });
-  }
+  addCategorySpecificFields(v4Report, mapping.category, report, sourceIdentifier, evidence);
 
   return v4Report;
 }
