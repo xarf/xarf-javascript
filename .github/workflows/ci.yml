@@ -37,7 +37,7 @@ jobs:
         if: matrix.node-version == '20'
         uses: codecov/codecov-action@v5
         with:
-          file: ./coverage/coverage-final.json
+          files: ./coverage/coverage-final.json
           fail_ci_if_error: false
 
   lint:
