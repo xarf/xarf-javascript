@@ -3,10 +3,12 @@ name: 'Dependency Review'
 on:
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
   pull-requests: write
+  issues: write
 
 jobs:
   dependency-review:
@@ -19,9 +21,28 @@ jobs:
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
         with:
-          # Fail if vulnerabilities found
+          # Fail if moderate or higher vulnerabilities found
           fail-on-severity: moderate
-          # Block banned licenses
-          deny-licenses: GPL-3.0, AGPL-3.0
+          # Fail on scope changes
+          fail-on-scopes: runtime, development
+          # Block banned licenses (copyleft)
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, LGPL-2.0, LGPL-2.1, LGPL-3.0
+          # Allow common permissive licenses
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, CC0-1.0, Unlicense
           # Comment on PR with details
-          comment-summary-in-pr: on-failure
+          comment-summary-in-pr: always
+          # Show vulnerabilities in PR comment
+          vulnerability-check: true
+          # Show license information
+          license-check: true
+          # Generate detailed report
+          base-ref: ${{ github.base_ref }}
+          head-ref: ${{ github.head_ref }}
+
+      - name: Upload dependency graph
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-review
+          path: dependency-review-*.json
+          retention-days: 30

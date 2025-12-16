@@ -78,12 +78,34 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run npm audit
+      - name: Run npm audit (all dependencies)
         run: npm audit --audit-level=moderate
         continue-on-error: true
 
-      - name: Check for security vulnerabilities
-        run: npm audit --production --audit-level=high
+      - name: Run npm audit (production only - strict)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Check for outdated dependencies
+        run: npm outdated || true
+
+      - name: Verify integrity of package-lock.json
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          git diff --exit-code package-lock.json
+
+      - name: Check for known vulnerabilities in package-lock
+        run: |
+          if command -v npm-audit-resolver &> /dev/null; then
+            npm audit --json | npm-audit-resolver --no-interactive
+          else
+            echo "npm-audit-resolver not available, skipping"
+          fi
+        continue-on-error: true
 
       - name: Format check
         run: npm run format:check
+
+      - name: License compliance check
+        run: |
+          npx license-checker --summary --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;CC0-1.0;Unlicense' || true
+        continue-on-error: true
