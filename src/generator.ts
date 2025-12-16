@@ -21,11 +21,21 @@ import type {
 
 /**
  * Generator options for creating XARF reports
+ *
+ * Supports both camelCase (backward compatibility) and snake_case (XARF spec) field names.
+ * Snake_case is preferred and matches the XARF specification.
  */
 export interface GeneratorOptions {
   category: XARFCategory;
-  reportType: string;
-  sourceIdentifier: string;
+
+  // Type field (XARF spec uses "type")
+  type?: string; // XARF spec field name
+  reportType?: string; // Backward compatibility (deprecated)
+
+  // Source identifier
+  source_identifier?: string; // XARF spec field name
+  sourceIdentifier?: string; // Backward compatibility (deprecated)
+
   reporter: {
     org: string;
     contact: string;
@@ -36,8 +46,15 @@ export interface GeneratorOptions {
     contact: string;
     domain: string;
   };
-  evidenceSource?: EvidenceSource;
-  onBehalfOf?: ContactInfo;
+
+  // Evidence source
+  evidence_source?: EvidenceSource; // XARF spec field name
+  evidenceSource?: EvidenceSource; // Backward compatibility (deprecated)
+
+  // On behalf of
+  on_behalf_of?: ContactInfo; // XARF spec field name
+  onBehalfOf?: ContactInfo; // Backward compatibility (deprecated)
+
   description?: string;
   evidence?: XARFEvidence[];
   severity?: SeverityLevel;
@@ -45,6 +62,8 @@ export interface GeneratorOptions {
   tags?: string[];
   occurrence?: TimeOccurrence;
   target?: Target;
+
+  // Additional fields (use snake_case directly)
   additionalFields?: Record<string, unknown>;
 }
 
@@ -232,12 +251,8 @@ export class XARFGenerator {
   generateReport(options: GeneratorOptions): XARFReport {
     const {
       category,
-      reportType,
-      sourceIdentifier,
       reporter,
       sender,
-      evidenceSource = 'automated_scan',
-      onBehalfOf,
       description,
       evidence,
       severity,
@@ -248,9 +263,18 @@ export class XARFGenerator {
       additionalFields,
     } = options;
 
+    // Normalize field names: prefer snake_case (XARF spec), fall back to camelCase (backward compat)
+    const reportType = options.type ?? options.reportType;
+    const sourceIdentifier = options.source_identifier ?? options.sourceIdentifier;
+    const evidenceSource = options.evidence_source ?? options.evidenceSource ?? 'automated_scan';
+    const onBehalfOf = options.on_behalf_of ?? options.onBehalfOf;
+
     // Validate required parameters
     if (!sourceIdentifier) {
-      throw new XARFError('sourceIdentifier is required');
+      throw new XARFError('source_identifier (or sourceIdentifier) is required');
+    }
+    if (!reportType) {
+      throw new XARFError('type (or reportType) is required');
     }
     if (!reporter) {
       throw new XARFError('reporter is required');
@@ -513,11 +537,11 @@ export class XARFGenerator {
     const reporterContact = `abuse@${reporterDomain}`;
     const senderContact = `report@${senderDomain}`;
 
-    // Build report parameters
+    // Build report parameters using snake_case (XARF spec format)
     const options: GeneratorOptions = {
       category,
-      reportType,
-      sourceIdentifier: sourceIp,
+      type: reportType, // Use "type" per XARF spec
+      source_identifier: sourceIp, // Use "source_identifier" per XARF spec
       reporter: {
         org: reporterOrg,
         contact: reporterContact,

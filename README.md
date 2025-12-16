@@ -70,8 +70,8 @@ import { XARFGenerator } from 'xarf';
 const generator = new XARFGenerator();
 const report = generator.generateReport({
   category: 'messaging',
-  reportType: 'spam',
-  sourceIdentifier: '192.0.2.100',
+  type: 'spam',  // Using XARF spec field name
+  source_identifier: '192.0.2.100',  // snake_case matches XARF spec
   reporter: {
     org: 'Example Security',
     contact: 'abuse@example.com',
@@ -82,6 +82,7 @@ const report = generator.generateReport({
     contact: 'abuse@example.com',
     domain: 'example.com'
   },
+  evidence_source: 'automated_scan',  // snake_case matches XARF spec
   severity: 'medium',
   description: 'Spam email detected from source',
   tags: ['spam', 'email']
@@ -144,13 +145,20 @@ const generator = new XARFGenerator();
 
 #### GeneratorOptions
 
-The `GeneratorOptions` interface for `generateReport()`:
+The `GeneratorOptions` interface for `generateReport()` supports both **snake_case** (XARF spec, preferred) and **camelCase** (backward compatibility):
 
 ```typescript
 {
   category: XARFCategory;                    // Required: Report category
-  reportType: string;                        // Required: Specific type within category
-  sourceIdentifier: string;                  // Required: Source IP or identifier
+
+  // Type field (use "type" per XARF spec, "reportType" deprecated)
+  type?: string;                             // XARF spec field name (preferred)
+  reportType?: string;                       // Backward compatibility (deprecated)
+
+  // Source identifier (use snake_case per XARF spec)
+  source_identifier?: string;                // XARF spec field name (preferred)
+  sourceIdentifier?: string;                 // Backward compatibility (deprecated)
+
   reporter: {                                // Required: Reporter information
     org: string;                             //   Organization name
     contact: string;                         //   Contact email address
@@ -161,12 +169,19 @@ The `GeneratorOptions` interface for `generateReport()`:
     contact: string;                         //   Contact email address
     domain: string;                          //   Sender's domain
   };
-  evidenceSource?: EvidenceSource;           // Optional: Evidence source type
-  onBehalfOf?: {                             // Optional: On-behalf-of information
+
+  // Evidence source (use snake_case per XARF spec)
+  evidence_source?: EvidenceSource;          // XARF spec field name (preferred)
+  evidenceSource?: EvidenceSource;           // Backward compatibility (deprecated)
+
+  // On behalf of (use snake_case per XARF spec)
+  on_behalf_of?: {                           // XARF spec field name (preferred)
     org: string;
     contact: string;
     domain: string;
   };
+  onBehalfOf?: ContactInfo;                  // Backward compatibility (deprecated)
+
   description?: string;                      // Optional: Human-readable description
   evidence?: XARFEvidence[];                 // Optional: Evidence items
   severity?: SeverityLevel;                  // Optional: low, medium, high, critical
@@ -174,9 +189,11 @@ The `GeneratorOptions` interface for `generateReport()`:
   tags?: string[];                           // Optional: Tags for categorization
   occurrence?: TimeOccurrence;               // Optional: Time range of occurrence
   target?: Target;                           // Optional: Target information
-  additionalFields?: Record<string, unknown>; // Optional: Category-specific fields
+  additionalFields?: Record<string, unknown>; // Optional: Category-specific fields (use snake_case)
 }
 ```
+
+**Note:** The library accepts both naming conventions but generates reports using snake_case as per the XARF specification.
 
 ### XARFValidator
 
@@ -229,8 +246,8 @@ XARF v4 supports reporting on behalf of another organization:
 ```typescript
 const report = generator.generateReport({
   category: 'messaging',
-  reportType: 'spam',
-  sourceIdentifier: '192.0.2.100',
+  type: 'spam',
+  source_identifier: '192.0.2.100',
   reporter: {
     org: 'Reporter Organization',
     contact: 'reporter@example.com',
@@ -241,7 +258,7 @@ const report = generator.generateReport({
     contact: 'reporter@example.com',
     domain: 'example.com'
   },
-  onBehalfOf: {
+  on_behalf_of: {  // snake_case matches XARF spec
     org: 'Client Organization',
     contact: 'client@example.com',
     domain: 'client.com'
@@ -256,8 +273,8 @@ const report = generator.generateReport({
 ```typescript
 const report = generator.generateReport({
   category: 'connection',
-  reportType: 'ddos',
-  sourceIdentifier: '192.0.2.100',
+  type: 'ddos',
+  source_identifier: '192.0.2.100',
   reporter: {
     org: 'Security Operations',
     contact: 'abuse@example.com',
@@ -285,8 +302,8 @@ const report = generator.generateReport({
 ```typescript
 const report = generator.generateReport({
   category: 'content',
-  reportType: 'phishing_site',
-  sourceIdentifier: '192.0.2.100',
+  type: 'phishing_site',
+  source_identifier: '192.0.2.100',
   reporter: {
     org: 'Phishing Response Team',
     contact: 'abuse@example.com',
@@ -312,8 +329,8 @@ const report = generator.generateReport({
 ```typescript
 const report = generator.generateReport({
   category: 'messaging',
-  reportType: 'spam',
-  sourceIdentifier: '192.0.2.100',
+  type: 'spam',
+  source_identifier: '192.0.2.100',
   reporter: {
     org: 'Example Security',
     contact: 'abuse@example.com',
@@ -331,7 +348,7 @@ const report = generator.generateReport({
     subject: 'You won the lottery!',
     message_id: '<123456@evil.example.com>'
   },
-  evidenceSource: 'spamtrap',
+  evidence_source: 'spamtrap',
   severity: 'low'
 });
 ```
