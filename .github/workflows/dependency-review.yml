@@ -25,10 +25,8 @@ jobs:
           fail-on-severity: moderate
           # Fail on scope changes
           fail-on-scopes: runtime, development
-          # Block banned licenses (copyleft)
+          # Block banned licenses (copyleft) - cannot use with allow-licenses
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, LGPL-2.0, LGPL-2.1, LGPL-3.0
-          # Allow common permissive licenses
-          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, CC0-1.0, Unlicense
           # Comment on PR with details
           comment-summary-in-pr: always
           # Show vulnerabilities in PR comment
