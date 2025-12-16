@@ -243,6 +243,42 @@ export class XARFValidator {
   }
 
   /**
+   * Validate contact info formats (email and domain)
+   * @param contactInfo - Contact info to validate
+   * @param fieldPrefix - Field name prefix (reporter or sender)
+   */
+  private validateContactFormats(
+    contactInfo: { contact: string; domain: string } | undefined,
+    fieldPrefix: string
+  ): void {
+    if (!contactInfo) return;
+
+    if (
+      contactInfo.contact &&
+      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(contactInfo.contact)
+    ) {
+      this.errors.push({
+        field: `${fieldPrefix}.contact`,
+        message: `${fieldPrefix.charAt(0).toUpperCase() + fieldPrefix.slice(1)} contact must be a valid email address`,
+        value: contactInfo.contact,
+      });
+    }
+
+    if (
+      contactInfo.domain &&
+      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
+        contactInfo.domain
+      )
+    ) {
+      this.errors.push({
+        field: `${fieldPrefix}.domain`,
+        message: `${fieldPrefix.charAt(0).toUpperCase() + fieldPrefix.slice(1)} domain must be a valid hostname`,
+        value: contactInfo.domain,
+      });
+    }
+  }
+
+  /**
    * Validate field formats
    * @param report - XARF report to validate for correct field formats
    */
@@ -288,57 +324,9 @@ export class XARFValidator {
       }
     }
 
-    // Validate email format for reporter contact
-    if (
-      report.reporter?.contact &&
-      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(report.reporter.contact)
-    ) {
-      this.errors.push({
-        field: 'reporter.contact',
-        message: 'Reporter contact must be a valid email address',
-        value: report.reporter.contact,
-      });
-    }
-
-    // Validate domain format for reporter
-    if (
-      report.reporter?.domain &&
-      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
-        report.reporter.domain
-      )
-    ) {
-      this.errors.push({
-        field: 'reporter.domain',
-        message: 'Reporter domain must be a valid hostname',
-        value: report.reporter.domain,
-      });
-    }
-
-    // Validate email format for sender contact
-    if (
-      report.sender?.contact &&
-      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(report.sender.contact)
-    ) {
-      this.errors.push({
-        field: 'sender.contact',
-        message: 'Sender contact must be a valid email address',
-        value: report.sender.contact,
-      });
-    }
-
-    // Validate domain format for sender
-    if (
-      report.sender?.domain &&
-      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
-        report.sender.domain
-      )
-    ) {
-      this.errors.push({
-        field: 'sender.domain',
-        message: 'Sender domain must be a valid hostname',
-        value: report.sender.domain,
-      });
-    }
+    // Validate contact formats
+    this.validateContactFormats(report.reporter, 'reporter');
+    this.validateContactFormats(report.sender, 'sender');
 
     // Validate confidence is between 0 and 1
     if (report.confidence !== undefined) {
@@ -349,6 +337,74 @@ export class XARFValidator {
           value: report.confidence,
         });
       }
+    }
+  }
+
+  /**
+   * Validate occurrence time range
+   * @param occurrence - Occurrence object with start and end times
+   */
+  private validateOccurrence(occurrence: { start: string; end: string } | undefined): void {
+    if (!occurrence) return;
+
+    if (!occurrence.start || !occurrence.end) {
+      this.errors.push({
+        field: 'occurrence',
+        message: 'Occurrence must have both start and end times',
+        value: occurrence,
+      });
+      return;
+    }
+
+    // Validate start timestamp format
+    try {
+      const start = new Date(occurrence.start);
+      if (isNaN(start.getTime())) {
+        this.errors.push({
+          field: 'occurrence.start',
+          message: 'Invalid timestamp format for occurrence start',
+          value: occurrence.start,
+        });
+      }
+    } catch {
+      this.errors.push({
+        field: 'occurrence.start',
+        message: 'Invalid timestamp format for occurrence start',
+        value: occurrence.start,
+      });
+    }
+
+    // Validate end timestamp format
+    try {
+      const end = new Date(occurrence.end);
+      if (isNaN(end.getTime())) {
+        this.errors.push({
+          field: 'occurrence.end',
+          message: 'Invalid timestamp format for occurrence end',
+          value: occurrence.end,
+        });
+      }
+    } catch {
+      this.errors.push({
+        field: 'occurrence.end',
+        message: 'Invalid timestamp format for occurrence end',
+        value: occurrence.end,
+      });
+    }
+
+    // Check start < end if both are valid dates
+    try {
+      const start = new Date(occurrence.start);
+      const end = new Date(occurrence.end);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start > end) {
+        this.errors.push({
+          field: 'occurrence',
+          message: 'Occurrence start time must be before end time',
+          value: occurrence,
+        });
+      }
+    } catch {
+      // Already handled above
     }
   }
 
@@ -423,67 +479,8 @@ export class XARFValidator {
       });
     }
 
-    // Validate occurrence times if present
-    if (report.occurrence) {
-      if (!report.occurrence.start || !report.occurrence.end) {
-        this.errors.push({
-          field: 'occurrence',
-          message: 'Occurrence must have both start and end times',
-          value: report.occurrence,
-        });
-      } else {
-        // Validate start timestamp format
-        try {
-          const start = new Date(report.occurrence.start);
-          if (isNaN(start.getTime())) {
-            this.errors.push({
-              field: 'occurrence.start',
-              message: 'Invalid timestamp format for occurrence start',
-              value: report.occurrence.start,
-            });
-          }
-        } catch {
-          this.errors.push({
-            field: 'occurrence.start',
-            message: 'Invalid timestamp format for occurrence start',
-            value: report.occurrence.start,
-          });
-        }
-
-        // Validate end timestamp format
-        try {
-          const end = new Date(report.occurrence.end);
-          if (isNaN(end.getTime())) {
-            this.errors.push({
-              field: 'occurrence.end',
-              message: 'Invalid timestamp format for occurrence end',
-              value: report.occurrence.end,
-            });
-          }
-        } catch {
-          this.errors.push({
-            field: 'occurrence.end',
-            message: 'Invalid timestamp format for occurrence end',
-            value: report.occurrence.end,
-          });
-        }
-
-        // Only check start < end if both are valid dates
-        try {
-          const start = new Date(report.occurrence.start);
-          const end = new Date(report.occurrence.end);
-          if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start > end) {
-            this.errors.push({
-              field: 'occurrence',
-              message: 'Occurrence start time must be before end time',
-              value: report.occurrence,
-            });
-          }
-        } catch {
-          // Already handled above
-        }
-      }
-    }
+    // Validate occurrence times
+    this.validateOccurrence(report.occurrence);
   }
 
   /**
