@@ -44,7 +44,12 @@ const report = parser.parse({
   reporter: {
     org: 'Security Team',
     contact: 'abuse@example.com',
-    type: 'automated'
+    domain: 'example.com'
+  },
+  sender: {
+    org: 'Security Team',
+    contact: 'abuse@example.com',
+    domain: 'example.com'
   },
   source_identifier: '192.0.2.100',
   category: 'connection',
@@ -67,8 +72,16 @@ const report = generator.generateReport({
   category: 'messaging',
   reportType: 'spam',
   sourceIdentifier: '192.0.2.100',
-  reporterContact: 'abuse@example.com',
-  reporterOrg: 'Example Security',
+  reporter: {
+    org: 'Example Security',
+    contact: 'abuse@example.com',
+    domain: 'example.com'
+  },
+  sender: {
+    org: 'Example Security',
+    contact: 'abuse@example.com',
+    domain: 'example.com'
+  },
   severity: 'medium',
   description: 'Spam email detected from source',
   tags: ['spam', 'email']
@@ -129,6 +142,42 @@ const generator = new XARFGenerator();
 - `generateRandomEvidence(category: XARFCategory, description?: string): XARFEvidence` - Generate sample evidence
 - `generateSampleReport(category: XARFCategory, reportType: string, includeEvidence?: boolean, includeOptional?: boolean): XARFReport` - Generate test report
 
+#### GeneratorOptions
+
+The `GeneratorOptions` interface for `generateReport()`:
+
+```typescript
+{
+  category: XARFCategory;                    // Required: Report category
+  reportType: string;                        // Required: Specific type within category
+  sourceIdentifier: string;                  // Required: Source IP or identifier
+  reporter: {                                // Required: Reporter information
+    org: string;                             //   Organization name
+    contact: string;                         //   Contact email address
+    domain: string;                          //   Reporter's domain
+  };
+  sender: {                                  // Required: Sender information
+    org: string;                             //   Organization name
+    contact: string;                         //   Contact email address
+    domain: string;                          //   Sender's domain
+  };
+  evidenceSource?: EvidenceSource;           // Optional: Evidence source type
+  onBehalfOf?: {                             // Optional: On-behalf-of information
+    org: string;
+    contact: string;
+    domain: string;
+  };
+  description?: string;                      // Optional: Human-readable description
+  evidence?: XARFEvidence[];                 // Optional: Evidence items
+  severity?: SeverityLevel;                  // Optional: low, medium, high, critical
+  confidence?: number;                       // Optional: 0.0 to 1.0
+  tags?: string[];                           // Optional: Tags for categorization
+  occurrence?: TimeOccurrence;               // Optional: Time range of occurrence
+  target?: Target;                           // Optional: Target information
+  additionalFields?: Record<string, unknown>; // Optional: Category-specific fields
+}
+```
+
 ### XARFValidator
 
 Comprehensive validation with detailed error and warning reporting.
@@ -182,12 +231,20 @@ const report = generator.generateReport({
   category: 'messaging',
   reportType: 'spam',
   sourceIdentifier: '192.0.2.100',
-  reporterContact: 'reporter@example.com',
-  reporterOrg: 'Reporter Organization',
+  reporter: {
+    org: 'Reporter Organization',
+    contact: 'reporter@example.com',
+    domain: 'example.com'
+  },
+  sender: {
+    org: 'Reporter Organization',
+    contact: 'reporter@example.com',
+    domain: 'example.com'
+  },
   onBehalfOf: {
     org: 'Client Organization',
     contact: 'client@example.com',
-    type: 'manual'
+    domain: 'client.com'
   }
 });
 ```
@@ -201,8 +258,16 @@ const report = generator.generateReport({
   category: 'connection',
   reportType: 'ddos',
   sourceIdentifier: '192.0.2.100',
-  reporterContact: 'abuse@example.com',
-  reporterOrg: 'Security Operations',
+  reporter: {
+    org: 'Security Operations',
+    contact: 'abuse@example.com',
+    domain: 'example.com'
+  },
+  sender: {
+    org: 'Security Operations',
+    contact: 'abuse@example.com',
+    domain: 'example.com'
+  },
   additionalFields: {
     destination_ip: '203.0.113.10',
     protocol: 'tcp',
@@ -222,8 +287,16 @@ const report = generator.generateReport({
   category: 'content',
   reportType: 'phishing_site',
   sourceIdentifier: '192.0.2.100',
-  reporterContact: 'abuse@example.com',
-  reporterOrg: 'Phishing Response Team',
+  reporter: {
+    org: 'Phishing Response Team',
+    contact: 'abuse@example.com',
+    domain: 'example.com'
+  },
+  sender: {
+    org: 'Phishing Response Team',
+    contact: 'abuse@example.com',
+    domain: 'example.com'
+  },
   additionalFields: {
     url: 'http://phishing.example.com',
     content_type: 'text/html'
@@ -241,7 +314,16 @@ const report = generator.generateReport({
   category: 'messaging',
   reportType: 'spam',
   sourceIdentifier: '192.0.2.100',
-  reporterContact: 'abuse@example.com',
+  reporter: {
+    org: 'Example Security',
+    contact: 'abuse@example.com',
+    domain: 'example.com'
+  },
+  sender: {
+    org: 'Example Security',
+    contact: 'abuse@example.com',
+    domain: 'example.com'
+  },
   additionalFields: {
     protocol: 'smtp',
     smtp_from: 'spammer@evil.example.com',
