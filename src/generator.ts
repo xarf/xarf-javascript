@@ -526,6 +526,39 @@ export class XARFGenerator {
   }
 
   /**
+   * Validate connection category required fields
+   * @param fields - Additional fields to check
+   * @throws {XARFError} If required fields are missing
+   */
+  private validateConnectionRequirements(fields: Record<string, unknown>): void {
+    if (!fields.destination_ip) {
+      throw new XARFError('destination_ip is required for connection reports');
+    }
+    if (!fields.protocol) {
+      throw new XARFError('protocol is required for connection reports');
+    }
+  }
+
+  /**
+   * Validate messaging category required fields
+   * @param fields - Additional fields to check
+   * @param reportType - Report type
+   * @throws {XARFError} If required fields are missing
+   */
+  private validateMessagingRequirements(fields: Record<string, unknown>, reportType: string): void {
+    if (fields.protocol === 'smtp' && !fields.smtp_from) {
+      throw new XARFError('smtp_from is required for SMTP messaging reports');
+    }
+    if (
+      fields.protocol === 'smtp' &&
+      (reportType === 'spam' || reportType === 'phishing') &&
+      !fields.subject
+    ) {
+      throw new XARFError(`subject is required for ${reportType} reports with SMTP protocol`);
+    }
+  }
+
+  /**
    * Validate category-specific required fields
    * @param category - Report category
    * @param reportType - Report type
@@ -541,45 +574,22 @@ export class XARFGenerator {
 
     switch (category) {
       case 'connection':
-        if (!fields.destination_ip) {
-          throw new XARFError('destination_ip is required for connection reports');
-        }
-        if (!fields.protocol) {
-          throw new XARFError('protocol is required for connection reports');
-        }
+        this.validateConnectionRequirements(fields);
         break;
-
       case 'content':
         if (!fields.url) {
           throw new XARFError('url is required for content reports');
         }
         break;
-
       case 'messaging':
-        // For SMTP messaging, smtp_from is required
-        if (fields.protocol === 'smtp' && !fields.smtp_from) {
-          throw new XARFError('smtp_from is required for SMTP messaging reports');
-        }
-        // For spam/phishing with SMTP, subject is required
-        if (
-          fields.protocol === 'smtp' &&
-          (reportType === 'spam' || reportType === 'phishing') &&
-          !fields.subject
-        ) {
-          throw new XARFError(`subject is required for ${reportType} reports with SMTP protocol`);
-        }
+        this.validateMessagingRequirements(fields, reportType);
         break;
-
       // Other categories don't have strict required fields beyond base XARF fields
       case 'infrastructure':
       case 'copyright':
       case 'vulnerability':
       case 'reputation':
         // No additional required fields
-        break;
-
-      default:
-        // Unknown category already validated earlier
         break;
     }
   }
@@ -606,6 +616,120 @@ export class XARFGenerator {
   }
 
   /**
+   * Generate random sample contact data
+   * @returns Sample reporter and sender contact info
+   */
+  private generateSampleContacts(): {
+    reporter: { org: string; contact: string; domain: string };
+    sender: { org: string; contact: string; domain: string };
+  } {
+    const sampleOrgs = [
+      'Security Operations Center',
+      'Abuse Response Team',
+      'Network Security Team',
+      'Threat Intelligence Unit',
+      'SOC Team',
+    ];
+    const sampleDomains = ['example.com', 'security.net', 'abuse.org', 'soc.io'];
+
+    const reporterOrg = sampleOrgs[Math.floor(Math.random() * sampleOrgs.length)];
+    const senderOrg = sampleOrgs[Math.floor(Math.random() * sampleOrgs.length)];
+    const reporterDomain = sampleDomains[Math.floor(Math.random() * sampleDomains.length)];
+    const senderDomain = sampleDomains[Math.floor(Math.random() * sampleDomains.length)];
+
+    return {
+      reporter: {
+        org: reporterOrg,
+        contact: `abuse@${reporterDomain}`,
+        domain: reporterDomain,
+      },
+      sender: {
+        org: senderOrg,
+        contact: `report@${senderDomain}`,
+        domain: senderDomain,
+      },
+    };
+  }
+
+  /**
+   * Add optional fields to sample report
+   * @param options - Generator options to modify
+   * @param category - Report category
+   * @param reportType - Report type
+   */
+  private addSampleOptionalFields(
+    options: GeneratorOptions,
+    category: XARFCategory,
+    reportType: string
+  ): void {
+    const severities = Array.from(XARFGenerator.VALID_SEVERITIES);
+    options.severity = severities[Math.floor(Math.random() * severities.length)];
+    options.confidence = Math.round((0.7 + Math.random() * 0.3) * 100) / 100;
+    options.tags = [`category:${category}`, `type:${reportType}`, 'source:sample'];
+
+    const targetIp = `203.0.113.${Math.floor(Math.random() * 256)}`;
+    const ports = [53, 80, 443, 8080, 22, 25];
+    options.target = {
+      ip: targetIp,
+      port: ports[Math.floor(Math.random() * ports.length)],
+    };
+
+    const now = new Date();
+    const startTime = new Date(now.getTime() - Math.floor(Math.random() * 7200000));
+    options.occurrence = {
+      start: startTime.toISOString(),
+      end: now.toISOString(),
+    };
+  }
+
+  /**
+   * Generate category-specific fields for sample report
+   * @param category - Report category
+   * @param reportType - Report type
+   * @param includeOptional - Whether to include optional fields
+   * @returns Additional fields object
+   */
+  private generateCategorySpecificFields(
+    category: XARFCategory,
+    reportType: string,
+    includeOptional: boolean
+  ): Record<string, unknown> {
+    const fields: Record<string, unknown> = {};
+
+    switch (category) {
+      case 'connection':
+        fields.destination_ip = `203.0.113.${Math.floor(Math.random() * 256)}`;
+        fields.protocol = ['tcp', 'udp', 'icmp'][Math.floor(Math.random() * 3)];
+        if (includeOptional) {
+          fields.destination_port = [80, 443, 22, 25, 53][Math.floor(Math.random() * 5)];
+        }
+        break;
+
+      case 'content':
+        fields.url = `http://malicious${Math.floor(Math.random() * 1000)}.example.com`;
+        if (includeOptional) {
+          fields.content_type = 'text/html';
+        }
+        break;
+
+      case 'messaging':
+        fields.protocol = ['smtp', 'http'][Math.floor(Math.random() * 2)];
+        if (fields.protocol === 'smtp') {
+          fields.smtp_from = `spammer${Math.floor(Math.random() * 100)}@evil.example.com`;
+          if (reportType === 'spam' || reportType === 'phishing') {
+            fields.subject = `Sample ${reportType} subject`;
+          }
+          if (includeOptional) {
+            fields.smtp_to = `victim@example.com`;
+          }
+        }
+        break;
+    }
+
+    return fields;
+  }
+
+  /**
    * Generate a sample XARF report with randomized data for testing
    * @param category - Report category
    * @param reportType - Specific type within category
@@ -620,7 +744,6 @@ export class XARFGenerator {
     includeEvidence = true,
     includeOptional = true
   ): XARFReport {
-    // Validate inputs
     if (!XARFGenerator.VALID_CATEGORIES.has(category)) {
       throw new XARFError(`Invalid category: ${category}`);
     }
@@ -630,114 +753,31 @@ export class XARFGenerator {
       throw new XARFError(`Invalid type '${reportType}' for category '${category}'`);
     }
 
-    // Generate random test data
     const sourceIp = `192.0.2.${Math.floor(Math.random() * 256)}`;
+    const contacts = this.generateSampleContacts();
 
-    const sampleOrgs = [
-      'Security Operations Center',
-      'Abuse Response Team',
-      'Network Security Team',
-      'Threat Intelligence Unit',
-      'SOC Team',
-    ];
-    const reporterOrg = sampleOrgs[Math.floor(Math.random() * sampleOrgs.length)];
-    const senderOrg = sampleOrgs[Math.floor(Math.random() * sampleOrgs.length)];
-
-    const sampleDomains = ['example.com', 'security.net', 'abuse.org', 'soc.io'];
-    const reporterDomain = sampleDomains[Math.floor(Math.random() * sampleDomains.length)];
-    const senderDomain = sampleDomains[Math.floor(Math.random() * sampleDomains.length)];
-    const reporterContact = `abuse@${reporterDomain}`;
-    const senderContact = `report@${senderDomain}`;
-
-    // Build report parameters using snake_case (XARF spec format)
     const options: GeneratorOptions = {
       category,
-      type: reportType, // Use "type" per XARF spec
-      source_identifier: sourceIp, // Use "source_identifier" per XARF spec
-      reporter: {
-        org: reporterOrg,
-        contact: reporterContact,
-        domain: reporterDomain,
-      },
-      sender: {
-        org: senderOrg,
-        contact: senderContact,
-        domain: senderDomain,
-      },
+      type: reportType,
+      source_identifier: sourceIp,
+      reporter: contacts.reporter,
+      sender: contacts.sender,
       description: `Sample ${reportType} report for testing`,
     };
 
-    // Add evidence if requested
     if (includeEvidence) {
       options.evidence = [this.generateRandomEvidence(category)];
     }
 
-    // Add optional fields if requested
     if (includeOptional) {
-      const severities = Array.from(XARFGenerator.VALID_SEVERITIES);
-      options.severity = severities[Math.floor(Math.random() * severities.length)];
-      options.confidence = Math.round((0.7 + Math.random() * 0.3) * 100) / 100;
-      options.tags = [`category:${category}`, `type:${reportType}`, 'source:sample'];
-
-      // Add target information
-      const targetIp = `203.0.113.${Math.floor(Math.random() * 256)}`;
-      const ports = [53, 80, 443, 8080, 22, 25];
-      options.target = {
-        ip: targetIp,
-        port: ports[Math.floor(Math.random() * ports.length)],
-      };
-
-      // Add occurrence time range
-      const now = new Date();
-      const startTime = new Date(now.getTime() - Math.floor(Math.random() * 7200000));
-      options.occurrence = {
-        start: startTime.toISOString(),
-        end: now.toISOString(),
-      };
+      this.addSampleOptionalFields(options, category, reportType);
     }
 
-    // Add category-specific required fields
-    const additionalFields: Record<string, unknown> = {};
-
-    switch (category) {
-      case 'connection':
-        additionalFields.destination_ip = `203.0.113.${Math.floor(Math.random() * 256)}`;
-        additionalFields.protocol = ['tcp', 'udp', 'icmp'][Math.floor(Math.random() * 3)];
-        if (includeOptional) {
-          additionalFields.destination_port = [80, 443, 22, 25, 53][Math.floor(Math.random() * 5)];
-        }
-        break;
-
-      case 'content':
-        additionalFields.url = `http://malicious${Math.floor(Math.random() * 1000)}.example.com`;
-        if (includeOptional) {
-          additionalFields.content_type = 'text/html';
-        }
-        break;
-
-      case 'messaging':
-        additionalFields.protocol = ['smtp', 'http'][Math.floor(Math.random() * 2)];
-        if (additionalFields.protocol === 'smtp') {
-          additionalFields.smtp_from = `spammer${Math.floor(Math.random() * 100)}@evil.example.com`;
-          if (reportType === 'spam' || reportType === 'phishing') {
-            additionalFields.subject = `Sample ${reportType} subject`;
-          }
-          if (includeOptional) {
-            additionalFields.smtp_to = `victim@example.com`;
-          }
-        }
-        break;
-
-      // Other categories don't have strict required fields
-      case 'infrastructure':
-      case 'copyright':
-      case 'vulnerability':
-      case 'reputation':
-        // Optional fields only
-        break;
-    }
-
-    options.additionalFields = additionalFields;
+    options.additionalFields = this.generateCategorySpecificFields(
+      category,
+      reportType,
+      includeOptional
+    );
 
     return this.generateReport(options);
   }
