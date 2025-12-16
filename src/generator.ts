@@ -265,7 +265,53 @@ export class XARFGenerator {
     const evidenceSource = options.evidence_source ?? options.evidenceSource ?? 'automated_scan';
     const onBehalfOf = options.on_behalf_of ?? options.onBehalfOf;
 
-    // Validate required parameters
+    // Validate all required fields
+    this.validateRequiredOptions(sourceIdentifier, reportType, reporter, sender);
+
+    // After validation, these are guaranteed to be defined
+    const validatedReportType = reportType!;
+    const validatedSourceIdentifier = sourceIdentifier!;
+    const validatedReporter = reporter!;
+    const validatedSender = sender!;
+
+    // Validate category and type
+    this.validateCategoryAndType(category, validatedReportType, evidenceSource);
+
+    // Validate optional fields
+    this.validateOptionalFields(severity, confidence, occurrence, onBehalfOf);
+
+    // Validate category-specific required fields
+    this.validateCategoryRequirements(category, validatedReportType, additionalFields);
+
+    // Build and return complete report
+    return this.buildCompleteReport(
+      {
+        category,
+        reportType: validatedReportType,
+        sourceIdentifier: validatedSourceIdentifier,
+        evidenceSource,
+        reporter: validatedReporter,
+        sender: validatedSender,
+        onBehalfOf,
+      },
+      { description, evidence, severity, confidence, tags, occurrence, target, additionalFields }
+    );
+  }
+
+  /**
+   * Validate required options for report generation
+   * @param sourceIdentifier - Source identifier value
+   * @param reportType - Report type value
+   * @param reporter - Reporter contact info
+   * @param sender - Sender contact info
+   * @throws {XARFError} If required fields are missing or invalid
+   */
+  private validateRequiredOptions(
+    sourceIdentifier: string | undefined,
+    reportType: string | undefined,
+    reporter: { org: string; contact: string; domain: string } | undefined,
+    sender: { org: string; contact: string; domain: string } | undefined
+  ): void {
     if (!sourceIdentifier) {
       throw new XARFError('source_identifier (or sourceIdentifier) is required');
     }
@@ -279,20 +325,28 @@ export class XARFGenerator {
       throw new XARFError('sender is required');
     }
 
-    // Validate reporter ContactInfo
     this.validateContactInfo(reporter, 'reporter');
-
-    // Validate sender ContactInfo
     this.validateContactInfo(sender, 'sender');
+  }
 
-    // Validate category
+  /**
+   * Validate category, type, and evidence source
+   * @param category - XARF category
+   * @param reportType - Report type
+   * @param evidenceSource - Evidence source
+   * @throws {XARFError} If category, type, or evidence source is invalid
+   */
+  private validateCategoryAndType(
+    category: XARFCategory,
+    reportType: string,
+    evidenceSource: EvidenceSource
+  ): void {
     if (!XARFGenerator.VALID_CATEGORIES.has(category)) {
       throw new XARFError(
         `Invalid category '${category}'. Must be one of: ${Array.from(XARFGenerator.VALID_CATEGORIES).join(', ')}`
       );
     }
 
-    // Validate type for category
     const validTypes = XARFGenerator.EVENT_TYPES[category] || [];
     if (!validTypes.includes(reportType)) {
       throw new XARFError(
@@ -300,81 +354,141 @@ export class XARFGenerator {
       );
     }
 
-    // Validate evidence_source
     if (!XARFGenerator.VALID_EVIDENCE_SOURCES.has(evidenceSource)) {
       throw new XARFError(
         `Invalid evidence_source '${evidenceSource}'. Must be one of: ${Array.from(XARFGenerator.VALID_EVIDENCE_SOURCES).join(', ')}`
       );
     }
+  }
 
-    // Validate severity if provided
+  /**
+   * Validate optional fields
+   * @param severity - Optional severity level
+   * @param confidence - Optional confidence score
+   * @param occurrence - Optional occurrence time range
+   * @param onBehalfOf - Optional on_behalf_of contact info
+   * @throws {XARFError} If optional fields have invalid values
+   */
+  private validateOptionalFields(
+    severity: 'low' | 'medium' | 'high' | 'critical' | undefined,
+    confidence: number | undefined,
+    occurrence: { start: string; end: string } | undefined,
+    onBehalfOf: { org: string; contact: string; domain: string } | undefined
+  ): void {
     if (severity && !XARFGenerator.VALID_SEVERITIES.has(severity)) {
       throw new XARFError(
         `Invalid severity '${severity}'. Must be one of: ${Array.from(XARFGenerator.VALID_SEVERITIES).join(', ')}`
       );
     }
 
-    // Validate confidence if provided
     if (confidence !== undefined && (confidence < 0.0 || confidence > 1.0)) {
       throw new XARFError('confidence must be between 0.0 and 1.0');
     }
 
-    // Validate category-specific required fields
-    this.validateCategoryRequirements(category, reportType, additionalFields);
+    if (occurrence && (!occurrence.start || !occurrence.end)) {
+      throw new XARFError("occurrence must contain 'start' and 'end' keys");
+    }
 
-    // Build base report structure
+    if (onBehalfOf && (!onBehalfOf.org || !onBehalfOf.contact || !onBehalfOf.domain)) {
+      throw new XARFError("on_behalf_of must contain 'org', 'contact', and 'domain' fields");
+    }
+  }
+
+  /**
+   * Build complete XARF report with all fields
+   * @param required - Required report fields (typed object with nested properties)
+   * @param required.category
+   * @param required.reportType
+   * @param required.sourceIdentifier
+   * @param required.evidenceSource
+   * @param required.reporter
+   * @param required.reporter.org
+   * @param required.reporter.contact
+   * @param required.reporter.domain
+   * @param required.sender
+   * @param required.sender.org
+   * @param required.sender.contact
+   * @param required.sender.domain
+   * @param required.onBehalfOf
+   * @param required.onBehalfOf.org
+   * @param required.onBehalfOf.contact
+   * @param required.onBehalfOf.domain
+   * @param optional - Optional report fields (typed object with nested properties)
+   * @param optional.description
+   * @param optional.evidence
+   * @param optional.severity
+   * @param optional.confidence
+   * @param optional.tags
+   * @param optional.occurrence
+   * @param optional.occurrence.start
+   * @param optional.occurrence.end
+   * @param optional.target
+   * @param optional.target.ip
+   * @param optional.target.domain
+   * @param optional.target.url
+   * @param optional.target.email
+   * @param optional.additionalFields
+   * @returns Complete XARF report
+   *
+   * eslint-disable jsdoc/require-param, jsdoc/check-param-names -- TypeScript types document the structure
+   */
+  private buildCompleteReport(
+    required: {
+      category: XARFCategory;
+      reportType: string;
+      sourceIdentifier: string;
+      evidenceSource: EvidenceSource;
+      reporter: { org: string; contact: string; domain: string };
+      sender: { org: string; contact: string; domain: string };
+      onBehalfOf?: { org: string; contact: string; domain: string };
+    },
+    optional: {
+      description?: string;
+      evidence?: XARFEvidence[];
+      severity?: 'low' | 'medium' | 'high' | 'critical';
+      confidence?: number;
+      tags?: string[];
+      occurrence?: { start: string; end: string };
+      target?: { ip?: string; domain?: string; url?: string; email?: string };
+      additionalFields?: Record<string, unknown>;
+    }
+  ): XARFReport {
     const report: XARFReport = {
       xarf_version: XARFGenerator.XARF_VERSION,
       report_id: this.generateUUID(),
       timestamp: this.generateTimestamp(),
       reporter: {
-        org: reporter.org,
-        contact: reporter.contact,
-        domain: reporter.domain,
+        org: required.reporter.org,
+        contact: required.reporter.contact,
+        domain: required.reporter.domain,
       },
       sender: {
-        org: sender.org,
-        contact: sender.contact,
-        domain: sender.domain,
+        org: required.sender.org,
+        contact: required.sender.contact,
+        domain: required.sender.domain,
       },
-      source_identifier: sourceIdentifier,
-      category,
-      type: reportType,
-      evidence_source: evidenceSource,
+      source_identifier: required.sourceIdentifier,
+      category: required.category,
+      type: required.reportType,
+      evidence_source: required.evidenceSource,
     };
 
-    // Add on_behalf_of if provided
-    if (onBehalfOf) {
-      if (!onBehalfOf.org || !onBehalfOf.contact || !onBehalfOf.domain) {
-        throw new XARFError("on_behalf_of must contain 'org', 'contact', and 'domain' fields");
-      }
+    if (required.onBehalfOf) {
       report.on_behalf_of = {
-        org: onBehalfOf.org,
-        contact: onBehalfOf.contact,
-        domain: onBehalfOf.domain,
+        org: required.onBehalfOf.org,
+        contact: required.onBehalfOf.contact,
+        domain: required.onBehalfOf.domain,
       };
     }
 
-    // Add optional fields
-    if (description) report.description = description;
-    if (evidence) report.evidence = evidence;
-    if (severity) report.severity = severity;
-    if (confidence !== undefined) report.confidence = confidence;
-    if (tags) report.tags = tags;
-
-    if (occurrence) {
-      if (!occurrence.start || !occurrence.end) {
-        throw new XARFError("occurrence must contain 'start' and 'end' keys");
-      }
-      report.occurrence = occurrence;
-    }
-
-    if (target) report.target = target;
-
-    // Add any additional category-specific fields
-    if (additionalFields) {
-      Object.assign(report, additionalFields);
-    }
+    if (optional.description) report.description = optional.description;
+    if (optional.evidence) report.evidence = optional.evidence;
+    if (optional.severity) report.severity = optional.severity;
+    if (optional.confidence !== undefined) report.confidence = optional.confidence;
+    if (optional.tags) report.tags = optional.tags;
+    if (optional.occurrence) report.occurrence = optional.occurrence;
+    if (optional.target) report.target = optional.target;
+    if (optional.additionalFields) Object.assign(report, optional.additionalFields);
 
     return report;
   }

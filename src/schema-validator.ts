@@ -137,6 +137,8 @@ export class SchemaValidator {
             this.loadReferencedSchemas(referencedSchema, relativePath);
           } catch (error) {
             // Ignore errors for already-loaded or missing schemas
+            // Explicitly acknowledge error to satisfy linter
+            void error;
           }
         }
       }
@@ -240,6 +242,8 @@ export class SchemaValidator {
           }
         } catch (error) {
           // Ignore errors loading individual schemas
+          // Explicitly acknowledge error to satisfy linter
+          void error;
         }
       }
     }
