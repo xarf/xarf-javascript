@@ -231,7 +231,8 @@ export class XARFGenerator {
     const payloadStr = typeof payload === 'string' ? payload : payload.toString('utf8');
     const payloadBuffer = typeof payload === 'string' ? Buffer.from(payload, 'utf8') : payload;
 
-    const hash = this.generateHash(payloadBuffer, hashAlgorithm);
+    const hashValue = this.generateHash(payloadBuffer, hashAlgorithm);
+    const hash = `${hashAlgorithm}:${hashValue}`; // Format: algorithm:hexvalue
 
     return {
       content_type: contentType,
@@ -565,7 +566,7 @@ export class XARFGenerator {
       const severities = Array.from(XARFGenerator.VALID_SEVERITIES);
       options.severity = severities[Math.floor(Math.random() * severities.length)];
       options.confidence = Math.round((0.7 + Math.random() * 0.3) * 100) / 100;
-      options.tags = [category, reportType, 'sample'];
+      options.tags = [`category:${category}`, `type:${reportType}`, 'source:sample'];
 
       // Add target information
       const targetIp = `203.0.113.${Math.floor(Math.random() * 256)}`;

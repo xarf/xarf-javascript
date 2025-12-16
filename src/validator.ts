@@ -373,17 +373,24 @@ export class XARFValidator {
       });
     }
 
-    // Validate evidence source
+    // Validate evidence source (expanded list from xarf-core.json spec)
     const validEvidenceSources = new Set([
       'spamtrap',
+      'user_complaint',
+      'automated_filter',
       'honeypot',
+      'crawler',
       'user_report',
       'automated_scan',
-      'manual_analysis',
+      'spam_analysis',
+      'firewall_logs',
+      'ids_detection',
+      'flow_analysis',
       'vulnerability_scan',
       'researcher_analysis',
+      'automated_discovery',
+      'traffic_analysis',
       'threat_intelligence',
-      'flow_analysis',
       'ids_ips',
       'siem',
     ]);
