@@ -5,7 +5,7 @@
  * Automatically converts v3 reports to v4 format.
  */
 
-import type { XARFReport, XARFCategory, XARFEvidence } from './types';
+import type { XARFReport, XARFCategory, XARFEvidence, EvidenceSource } from './types';
 
 /**
  * XARF v3 ReporterInfo structure
@@ -208,7 +208,7 @@ function convertWithMapping(
     source_identifier: sourceIdentifier,
     category: mapping.category,
     type: mapping.type,
-    evidence_source: evidenceSource as any,
+    evidence_source: evidenceSource as EvidenceSource,
     description: report.AttackDescription,
     evidence,
     _internal: {
