@@ -43,7 +43,7 @@ export class SchemaValidator {
   private schemasDir: string;
 
   /**
-   *
+   * Initialize SchemaValidator with AJV and format validators
    */
   constructor() {
     // Initialize AJV with strict mode and all errors
@@ -67,7 +67,8 @@ export class SchemaValidator {
   /**
    * Load a schema file from the schemas directory
    * Helper method to load schemas synchronously
-   * @param relativePath
+   * @param relativePath - Relative path to schema file within schemas directory
+   * @returns Parsed schema object
    */
   private loadSchemaFile(relativePath: string): object {
     const schemaPath = path.join(this.schemasDir, relativePath);
@@ -83,8 +84,8 @@ export class SchemaValidator {
   /**
    * Recursively load all referenced schemas from a base schema
    * This manually handles $ref resolution for nested schemas
-   * @param schema
-   * @param basePath
+   * @param schema - Schema object to scan for $ref references
+   * @param basePath - Base path for resolving relative schema references
    */
   private loadReferencedSchemas(schema: unknown, basePath: string = ''): void {
     // Check for $ref in schema
@@ -248,7 +249,8 @@ export class SchemaValidator {
    * Extract type-specific schema part, removing the $ref to core schema
    * Type schemas have structure: { allOf: [{ $ref: "../xarf-core.json" }, { type-specific }] }
    * We only need the type-specific part since master schema already includes core
-   * @param schema
+   * @param schema - Type schema with allOf structure containing core ref and type-specific rules
+   * @returns Extracted type-specific schema without core reference
    */
   private extractTypeSpecificSchema(schema: Record<string, unknown>): Record<string, unknown> {
     // If schema has allOf array with 2 elements
@@ -318,7 +320,8 @@ export class SchemaValidator {
   /**
    * Filter out references to missing type-specific schemas
    * This handles cases where the master schema references schemas that don't exist
-   * @param schema
+   * @param schema - Master schema with anyOf array containing type-specific schema references
+   * @returns Filtered schema with only existing type-specific schemas referenced
    */
   private filterMissingSchemas(schema: Record<string, unknown>): Record<string, unknown> {
     // Clone the schema
@@ -451,7 +454,8 @@ export class SchemaValidator {
 
   /**
    * Format AJV validation errors into human-readable messages
-   * @param ajvErrors
+   * @param ajvErrors - Array of AJV error objects from validation
+   * @returns Array of formatted error messages with field and context information
    */
   private formatValidationErrors(ajvErrors: unknown[]): string[] {
     return ajvErrors.map((error: unknown) => {

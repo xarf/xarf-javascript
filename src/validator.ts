@@ -175,7 +175,7 @@ export class XARFValidator {
 
   /**
    * Validate required fields are present
-   * @param report
+   * @param report - XARF report to validate for required fields
    */
   private validateRequiredFields(report: XARFReport): void {
     const required = [
@@ -212,11 +212,11 @@ export class XARFValidator {
 
   /**
    * Validate ContactInfo fields
-   * @param contactInfo
-   * @param contactInfo.org
-   * @param contactInfo.contact
-   * @param contactInfo.domain
-   * @param fieldName
+   * @param contactInfo - Contact information object to validate
+   * @param contactInfo.org - Organization name
+   * @param contactInfo.contact - Contact email address
+   * @param contactInfo.domain - Domain name
+   * @param fieldName - Name of the contact field being validated (reporter or sender)
    */
   private validateContactInfoFields(
     contactInfo: { org: string; contact: string; domain: string },
@@ -244,7 +244,7 @@ export class XARFValidator {
 
   /**
    * Validate field formats
-   * @param report
+   * @param report - XARF report to validate for correct field formats
    */
   private validateFormats(report: XARFReport): void {
     // Validate XARF version format
@@ -354,7 +354,7 @@ export class XARFValidator {
 
   /**
    * Validate field values
-   * @param report
+   * @param report - XARF report to validate for correct field values
    */
   private validateValues(report: XARFReport): void {
     // Validate XARF version
@@ -488,7 +488,7 @@ export class XARFValidator {
 
   /**
    * Validate category-specific requirements
-   * @param report
+   * @param report - XARF report to validate for category-specific rules
    */
   private validateCategorySpecific(report: XARFReport): void {
     switch (report.category) {
@@ -506,7 +506,7 @@ export class XARFValidator {
 
   /**
    * Validate messaging category reports
-   * @param report
+   * @param report - XARF report with messaging category to validate
    */
   private validateMessagingReport(report: XARFReport): void {
     const validTypes = new Set(['spam', 'phishing', 'social_engineering', 'bulk_messaging']);
@@ -531,7 +531,7 @@ export class XARFValidator {
 
   /**
    * Validate connection category reports
-   * @param report
+   * @param report - XARF report with connection category to validate
    */
   private validateConnectionReport(report: XARFReport): void {
     const validTypes = new Set([
@@ -581,7 +581,7 @@ export class XARFValidator {
 
   /**
    * Validate content category reports
-   * @param report
+   * @param report - XARF report with content category to validate
    */
   private validateContentReport(report: XARFReport): void {
     const validTypes = new Set([

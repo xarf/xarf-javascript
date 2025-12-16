@@ -201,7 +201,7 @@ export class XARFParser {
 
   /**
    * Check for unknown or potentially misspelled properties
-   * @param data
+   * @param data - Parsed XARF report data to check for unknown fields
    */
   private checkForUnknownProperties(data: Record<string, unknown>): void {
     // Known base fields
@@ -289,8 +289,9 @@ export class XARFParser {
 
   /**
    * Validate ContactInfo structure (reporter or sender)
-   * @param contactInfo
-   * @param fieldName
+   * @param contactInfo - Contact information object to validate
+   * @param fieldName - Name of the field being validated (for error messages)
+   * @returns True if contact info is valid, false otherwise
    */
   private validateContactInfo(contactInfo: Record<string, unknown>, fieldName: string): boolean {
     if (typeof contactInfo !== 'object' || contactInfo === null) {
@@ -360,8 +361,9 @@ export class XARFParser {
 
   /**
    * Validate messaging category reports
-   * @param data
-   * @param reportType
+   * @param data - Parsed XARF report data
+   * @param reportType - Type of messaging report (spam, phishing, social_engineering)
+   * @returns True if validation passes, false otherwise
    */
   private validateMessaging(data: Record<string, unknown>, reportType: string): boolean {
     const validTypes = new Set(['spam', 'phishing', 'social_engineering']);
@@ -387,8 +389,9 @@ export class XARFParser {
 
   /**
    * Validate connection category reports
-   * @param data
-   * @param reportType
+   * @param data - Parsed XARF report data
+   * @param reportType - Type of connection report (ddos, port_scan, login_attack, ip_spoofing)
+   * @returns True if validation passes, false otherwise
    */
   private validateConnection(data: Record<string, unknown>, reportType: string): boolean {
     const validTypes = new Set(['ddos', 'port_scan', 'login_attack', 'ip_spoofing']);
@@ -413,8 +416,9 @@ export class XARFParser {
 
   /**
    * Validate content category reports
-   * @param data
-   * @param reportType
+   * @param data - Parsed XARF report data
+   * @param reportType - Type of content report (phishing_site, malware_distribution, etc.)
+   * @returns True if validation passes, false otherwise
    */
   private validateContent(data: Record<string, unknown>, reportType: string): boolean {
     const validTypes = new Set([

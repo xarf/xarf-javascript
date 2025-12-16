@@ -92,7 +92,8 @@ const V3_TYPE_MAPPING: Record<string, { category: XARFCategory; type: string }> 
 
 /**
  * Detect if a report is XARF v3 format
- * @param data
+ * @param data - Parsed JSON data to check for XARF v3 structure
+ * @returns True if data contains XARF v3 format indicators
  */
 export function isXARFv3(data: Record<string, unknown>): boolean {
   return (
@@ -106,7 +107,8 @@ export function isXARFv3(data: Record<string, unknown>): boolean {
 
 /**
  * Convert v3 evidence/attachment to v4 format
- * @param v3Attachments
+ * @param v3Attachments - Array of XARF v3 attachment objects
+ * @returns Array of XARF v4 evidence objects, or undefined if no attachments
  */
 function convertEvidence(v3Attachments?: XARFv3Attachment[]): XARFEvidence[] | undefined {
   if (!v3Attachments || v3Attachments.length === 0) {
@@ -122,6 +124,7 @@ function convertEvidence(v3Attachments?: XARFv3Attachment[]): XARFEvidence[] | u
 
 /**
  * Generate a UUID v4 for the converted report
+ * @returns UUID v4 string
  */
 function generateUUID(): string {
   // Simple UUID v4 generator
@@ -157,11 +160,12 @@ export function convertV3toV4(v3Report: XARFv3Report, warnings?: string[]): XARF
 
 /**
  * Internal conversion helper
- * @param v3Report
- * @param mapping
- * @param mapping.category
- * @param mapping.type
- * @param warnings
+ * @param v3Report - XARF v3 report object to convert
+ * @param mapping - Category and type mapping configuration
+ * @param mapping.category - XARF v4 category to map to
+ * @param mapping.type - XARF v4 type to map to
+ * @param warnings - Optional array to collect conversion warnings
+ * @returns Converted XARF v4 report
  */
 function convertWithMapping(
   v3Report: XARFv3Report,
@@ -253,6 +257,7 @@ function convertWithMapping(
 
 /**
  * Get deprecation warning message for v3 reports
+ * @returns Formatted deprecation warning message
  */
 export function getV3DeprecationWarning(): string {
   return [
