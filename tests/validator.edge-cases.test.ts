@@ -28,7 +28,7 @@ describe('XARFValidator Edge Cases', () => {
         evidence_source: 'spamtrap',
       } as unknown as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'reporter.contact')).toBe(true);
@@ -54,7 +54,7 @@ describe('XARFValidator Edge Cases', () => {
         evidence_source: 'spamtrap',
       } as unknown as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'reporter.domain')).toBe(true);
@@ -83,7 +83,7 @@ describe('XARFValidator Edge Cases', () => {
         evidence_source: 'spamtrap',
       } as unknown as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       // Valid timestamp should pass
       expect(result.valid).toBe(true);
@@ -112,7 +112,7 @@ describe('XARFValidator Edge Cases', () => {
         evidence_source: 'invalid_source',
       } as unknown as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'evidence_source')).toBe(true);
@@ -140,7 +140,7 @@ describe('XARFValidator Edge Cases', () => {
         severity: 'extreme',
       } as unknown as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'severity')).toBe(true);
@@ -171,7 +171,7 @@ describe('XARFValidator Edge Cases', () => {
         },
       } as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'occurrence')).toBe(true);
@@ -202,7 +202,7 @@ describe('XARFValidator Edge Cases', () => {
         occurrence: {} as any,
       } as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'occurrence')).toBe(true);
@@ -233,7 +233,7 @@ describe('XARFValidator Edge Cases', () => {
         protocol: 'tcp',
       } as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.warnings.length).toBeGreaterThan(0);
       expect(result.warnings.some((w) => w.field === 'type')).toBe(true);
@@ -261,7 +261,7 @@ describe('XARFValidator Edge Cases', () => {
         url: 'http://example.com',
       } as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.warnings.length).toBeGreaterThan(0);
       expect(result.warnings.some((w) => w.field === 'type')).toBe(true);
@@ -288,7 +288,7 @@ describe('XARFValidator Edge Cases', () => {
         evidence_source: 'honeypot',
       } as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       // Should validate without category-specific errors
       expect(result.valid).toBe(true);
@@ -320,7 +320,7 @@ describe('XARFValidator Edge Cases', () => {
         destination_port: 'not-a-number',
       } as unknown as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
@@ -350,7 +350,7 @@ describe('XARFValidator Edge Cases', () => {
         destination_port: 70000,
       } as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
@@ -380,7 +380,7 @@ describe('XARFValidator Edge Cases', () => {
         destination_port: -1,
       } as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
@@ -410,7 +410,7 @@ describe('XARFValidator Edge Cases', () => {
         url: 'not-a-valid-url',
       } as XARFReport;
 
-      const result = validator.validate(report);
+      const result = await validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'url')).toBe(true);

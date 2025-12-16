@@ -6,6 +6,7 @@
 
 import { XARFValidationError } from './errors';
 import type { XARFReport, XARFCategory } from './types';
+import { SchemaValidator } from './schema-validator';
 
 /**
  * Validation result with detailed error information
@@ -42,6 +43,18 @@ export interface ValidationWarning {
 export class XARFValidator {
   private errors: ValidationError[] = [];
   private warnings: ValidationWarning[] = [];
+  private schemaValidator: SchemaValidator;
+  private useSchemaValidation: boolean;
+
+  /**
+   * Create a new XARF validator
+   *
+   * @param useSchemaValidation - Enable JSON schema validation (default: false - experimental)
+   */
+  constructor(useSchemaValidation = false) {
+    this.useSchemaValidation = useSchemaValidation;
+    this.schemaValidator = new SchemaValidator();
+  }
 
   /**
    * Validate a XARF report comprehensively
@@ -51,10 +64,20 @@ export class XARFValidator {
    * @returns Validation result with errors and warnings
    * @throws {XARFValidationError} If strict mode and validation fails
    */
-  validate(report: XARFReport, strict = false): ValidationResult {
+  async validate(report: XARFReport, strict = false): Promise<ValidationResult> {
     this.errors = [];
     this.warnings = [];
 
+    // 1. Run schema validation first (if enabled)
+    if (this.useSchemaValidation) {
+      const schemaResult = await this.validateWithSchema(report);
+      if (!schemaResult.valid) {
+        // Schema validation errors are primary - add them first
+        this.errors.push(...schemaResult.errors);
+      }
+    }
+
+    // 2. Run hand-coded validation for better error messages and additional checks
     // Validate required fields
     this.validateRequiredFields(report);
 
@@ -67,7 +90,10 @@ export class XARFValidator {
     // Validate category-specific requirements
     this.validateCategorySpecific(report);
 
-    // In strict mode, convert warnings to errors
+    // 3. Merge and deduplicate errors (schema errors take priority)
+    this.deduplicateErrors();
+
+    // 4. In strict mode, convert warnings to errors
     if (strict && this.warnings.length > 0) {
       this.warnings.forEach((warning) => {
         this.errors.push({
@@ -93,6 +119,61 @@ export class XARFValidator {
     }
 
     return result;
+  }
+
+  /**
+   * Validate report using JSON schema
+   *
+   * @param report - The XARF report to validate
+   * @returns Validation result from schema validation
+   */
+  async validateWithSchema(report: XARFReport): Promise<ValidationResult> {
+    try {
+      const schemaResult = await this.schemaValidator.validate(report);
+
+      // Convert schema validation errors to our format
+      const errors: ValidationError[] = schemaResult.errors.map((err) => ({
+        field: err.replace(/^\//, '').replace(/\//g, '.') || 'root',
+        message: err.includes(':') ? err.split(':').slice(1).join(':').trim() : err,
+        value: undefined,
+      }));
+
+      return {
+        valid: schemaResult.valid,
+        errors,
+        warnings: [],
+      };
+    } catch (error) {
+      // If schema validation fails completely, add a general error
+      return {
+        valid: false,
+        errors: [
+          {
+            field: 'schema',
+            message: `Schema validation error: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        ],
+        warnings: [],
+      };
+    }
+  }
+
+  /**
+   * Deduplicate errors - keep schema errors, remove duplicate hand-coded errors
+   */
+  private deduplicateErrors(): void {
+    const seen = new Set<string>();
+    const uniqueErrors: ValidationError[] = [];
+
+    for (const error of this.errors) {
+      const key = `${error.field}:${error.message}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueErrors.push(error);
+      }
+    }
+
+    this.errors = uniqueErrors;
   }
 
   /**
