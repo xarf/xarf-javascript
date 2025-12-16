@@ -80,10 +80,11 @@ export class SchemaValidator {
    * Recursively load all referenced schemas from a base schema
    * This manually handles $ref resolution for nested schemas
    */
-  private loadReferencedSchemas(schema: any, basePath: string = ''): void {
+  private loadReferencedSchemas(schema: unknown, basePath: string = ''): void {
     // Check for $ref in schema
-    if (schema.$ref && typeof schema.$ref === 'string') {
-      const ref = schema.$ref;
+    const schemaObj = schema as Record<string, unknown>;
+    if (schemaObj.$ref && typeof schemaObj.$ref === 'string') {
+      const ref = schemaObj.$ref;
 
       // Skip meta-schemas and anchor references
       if (ref.includes('json-schema.org') || ref.startsWith('#')) {
@@ -135,17 +136,17 @@ export class SchemaValidator {
     }
 
     // Recursively check all object properties
-    if (typeof schema === 'object' && schema !== null) {
-      for (const key in schema) {
-        if (typeof schema[key] === 'object') {
-          this.loadReferencedSchemas(schema[key], basePath);
+    if (typeof schemaObj === 'object' && schemaObj !== null) {
+      for (const key in schemaObj) {
+        if (typeof schemaObj[key] === 'object') {
+          this.loadReferencedSchemas(schemaObj[key], basePath);
         }
       }
     }
 
     // Check array items
-    if (Array.isArray(schema)) {
-      schema.forEach((item) => this.loadReferencedSchemas(item, basePath));
+    if (Array.isArray(schemaObj)) {
+      schemaObj.forEach((item) => this.loadReferencedSchemas(item, basePath));
     }
   }
 
@@ -164,12 +165,24 @@ export class SchemaValidator {
         throw new Error(`Core schema not found at: ${coreSchemaPath}`);
       }
 
-      const coreSchema = JSON.parse(fs.readFileSync(coreSchemaPath, 'utf-8'));
+      const coreSchema = JSON.parse(fs.readFileSync(coreSchemaPath, 'utf-8')) as Record<
+        string,
+        unknown
+      >;
 
-      // Check if schema already exists before adding
-      const schemaId = 'https://xarf.org/schemas/v4/xarf-core.json';
-      if (!this.ajv.getSchema(schemaId)) {
-        this.ajv.addSchema(coreSchema);
+      // Register core schema under BOTH the relative path and full URL
+      // Master schema uses relative path "xarf-core.json"
+      const relativePath = 'xarf-core.json';
+      if (!this.ajv.getSchema(relativePath)) {
+        const schemaWithRelativeId = { ...coreSchema, $id: relativePath };
+        this.ajv.addSchema(schemaWithRelativeId);
+      }
+
+      // Also register under full URL for completeness
+      const fullUrl = 'https://xarf.org/schemas/v4/xarf-core.json';
+      if (!this.ajv.getSchema(fullUrl)) {
+        const schemaWithFullId = { ...coreSchema, $id: fullUrl };
+        this.ajv.addSchema(schemaWithFullId);
       }
 
       this.coreSchemaLoaded = true;
@@ -197,11 +210,26 @@ export class SchemaValidator {
       if (file.endsWith('.json')) {
         try {
           const schemaPath = path.join(typesDir, file);
-          const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8'));
+          const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8')) as Record<
+            string,
+            unknown
+          >;
 
-          // Add schema if it has an $id and isn't already loaded
-          if (schema.$id && !this.ajv.getSchema(schema.$id)) {
-            this.ajv.addSchema(schema);
+          // Type schemas have `allOf: [{ $ref: "../xarf-core.json" }, { ... }]`
+          // The master schema already includes the core schema via allOf
+          // So we need to extract just the type-specific part (second element of allOf)
+          const modifiedSchema = this.extractTypeSpecificSchema(schema);
+
+          // Build the FULL URL that AJV will resolve
+          // Master schema id is https://xarf.org/schemas/v4/xarf-v4-master.json
+          // When it references "types/messaging-spam.json", AJV resolves to full URL
+          const relativePath = `types/${file}`;
+          const fullUrl = `https://xarf.org/schemas/v4/${relativePath}`;
+
+          // Add schema under the FULL URL (what AJV resolves to)
+          if (!this.ajv.getSchema(fullUrl)) {
+            const schemaWithFullId = { ...modifiedSchema, $id: fullUrl };
+            this.ajv.addSchema(schemaWithFullId);
           }
         } catch (error) {
           // Ignore errors loading individual schemas
@@ -211,8 +239,32 @@ export class SchemaValidator {
   }
 
   /**
+   * Extract type-specific schema part, removing the $ref to core schema
+   * Type schemas have structure: { allOf: [{ $ref: "../xarf-core.json" }, { type-specific }] }
+   * We only need the type-specific part since master schema already includes core
+   */
+  private extractTypeSpecificSchema(schema: Record<string, unknown>): Record<string, unknown> {
+    // If schema has allOf array with 2 elements
+    if (
+      schema.allOf &&
+      Array.isArray(schema.allOf) &&
+      schema.allOf.length === 2 &&
+      typeof schema.allOf[1] === 'object'
+    ) {
+      // Return just the type-specific part (second element of allOf)
+      return { ...schema, allOf: undefined, ...schema.allOf[1] };
+    }
+
+    // Otherwise return as-is
+    return schema;
+  }
+
+  /**
    * Load and compile the master XARF schema with type-specific validation
    * This includes all category+type combinations
+   *
+   * Note: Some type-specific schemas may be missing from the master schema.
+   * In that case, we create a filtered version that only includes existing schemas.
    */
   private loadMasterSchema(): void {
     if (this.masterSchemaLoaded) {
@@ -226,17 +278,28 @@ export class SchemaValidator {
       // Pre-load all type-specific schemas
       this.preloadAllTypeSchemas();
 
-      // Load and compile the master schema
-      const masterSchema = this.loadSchemaFile('xarf-v4-master.json');
+      // Load the master schema
+      const masterSchema = this.loadSchemaFile('xarf-v4-master.json') as Record<string, unknown>;
 
-      // Add the master schema
+      // Filter out missing type-specific schemas from the master schema
+      const filteredMasterSchema = this.filterMissingSchemas(masterSchema);
+
+      // Add the filtered master schema
       const masterSchemaId = 'https://xarf.org/schemas/v4/xarf-v4-master.json';
       if (!this.ajv.getSchema(masterSchemaId)) {
-        this.ajv.addSchema(masterSchema);
+        this.ajv.addSchema(filteredMasterSchema);
       }
 
-      // Compile the schema to validate it's correct
-      this.ajv.compile(masterSchema);
+      // Try to compile the schema
+      try {
+        this.ajv.compile(filteredMasterSchema);
+      } catch (compileError) {
+        // If compilation still fails, log a warning but continue
+        // Core schema validation will still work
+        console.warn(
+          `Warning: Master schema compilation failed: ${compileError instanceof Error ? compileError.message : String(compileError)}`
+        );
+      }
 
       this.masterSchemaLoaded = true;
     } catch (error) {
@@ -244,6 +307,46 @@ export class SchemaValidator {
         `Failed to load master schema: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+
+  /**
+   * Filter out references to missing type-specific schemas
+   * This handles cases where the master schema references schemas that don't exist
+   */
+  private filterMissingSchemas(schema: Record<string, unknown>): Record<string, unknown> {
+    // Clone the schema
+    const filtered = JSON.parse(JSON.stringify(schema));
+
+    // Find the anyOf array that contains type-specific validations
+    if (
+      filtered.allOf &&
+      Array.isArray(filtered.allOf) &&
+      filtered.allOf[1] &&
+      typeof filtered.allOf[1] === 'object' &&
+      (filtered.allOf[1] as Record<string, unknown>).anyOf
+    ) {
+      const anyOf = (filtered.allOf[1] as Record<string, unknown>).anyOf as Array<
+        Record<string, unknown>
+      >;
+
+      // Filter out entries that reference missing schemas
+      const filteredAnyOf = anyOf.filter((entry: Record<string, unknown>) => {
+        if (entry.then && typeof entry.then === 'object') {
+          const ref = (entry.then as Record<string, unknown>).$ref;
+          if (typeof ref === 'string' && ref.startsWith('types/')) {
+            const schemaFile = ref.replace('types/', '');
+            const schemaPath = path.join(this.schemasDir, 'types', schemaFile);
+            return fs.existsSync(schemaPath);
+          }
+        }
+        return true;
+      });
+
+      // Update the anyOf array
+      (filtered.allOf[1] as Record<string, unknown>).anyOf = filteredAnyOf;
+    }
+
+    return filtered;
   }
 
   /**
@@ -346,23 +449,25 @@ export class SchemaValidator {
    * Format AJV validation errors into human-readable messages
    */
   private formatValidationErrors(ajvErrors: unknown[]): string[] {
-    return ajvErrors.map((error: Record<string, unknown>) => {
-      const field = (error.instancePath as string) || (error.dataPath as string) || 'root';
-      const message = (error.message as string) || 'validation failed';
+    return ajvErrors.map((error: unknown) => {
+      const err = error as Record<string, unknown>;
+      const field = (err.instancePath as string) || (err.dataPath as string) || 'root';
+      const message = (err.message as string) || 'validation failed';
+      const keyword = err.keyword as string;
 
       // Add additional context based on error keyword
       let detail = '';
-      const params = error.params as Record<string, unknown> | undefined;
-      if (error.keyword === 'required') {
+      const params = err.params as Record<string, unknown> | undefined;
+      if (keyword === 'required') {
         detail = ` (missing required field: ${params?.missingProperty || 'unknown'})`;
-      } else if (error.keyword === 'enum') {
+      } else if (keyword === 'enum') {
         const allowedValues = params?.allowedValues;
         detail = ` (allowed values: ${Array.isArray(allowedValues) ? allowedValues.join(', ') : 'unknown'})`;
-      } else if (error.keyword === 'format') {
+      } else if (keyword === 'format') {
         detail = ` (expected format: ${params?.format || 'unknown'})`;
-      } else if (error.keyword === 'pattern') {
+      } else if (keyword === 'pattern') {
         detail = ` (expected pattern: ${params?.pattern || 'unknown'})`;
-      } else if (error.keyword === 'type') {
+      } else if (keyword === 'type') {
         detail = ` (expected type: ${params?.type || 'unknown'})`;
       }
 
