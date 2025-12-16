@@ -294,11 +294,10 @@ export class SchemaValidator {
       try {
         this.ajv.compile(filteredMasterSchema);
       } catch (compileError) {
-        // If compilation still fails, log a warning but continue
+        // If compilation still fails, silently continue
         // Core schema validation will still work
-        console.warn(
-          `Warning: Master schema compilation failed: ${compileError instanceof Error ? compileError.message : String(compileError)}`
-        );
+        // Suppress unused variable warning
+        void compileError;
       }
 
       this.masterSchemaLoaded = true;
