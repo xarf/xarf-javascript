@@ -27,6 +27,61 @@ export class XARFParser {
   }
 
   /**
+   * Parse JSON data into object
+   * @param jsonData - JSON string or object
+   * @returns Parsed object
+   * @throws {XARFParseError} If JSON parsing fails
+   */
+  private parseJSON(jsonData: string | Record<string, unknown>): Record<string, unknown> {
+    try {
+      if (typeof jsonData === 'string') {
+        return JSON.parse(jsonData) as Record<string, unknown>;
+      }
+      return jsonData;
+    } catch (error) {
+      throw new XARFParseError(
+        `Invalid JSON: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  /**
+   * Handle v3 to v4 conversion if needed
+   * @param data - Report data to check and possibly convert
+   * @returns Converted v4 data or original if already v4
+   */
+  private handleV3Conversion(data: Record<string, unknown>): Record<string, unknown> {
+    if (!isXARFv3(data)) {
+      return data;
+    }
+
+    const conversionWarnings: string[] = [];
+    const v4Report = convertV3toV4(data as XARFv3Report, conversionWarnings);
+
+    this.warnings.push(getV3DeprecationWarning());
+    this.warnings.push(...conversionWarnings);
+
+    return v4Report as Record<string, unknown>;
+  }
+
+  /**
+   * Cast data to appropriate report type based on category
+   * @param data - Validated report data
+   * @param category - Report category
+   * @returns Typed report object
+   */
+  private castToReportType(data: Record<string, unknown>, category: string): XARFReport {
+    if (category === 'messaging') {
+      return data as MessagingReport;
+    } else if (category === 'connection') {
+      return data as ConnectionReport;
+    } else if (category === 'content') {
+      return data as ContentReport;
+    }
+    return data as XARFReport;
+  }
+
+  /**
    * Parse XARF report from JSON
    *
    * Supports both XARF v4 and v3 (legacy) formats.
@@ -40,65 +95,28 @@ export class XARFParser {
     this.errors = [];
     this.warnings = [];
 
-    let data: Record<string, unknown>;
-    try {
-      if (typeof jsonData === 'string') {
-        data = JSON.parse(jsonData) as Record<string, unknown>;
-      } else {
-        data = jsonData;
-      }
-    } catch (error) {
-      throw new XARFParseError(
-        `Invalid JSON: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    let data = this.parseJSON(jsonData);
+    data = this.handleV3Conversion(data);
 
-    // Check if this is a v3 report and convert it
-    if (isXARFv3(data)) {
-      const conversionWarnings: string[] = [];
-      const v4Report = convertV3toV4(data as XARFv3Report, conversionWarnings);
-
-      // Add deprecation warning
-      this.warnings.push(getV3DeprecationWarning());
-      this.warnings.push(...conversionWarnings);
-
-      // Warnings are collected and can be retrieved via getWarnings()
-      // In non-strict mode, warnings don't stop processing
-
-      // Continue processing the converted v4 report
-      data = v4Report as Record<string, unknown>;
-    }
-
-    // Validate basic structure
     if (!this.validateStructure(data)) {
       if (this.strict) {
         throw new XARFValidationError('Validation failed', this.errors);
       }
     }
 
-    // Parse based on category
     const reportCategory = data.category as string;
 
     if (!this.supportedCategories.has(reportCategory)) {
       const errorMsg = `Unsupported category '${reportCategory}' in alpha version. Supported: ${Array.from(this.supportedCategories).join(', ')}`;
       if (this.strict) {
         throw new XARFValidationError(errorMsg);
-      } else {
-        this.errors.push(errorMsg);
-        return data as XARFReport;
       }
+      this.errors.push(errorMsg);
+      return data as XARFReport;
     }
 
     try {
-      if (reportCategory === 'messaging') {
-        return data as MessagingReport;
-      } else if (reportCategory === 'connection') {
-        return data as ConnectionReport;
-      } else if (reportCategory === 'content') {
-        return data as ContentReport;
-      } else {
-        return data as XARFReport;
-      }
+      return this.castToReportType(data, reportCategory);
     } catch (error) {
       throw new XARFParseError(
         `Failed to parse ${reportCategory} report: ${error instanceof Error ? error.message : String(error)}`
