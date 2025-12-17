@@ -375,20 +375,55 @@ export class XARFGenerator {
     occurrence: { start: string; end: string } | undefined,
     onBehalfOf: { org: string; contact: string; domain: string } | undefined
   ): void {
+    this.validateSeverity(severity);
+    this.validateConfidence(confidence);
+    this.validateOccurrence(occurrence);
+    this.validateOnBehalfOf(onBehalfOf);
+  }
+
+  /**
+   * Validate severity level
+   * @param severity - Optional severity level
+   * @throws {XARFError} If severity is invalid
+   */
+  private validateSeverity(severity: 'low' | 'medium' | 'high' | 'critical' | undefined): void {
     if (severity && !XARFGenerator.VALID_SEVERITIES.has(severity)) {
       throw new XARFError(
         `Invalid severity '${severity}'. Must be one of: ${Array.from(XARFGenerator.VALID_SEVERITIES).join(', ')}`
       );
     }
+  }
 
+  /**
+   * Validate confidence score
+   * @param confidence - Optional confidence score
+   * @throws {XARFError} If confidence is out of range
+   */
+  private validateConfidence(confidence: number | undefined): void {
     if (confidence !== undefined && (confidence < 0.0 || confidence > 1.0)) {
       throw new XARFError('confidence must be between 0.0 and 1.0');
     }
+  }
 
+  /**
+   * Validate occurrence time range
+   * @param occurrence - Optional occurrence time range
+   * @throws {XARFError} If occurrence is missing required fields
+   */
+  private validateOccurrence(occurrence: { start: string; end: string } | undefined): void {
     if (occurrence && (!occurrence.start || !occurrence.end)) {
       throw new XARFError("occurrence must contain 'start' and 'end' keys");
     }
+  }
 
+  /**
+   * Validate on_behalf_of contact info
+   * @param onBehalfOf - Optional on_behalf_of contact info
+   * @throws {XARFError} If on_behalf_of is missing required fields
+   */
+  private validateOnBehalfOf(
+    onBehalfOf: { org: string; contact: string; domain: string } | undefined
+  ): void {
     if (onBehalfOf && (!onBehalfOf.org || !onBehalfOf.contact || !onBehalfOf.domain)) {
       throw new XARFError("on_behalf_of must contain 'org', 'contact', and 'domain' fields");
     }
