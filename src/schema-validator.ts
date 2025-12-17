@@ -520,25 +520,81 @@ export class SchemaValidator {
       const field = (err.instancePath as string) || (err.dataPath as string) || 'root';
       const message = (err.message as string) || 'validation failed';
       const keyword = err.keyword as string;
-
-      // Add additional context based on error keyword
-      let detail = '';
       const params = err.params as Record<string, unknown> | undefined;
-      if (keyword === 'required') {
-        detail = ` (missing required field: ${params?.missingProperty || 'unknown'})`;
-      } else if (keyword === 'enum') {
-        const allowedValues = params?.allowedValues;
-        detail = ` (allowed values: ${Array.isArray(allowedValues) ? allowedValues.join(', ') : 'unknown'})`;
-      } else if (keyword === 'format') {
-        detail = ` (expected format: ${params?.format || 'unknown'})`;
-      } else if (keyword === 'pattern') {
-        detail = ` (expected pattern: ${params?.pattern || 'unknown'})`;
-      } else if (keyword === 'type') {
-        detail = ` (expected type: ${params?.type || 'unknown'})`;
-      }
 
+      const detail = this.buildErrorDetail(keyword, params);
       return `${field}: ${message}${detail}`;
     });
+  }
+
+  /**
+   * Build detailed error context based on validation keyword
+   * @param keyword - AJV validation keyword (required, enum, format, etc.)
+   * @param params - Error parameters containing specific validation details
+   * @returns Formatted detail string with context information
+   */
+  private buildErrorDetail(keyword: string, params?: Record<string, unknown>): string {
+    switch (keyword) {
+      case 'required':
+        return this.formatRequiredError(params);
+      case 'enum':
+        return this.formatEnumError(params);
+      case 'format':
+        return this.formatFormatError(params);
+      case 'pattern':
+        return this.formatPatternError(params);
+      case 'type':
+        return this.formatTypeError(params);
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Format required field error detail
+   * @param params - Error parameters
+   * @returns Formatted detail string
+   */
+  private formatRequiredError(params?: Record<string, unknown>): string {
+    return ` (missing required field: ${params?.missingProperty || 'unknown'})`;
+  }
+
+  /**
+   * Format enum validation error detail
+   * @param params - Error parameters
+   * @returns Formatted detail string
+   */
+  private formatEnumError(params?: Record<string, unknown>): string {
+    const allowedValues = params?.allowedValues;
+    const values = Array.isArray(allowedValues) ? allowedValues.join(', ') : 'unknown';
+    return ` (allowed values: ${values})`;
+  }
+
+  /**
+   * Format format validation error detail
+   * @param params - Error parameters
+   * @returns Formatted detail string
+   */
+  private formatFormatError(params?: Record<string, unknown>): string {
+    return ` (expected format: ${params?.format || 'unknown'})`;
+  }
+
+  /**
+   * Format pattern validation error detail
+   * @param params - Error parameters
+   * @returns Formatted detail string
+   */
+  private formatPatternError(params?: Record<string, unknown>): string {
+    return ` (expected pattern: ${params?.pattern || 'unknown'})`;
+  }
+
+  /**
+   * Format type validation error detail
+   * @param params - Error parameters
+   * @returns Formatted detail string
+   */
+  private formatTypeError(params?: Record<string, unknown>): string {
+    return ` (expected type: ${params?.type || 'unknown'})`;
   }
 
   /**
