@@ -207,27 +207,61 @@ function addCategorySpecificFields(
   evidence?: XARFEvidence[]
 ): void {
   if (category === 'messaging') {
-    Object.assign(v4Report, {
-      protocol: v3Report.Protocol || v3Report.AdditionalInfo?.Protocol || 'smtp',
-      smtp_from: v3Report.SmtpMailFromAddress || v3Report.AdditionalInfo?.SMTPFrom,
-      smtp_to: v3Report.SmtpRcptToAddress,
-      subject: v3Report.SmtpMessageSubject || v3Report.AdditionalInfo?.Subject,
-      source_port: v3Report.Source?.Port || v3Report.SourcePort,
-    });
+    addMessagingFields(v4Report, v3Report);
   } else if (category === 'connection') {
-    Object.assign(v4Report, {
-      destination_ip: v3Report.DestinationIp || 'unknown',
-      protocol: v3Report.Protocol || 'tcp',
-      source_port: v3Report.Source?.Port || v3Report.SourcePort,
-      destination_port: v3Report.DestinationPort,
-      attempt_count: v3Report.AttackCount,
-    });
+    addConnectionFields(v4Report, v3Report);
   } else if (category === 'content') {
-    Object.assign(v4Report, {
-      url: v3Report.Url || `http://${sourceIdentifier}`,
-      content_type: evidence?.[0]?.content_type || 'text/html',
-    });
+    addContentFields(v4Report, v3Report, sourceIdentifier, evidence);
   }
+}
+
+/**
+ * Add messaging-specific fields to v4 report
+ * @param v4Report - V4 report to modify
+ * @param v3Report - Original v3 report
+ */
+function addMessagingFields(v4Report: XARFReport, v3Report: XARFv3Report['Report']): void {
+  Object.assign(v4Report, {
+    protocol: v3Report.Protocol || v3Report.AdditionalInfo?.Protocol || 'smtp',
+    smtp_from: v3Report.SmtpMailFromAddress || v3Report.AdditionalInfo?.SMTPFrom,
+    smtp_to: v3Report.SmtpRcptToAddress,
+    subject: v3Report.SmtpMessageSubject || v3Report.AdditionalInfo?.Subject,
+    source_port: v3Report.Source?.Port || v3Report.SourcePort,
+  });
+}
+
+/**
+ * Add connection-specific fields to v4 report
+ * @param v4Report - V4 report to modify
+ * @param v3Report - Original v3 report
+ */
+function addConnectionFields(v4Report: XARFReport, v3Report: XARFv3Report['Report']): void {
+  Object.assign(v4Report, {
+    destination_ip: v3Report.DestinationIp || 'unknown',
+    protocol: v3Report.Protocol || 'tcp',
+    source_port: v3Report.Source?.Port || v3Report.SourcePort,
+    destination_port: v3Report.DestinationPort,
+    attempt_count: v3Report.AttackCount,
+  });
+}
+
+/**
+ * Add content-specific fields to v4 report
+ * @param v4Report - V4 report to modify
+ * @param v3Report - Original v3 report
+ * @param sourceIdentifier - Source identifier for URL fallback
+ * @param evidence - Converted evidence array for content type
+ */
+function addContentFields(
+  v4Report: XARFReport,
+  v3Report: XARFv3Report['Report'],
+  sourceIdentifier: string,
+  evidence?: XARFEvidence[]
+): void {
+  Object.assign(v4Report, {
+    url: v3Report.Url || `http://${sourceIdentifier}`,
+    content_type: evidence?.[0]?.content_type || 'text/html',
+  });
 }
 
 /**
