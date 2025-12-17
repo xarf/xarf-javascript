@@ -283,58 +283,81 @@ export class XARFValidator {
    * @param report - XARF report to validate for correct field formats
    */
   private validateFormats(report: XARFReport): void {
-    // Validate XARF version format
-    if (report.xarf_version && !/^\d+\.\d+\.\d+$/.test(report.xarf_version)) {
+    this.validateXarfVersion(report.xarf_version);
+    this.validateReportId(report.report_id);
+    this.validateTimestamp(report.timestamp);
+    this.validateContactFormats(report.reporter, 'reporter');
+    this.validateContactFormats(report.sender, 'sender');
+    this.validateConfidenceRange(report.confidence);
+  }
+
+  /**
+   * Validate XARF version format
+   * @param version - XARF version string
+   */
+  private validateXarfVersion(version: string | undefined): void {
+    if (version && !/^\d+\.\d+\.\d+$/.test(version)) {
       this.errors.push({
         field: 'xarf_version',
         message: 'Invalid version format (expected X.Y.Z)',
-        value: report.xarf_version,
+        value: version,
       });
     }
+  }
 
-    // Validate UUID format for report_id
+  /**
+   * Validate report ID UUID format
+   * @param reportId - Report ID string
+   */
+  private validateReportId(reportId: string | undefined): void {
     if (
-      report.report_id &&
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(report.report_id)
+      reportId &&
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reportId)
     ) {
       this.warnings.push({
         field: 'report_id',
         message: 'Report ID does not appear to be a valid UUID',
-        value: report.report_id,
+        value: reportId,
       });
     }
+  }
 
-    // Validate timestamp format
-    if (report.timestamp) {
-      try {
-        const date = new Date(report.timestamp);
-        if (isNaN(date.getTime())) {
-          this.errors.push({
-            field: 'timestamp',
-            message: 'Invalid timestamp format',
-            value: report.timestamp,
-          });
-        }
-      } catch {
+  /**
+   * Validate timestamp format
+   * @param timestamp - Timestamp string
+   */
+  private validateTimestamp(timestamp: string | undefined): void {
+    if (!timestamp) return;
+
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
         this.errors.push({
           field: 'timestamp',
           message: 'Invalid timestamp format',
-          value: report.timestamp,
+          value: timestamp,
         });
       }
+    } catch {
+      this.errors.push({
+        field: 'timestamp',
+        message: 'Invalid timestamp format',
+        value: timestamp,
+      });
     }
+  }
 
-    // Validate contact formats
-    this.validateContactFormats(report.reporter, 'reporter');
-    this.validateContactFormats(report.sender, 'sender');
-
-    // Validate confidence is between 0 and 1
-    if (report.confidence !== undefined) {
-      if (typeof report.confidence !== 'number' || report.confidence < 0 || report.confidence > 1) {
+  /**
+   * Validate confidence score range
+   * @param confidence - Confidence score
+   */
+  private validateConfidenceRange(confidence: number | undefined): void {
+    if (confidence !== undefined) {
+      if (typeof confidence !== 'number' || confidence < 0 || confidence > 1) {
         this.errors.push({
           field: 'confidence',
           message: 'Confidence must be a number between 0.0 and 1.0',
-          value: report.confidence,
+          value: confidence,
         });
       }
     }
@@ -356,43 +379,64 @@ export class XARFValidator {
       return;
     }
 
-    // Validate start timestamp format
+    this.validateOccurrenceStart(occurrence.start);
+    this.validateOccurrenceEnd(occurrence.end);
+    this.validateOccurrenceTimeOrder(occurrence);
+  }
+
+  /**
+   * Validate occurrence start timestamp
+   * @param start - Start timestamp string
+   */
+  private validateOccurrenceStart(start: string): void {
     try {
-      const start = new Date(occurrence.start);
-      if (isNaN(start.getTime())) {
+      const startDate = new Date(start);
+      if (isNaN(startDate.getTime())) {
         this.errors.push({
           field: 'occurrence.start',
           message: 'Invalid timestamp format for occurrence start',
-          value: occurrence.start,
+          value: start,
         });
       }
     } catch {
       this.errors.push({
         field: 'occurrence.start',
         message: 'Invalid timestamp format for occurrence start',
-        value: occurrence.start,
+        value: start,
       });
     }
+  }
 
-    // Validate end timestamp format
+  /**
+   * Validate occurrence end timestamp
+   * @param end - End timestamp string
+   */
+  private validateOccurrenceEnd(end: string): void {
     try {
-      const end = new Date(occurrence.end);
-      if (isNaN(end.getTime())) {
+      const endDate = new Date(end);
+      if (isNaN(endDate.getTime())) {
         this.errors.push({
           field: 'occurrence.end',
           message: 'Invalid timestamp format for occurrence end',
-          value: occurrence.end,
+          value: end,
         });
       }
     } catch {
       this.errors.push({
         field: 'occurrence.end',
         message: 'Invalid timestamp format for occurrence end',
-        value: occurrence.end,
+        value: end,
       });
     }
+  }
 
-    // Check start < end if both are valid dates
+  /**
+   * Validate occurrence time order (start before end)
+   * @param occurrence - Occurrence object with start and end times
+   * @param occurrence.start - Start timestamp string
+   * @param occurrence.end - End timestamp string
+   */
+  private validateOccurrenceTimeOrder(occurrence: { start: string; end: string }): void {
     try {
       const start = new Date(occurrence.start);
       const end = new Date(occurrence.end);

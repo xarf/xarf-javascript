@@ -432,40 +432,38 @@ export class XARFGenerator {
   /**
    * Build complete XARF report with all fields
    * @param required - Required report fields (typed object with nested properties)
-   * @param required.category
-   * @param required.reportType
-   * @param required.sourceIdentifier
-   * @param required.evidenceSource
-   * @param required.reporter
-   * @param required.reporter.org
-   * @param required.reporter.contact
-   * @param required.reporter.domain
-   * @param required.sender
-   * @param required.sender.org
-   * @param required.sender.contact
-   * @param required.sender.domain
-   * @param required.onBehalfOf
-   * @param required.onBehalfOf.org
-   * @param required.onBehalfOf.contact
-   * @param required.onBehalfOf.domain
+   * @param required.category - Report category (messaging, connection, content, etc.)
+   * @param required.reportType - Specific report type within the category
+   * @param required.sourceIdentifier - Source IP address or identifier
+   * @param required.evidenceSource - How the abuse was detected
+   * @param required.reporter - Reporter contact information
+   * @param required.reporter.org - Reporter organization name
+   * @param required.reporter.contact - Reporter contact email address
+   * @param required.reporter.domain - Reporter organization domain
+   * @param required.sender - Sender/ISP contact information
+   * @param required.sender.org - Sender organization name
+   * @param required.sender.contact - Sender contact email address
+   * @param required.sender.domain - Sender organization domain
+   * @param required.onBehalfOf - Optional on-behalf-of contact information
+   * @param required.onBehalfOf.org - On-behalf-of organization name
+   * @param required.onBehalfOf.contact - On-behalf-of contact email address
+   * @param required.onBehalfOf.domain - On-behalf-of organization domain
    * @param optional - Optional report fields (typed object with nested properties)
-   * @param optional.description
-   * @param optional.evidence
-   * @param optional.severity
-   * @param optional.confidence
-   * @param optional.tags
-   * @param optional.occurrence
-   * @param optional.occurrence.start
-   * @param optional.occurrence.end
-   * @param optional.target
-   * @param optional.target.ip
-   * @param optional.target.domain
-   * @param optional.target.url
-   * @param optional.target.email
-   * @param optional.additionalFields
+   * @param optional.description - Human-readable description of the abuse
+   * @param optional.evidence - Array of evidence objects with payloads
+   * @param optional.severity - Severity level (low, medium, high, critical)
+   * @param optional.confidence - Confidence score (0.0 to 1.0)
+   * @param optional.tags - Additional classification tags
+   * @param optional.occurrence - Time range when abuse occurred
+   * @param optional.occurrence.start - Start time of abuse occurrence
+   * @param optional.occurrence.end - End time of abuse occurrence
+   * @param optional.target - Target information (victim)
+   * @param optional.target.ip - Target IP address
+   * @param optional.target.domain - Target domain name
+   * @param optional.target.url - Target URL
+   * @param optional.target.email - Target email address
+   * @param optional.additionalFields - Additional category-specific fields
    * @returns Complete XARF report
-   *
-   * eslint-disable jsdoc/require-param, jsdoc/check-param-names -- TypeScript types document the structure
    */
   private buildCompleteReport(
     required: {
