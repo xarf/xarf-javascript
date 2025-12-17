@@ -88,62 +88,115 @@ export class SchemaValidator {
    * @param basePath - Base path for resolving relative schema references
    */
   private loadReferencedSchemas(schema: unknown, basePath: string = ''): void {
-    // Check for $ref in schema
     const schemaObj = schema as Record<string, unknown>;
+
+    // Process $ref if present
     if (schemaObj.$ref && typeof schemaObj.$ref === 'string') {
-      const ref = schemaObj.$ref;
+      this.processSchemaRef(schemaObj.$ref, basePath);
+    }
 
-      // Skip meta-schemas and anchor references
-      if (ref.includes('json-schema.org') || ref.startsWith('#')) {
-        // Skip - these are handled by AJV internally
-      } else {
-        // Handle relative paths (e.g., "types/messaging-spam.json" or "./content-base.json")
-        let relativePath = ref;
+    // Recursively process nested structures
+    this.processNestedSchemas(schemaObj, basePath);
+  }
 
-        // Remove leading "./" for same-directory references
-        if (relativePath.startsWith('./')) {
-          relativePath = relativePath.substring(2);
+  /**
+   * Process a schema $ref and load it if needed
+   * @param ref - Schema reference string
+   * @param basePath - Base path for resolving relative references
+   */
+  private processSchemaRef(ref: string, basePath: string): void {
+    // Skip meta-schemas and anchor references
+    if (this.shouldSkipRef(ref)) {
+      return;
+    }
 
-          // If we have a basePath (e.g., we're in "types/content-phishing.json"),
-          // prepend the directory from basePath
-          if (basePath) {
-            const baseDir = path.dirname(basePath);
-            if (baseDir && baseDir !== '.') {
-              relativePath = `${baseDir}/${relativePath}`;
-            }
-          }
-        }
+    const relativePath = this.normalizeRelativePath(ref, basePath);
+    const schemaId = this.buildSchemaId(relativePath);
 
-        // If it's a full URL, extract the relative path
-        if (ref.includes('schemas/v4/')) {
-          const match = ref.match(/schemas\/v4\/(.+\.json)/);
-          if (match) {
-            relativePath = match[1];
-          }
-        }
+    // Load and add schema if not already loaded
+    if (!this.ajv.getSchema(schemaId)) {
+      this.loadAndAddSchema(relativePath);
+    }
+  }
 
-        // Build schema ID
-        const schemaId = relativePath.startsWith('http')
-          ? relativePath
-          : `https://xarf.org/schemas/v4/${relativePath}`;
+  /**
+   * Check if a schema reference should be skipped
+   * @param ref - Schema reference string
+   * @returns True if ref should be skipped (handled by AJV internally)
+   */
+  private shouldSkipRef(ref: string): boolean {
+    return ref.includes('json-schema.org') || ref.startsWith('#');
+  }
 
-        // Load and add schema if not already loaded
-        if (!this.ajv.getSchema(schemaId)) {
-          try {
-            const referencedSchema = this.loadSchemaFile(relativePath);
-            this.ajv.addSchema(referencedSchema);
+  /**
+   * Normalize a relative path based on context
+   * @param ref - Schema reference string
+   * @param basePath - Base path for resolving relative references
+   * @returns Normalized relative path
+   */
+  private normalizeRelativePath(ref: string, basePath: string): string {
+    let relativePath = ref;
 
-            // Recursively load any schemas referenced by this schema
-            this.loadReferencedSchemas(referencedSchema, relativePath);
-          } catch (error) {
-            // Ignore errors for already-loaded or missing schemas
-            // Explicitly acknowledge error to satisfy linter
-            void error;
-          }
+    // Remove leading "./" for same-directory references
+    if (relativePath.startsWith('./')) {
+      relativePath = relativePath.substring(2);
+
+      // If we have a basePath (e.g., we're in "types/content-phishing.json"),
+      // prepend the directory from basePath
+      if (basePath) {
+        const baseDir = path.dirname(basePath);
+        if (baseDir && baseDir !== '.') {
+          relativePath = `${baseDir}/${relativePath}`;
         }
       }
     }
 
+    // If it's a full URL, extract the relative path
+    if (ref.includes('schemas/v4/')) {
+      const match = ref.match(/schemas\/v4\/(.+\.json)/);
+      if (match) {
+        relativePath = match[1];
+      }
+    }
+
+    return relativePath;
+  }
+
+  /**
+   * Build schema ID from relative path
+   * @param relativePath - Relative path to schema file
+   * @returns Full schema ID URL
+   */
+  private buildSchemaId(relativePath: string): string {
+    return relativePath.startsWith('http')
+      ? relativePath
+      : `https://xarf.org/schemas/v4/${relativePath}`;
+  }
+
+  /**
+   * Load and add a schema file
+   * @param relativePath - Relative path to schema file (also used as basePath for nested schemas)
+   */
+  private loadAndAddSchema(relativePath: string): void {
+    try {
+      const referencedSchema = this.loadSchemaFile(relativePath);
+      this.ajv.addSchema(referencedSchema);
+
+      // Recursively load any schemas referenced by this schema
+      this.loadReferencedSchemas(referencedSchema, relativePath);
+    } catch (error) {
+      // Ignore errors for already-loaded or missing schemas
+      // Explicitly acknowledge error to satisfy linter
+      void error;
+    }
+  }
+
+  /**
+   * Recursively process nested schemas (objects and arrays)
+   * @param schemaObj - Schema object to process
+   * @param basePath - Base path for resolving relative references
+   */
+  private processNestedSchemas(schemaObj: Record<string, unknown>, basePath: string): void {
     // Recursively check all object properties
     if (typeof schemaObj === 'object' && schemaObj !== null) {
       for (const key in schemaObj) {
