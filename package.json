@@ -12,6 +12,7 @@
     "build": "tsc && npm run copy-schemas",
     "copy-schemas": "cp -r schemas dist/",
     "fetch-schemas": "node scripts/fetch-schemas.js",
+    "check-schema-updates": "node scripts/check-schema-updates.js",
     "postinstall": "npm run fetch-schemas",
     "test": "jest",
     "test:watch": "jest --watch",
