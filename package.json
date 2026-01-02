@@ -2,11 +2,18 @@
   "name": "xarf",
   "version": "1.0.0",
   "description": "XARF v4 (eXtended Abuse Reporting Format) parser and generator for JavaScript/TypeScript - supports XARF spec v4.0.0 with backward compatibility for v3",
+  "xarfSpec": {
+    "version": "v4.1.0",
+    "repository": "https://github.com/xarf/xarf-spec"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc && npm run copy-schemas",
-    "copy-schemas": "cp -r src/schemas dist/",
+    "copy-schemas": "cp -r schemas dist/",
+    "fetch-schemas": "node scripts/fetch-schemas.js",
+    "check-schema-updates": "node scripts/check-schema-updates.js",
+    "postinstall": "npm run fetch-schemas",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -69,6 +76,7 @@
     "jest": "^29.7.0",
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
+    "tar": "^7.5.2",
     "ts-jest": "^29.4.6",
     "ts-prune": "^0.10.3",
     "typescript": "^5.3.3"

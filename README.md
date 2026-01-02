@@ -1,6 +1,6 @@
 # XARF JavaScript/TypeScript Library
 
-![XARF Spec](https://img.shields.io/badge/XARF%20Spec-v4.0.0-blue)
+![XARF Spec](https://img.shields.io/badge/XARF%20Spec-v4.1.0-blue)
 [![npm version](https://badge.fury.io/js/xarf.svg)](https://www.npmjs.com/package/xarf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Test](https://github.com/xarf/xarf-javascript/actions/workflows/test.yml/badge.svg)](https://github.com/xarf/xarf-javascript/actions/workflows/test.yml)
@@ -394,6 +394,54 @@ npm run build
 npm run typecheck
 ```
 
+## Schema Management
+
+This library validates against the official [xarf-spec](https://github.com/xarf/xarf-spec) JSON schemas. Schemas are automatically fetched from the xarf-spec repository on `npm install`.
+
+### Checking for Schema Updates
+
+```bash
+# Check if a newer version of xarf-spec is available
+npm run check-schema-updates
+
+# Show all available releases
+npm run check-schema-updates -- --all
+```
+
+Example output:
+```
+[xarf] Checking for schema updates...
+
+  Configured version: v4.1.0
+  Installed version:  v4.1.0
+  Latest release:     v4.1.0 (Dec 18, 2025)
+
+  ✅ You are using the latest version.
+```
+
+### Updating Schemas
+
+To update to a newer version of the XARF specification:
+
+1. Edit `package.json` and update the version:
+   ```json
+   "xarfSpec": {
+     "version": "v4.2.0"
+   }
+   ```
+
+2. Run npm install to fetch the new schemas:
+   ```bash
+   npm install
+   ```
+
+### Manual Schema Fetch
+
+```bash
+# Re-fetch schemas from xarf-spec (useful if schemas are missing)
+npm run fetch-schemas
+```
+
 ## Linting and Formatting
 
 ```bash
@@ -515,8 +563,10 @@ Unknown v3 report types are mapped to category `content` with type `unclassified
 ## Version
 
 Current version: 1.0.0
-XARF Specification: 4.0.0
+XARF Specification: 4.1.0 (from [xarf-spec](https://github.com/xarf/xarf-spec))
 
 Production release with full support for all 7 XARF categories: messaging, connection, content, infrastructure, copyright, vulnerability, and reputation.
+
+**Schema Updates**: Schemas are fetched from the official xarf-spec repository. Run `npm run check-schema-updates` to check for new versions.
 
 **v3 Compatibility**: Full backward compatibility with XARF v3 format with automatic conversion and deprecation warnings.
