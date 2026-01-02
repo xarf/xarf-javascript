@@ -61,7 +61,35 @@ export class SchemaValidator {
     addFormats(this.ajv);
 
     // Determine schemas directory path
-    this.schemasDir = path.join(__dirname, 'schemas');
+    // Schemas are fetched from xarf-spec to project_root/schemas/ and copied to dist/schemas/ on build
+    this.schemasDir = this.findSchemasDir();
+  }
+
+  /**
+   * Find the schemas directory, checking multiple possible locations
+   * @returns Path to schemas directory
+   */
+  private findSchemasDir(): string {
+    // When running compiled code from dist/, schemas are at dist/schemas/
+    const distSchemas = path.join(__dirname, 'schemas');
+    if (fs.existsSync(distSchemas)) {
+      return distSchemas;
+    }
+
+    // When running with ts-jest or from src/, schemas are at project root
+    const rootSchemas = path.join(__dirname, '..', 'schemas');
+    if (fs.existsSync(rootSchemas)) {
+      return rootSchemas;
+    }
+
+    // Fallback: try to find from current working directory
+    const cwdSchemas = path.join(process.cwd(), 'schemas');
+    if (fs.existsSync(cwdSchemas)) {
+      return cwdSchemas;
+    }
+
+    // Return default path (will fail later with descriptive error)
+    return distSchemas;
   }
 
   /**

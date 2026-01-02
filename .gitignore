@@ -6,6 +6,10 @@ yarn.lock
 dist/
 *.tsbuildinfo
 
+# Fetched XARF schemas (downloaded from xarf-spec on npm install)
+schemas/
+.xarf-temp/
+
 # Test coverage
 coverage/
 .nyc_output/
