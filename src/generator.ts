@@ -9,6 +9,7 @@ import { randomBytes, randomUUID, createHash } from 'crypto';
 import { XARFError } from './errors';
 import { schemaRegistry } from './schema-registry';
 import { validator as schemaValidator } from './schema-validator';
+import { validateContactInfo as validateContactInfoUtil } from './validation-utils';
 import type {
   XARFReport,
   XARFCategory,
@@ -227,61 +228,44 @@ export class XARFGenerator {
   // XARF v4.0.0 specification constants
   static readonly XARF_VERSION = '4.0.0';
 
-  // Cache for schema-derived values
-  private static _validCategories: Set<XARFCategory> | null = null;
-  private static _eventTypes: Record<string, string[]> | null = null;
-  private static _validEvidenceSources: Set<string> | null = null;
-  private static _validSeverities: Set<SeverityLevel> | null = null;
-
   /**
-   * Valid categories as per XARF spec (dynamically loaded from schema)
+   * Valid categories as per XARF spec (from schema registry)
    * @returns Set of valid XARF categories
    */
   static get VALID_CATEGORIES(): Set<XARFCategory> {
-    if (!XARFGenerator._validCategories) {
-      XARFGenerator._validCategories = schemaRegistry.getCategories();
-    }
-    return XARFGenerator._validCategories;
+    return schemaRegistry.getCategories();
   }
 
   /**
-   * Valid types per category (dynamically loaded from schema)
+   * Valid types per category (from schema registry)
    * @returns Record mapping categories to their valid types
    */
   static get EVENT_TYPES(): Record<string, string[]> {
-    if (!XARFGenerator._eventTypes) {
-      XARFGenerator._eventTypes = {};
-      const allTypes = schemaRegistry.getAllTypes();
-      for (const [category, types] of allTypes) {
-        XARFGenerator._eventTypes[category] = Array.from(types);
-      }
+    const result: Record<string, string[]> = {};
+    const allTypes = schemaRegistry.getAllTypes();
+    for (const [category, types] of allTypes) {
+      result[category] = Array.from(types);
     }
-    return XARFGenerator._eventTypes;
+    return result;
   }
 
   /**
-   * Valid evidence sources (dynamically loaded from schema)
+   * Valid evidence sources (from schema registry)
    * @returns Set of valid evidence sources
    */
   static get VALID_EVIDENCE_SOURCES(): Set<string> {
-    if (!XARFGenerator._validEvidenceSources) {
-      XARFGenerator._validEvidenceSources = schemaRegistry.getEvidenceSources();
-    }
-    return XARFGenerator._validEvidenceSources;
+    return schemaRegistry.getEvidenceSources();
   }
 
   // Valid reporter types
   static readonly VALID_REPORTER_TYPES = new Set<ReporterType>(['automated', 'manual', 'hybrid']);
 
   /**
-   * Valid severity levels (dynamically loaded from schema)
+   * Valid severity levels (from schema registry)
    * @returns Set of valid severity levels
    */
   static get VALID_SEVERITIES(): Set<SeverityLevel> {
-    if (!XARFGenerator._validSeverities) {
-      XARFGenerator._validSeverities = schemaRegistry.getSeverities();
-    }
-    return XARFGenerator._validSeverities;
+    return schemaRegistry.getSeverities();
   }
 
   // Evidence content types by category
@@ -701,7 +685,7 @@ export class XARFGenerator {
    * @param contactInfo - Contact information to validate
    * @param contactInfo.org - Organization name
    * @param contactInfo.contact - Contact email address
-   * @param contactInfo.domain - Domain name
+   * @param contactInfo.domain - Organization domain
    * @param fieldName - Name of the field for error messages
    * @throws {XARFError} If validation fails
    */
@@ -709,22 +693,9 @@ export class XARFGenerator {
     contactInfo: { org: string; contact: string; domain: string },
     fieldName: string
   ): void {
-    if (!contactInfo.org || contactInfo.org.trim().length === 0) {
-      throw new XARFError(`${fieldName}.org is required and must be non-empty`);
-    }
-    if (
-      !contactInfo.contact ||
-      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(contactInfo.contact)
-    ) {
-      throw new XARFError(`${fieldName}.contact must be a valid email address`);
-    }
-    if (
-      !contactInfo.domain ||
-      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
-        contactInfo.domain
-      )
-    ) {
-      throw new XARFError(`${fieldName}.domain must be a valid hostname`);
+    const result = validateContactInfoUtil(contactInfo as Record<string, unknown>, fieldName);
+    if (!result.valid) {
+      throw new XARFError(result.errors[0]);
     }
   }
 

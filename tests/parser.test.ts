@@ -257,7 +257,7 @@ describe('XARFParser', () => {
 
       expect(result).toBe(false);
       const errors = parser.getErrors();
-      expect(errors.some((e) => e.includes('valid email address'))).toBe(true);
+      expect(errors.some((e) => e.includes('Invalid email format'))).toBe(true);
     });
 
     it('should handle unsupported category', () => {

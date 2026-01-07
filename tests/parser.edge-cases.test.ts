@@ -96,7 +96,7 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('reporter must be an object'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('reporter is required'))).toBe(true);
     });
 
     it('should handle invalid timestamp format gracefully', () => {
@@ -368,7 +368,11 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Missing reporter fields'))).toBe(true);
+      expect(
+        parser
+          .getErrors()
+          .some((e) => e.includes('reporter.contact') || e.includes('reporter.domain'))
+      ).toBe(true);
     });
   });
 });

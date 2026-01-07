@@ -8,6 +8,7 @@ import { XARFValidationError } from './errors';
 import type { XARFReport } from './types';
 import { SchemaValidator } from './schema-validator';
 import { schemaRegistry } from './schema-registry';
+import { validateEmail, validateDomain } from './validation-utils';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -390,17 +391,8 @@ export class XARFValidator {
    * @param report - XARF report to validate for required fields
    */
   private validateRequiredFields(report: XARFReport): void {
-    const required = [
-      'xarf_version',
-      'report_id',
-      'timestamp',
-      'reporter',
-      'sender',
-      'source_identifier',
-      'category',
-      'type',
-      'evidence_source',
-    ];
+    // Get required fields from schema registry (single source of truth)
+    const required = schemaRegistry.getRequiredFields();
 
     required.forEach((field) => {
       if (!(field in report) || report[field as keyof XARFReport] === undefined) {
@@ -465,28 +457,28 @@ export class XARFValidator {
   ): void {
     if (!contactInfo) return;
 
-    if (
-      contactInfo.contact &&
-      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(contactInfo.contact)
-    ) {
-      this.errors.push({
-        field: `${fieldPrefix}.contact`,
-        message: `${fieldPrefix.charAt(0).toUpperCase() + fieldPrefix.slice(1)} contact must be a valid email address`,
-        value: contactInfo.contact,
-      });
+    const capitalizedPrefix = fieldPrefix.charAt(0).toUpperCase() + fieldPrefix.slice(1);
+
+    if (contactInfo.contact) {
+      const emailResult = validateEmail(contactInfo.contact);
+      if (!emailResult.valid) {
+        this.errors.push({
+          field: `${fieldPrefix}.contact`,
+          message: `${capitalizedPrefix} contact must be a valid email address`,
+          value: contactInfo.contact,
+        });
+      }
     }
 
-    if (
-      contactInfo.domain &&
-      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
-        contactInfo.domain
-      )
-    ) {
-      this.errors.push({
-        field: `${fieldPrefix}.domain`,
-        message: `${fieldPrefix.charAt(0).toUpperCase() + fieldPrefix.slice(1)} domain must be a valid hostname`,
-        value: contactInfo.domain,
-      });
+    if (contactInfo.domain) {
+      const domainResult = validateDomain(contactInfo.domain);
+      if (!domainResult.valid) {
+        this.errors.push({
+          field: `${fieldPrefix}.domain`,
+          message: `${capitalizedPrefix} domain must be a valid hostname`,
+          value: contactInfo.domain,
+        });
+      }
     }
   }
 

@@ -76,7 +76,7 @@ describe('XARFGenerator Edge Cases', () => {
             domain: 'example.com',
           },
         });
-      }).toThrow('valid email address');
+      }).toThrow('Invalid email format');
     });
 
     it('should throw error for invalid evidence_source', () => {

@@ -5,6 +5,10 @@
 import { XARFParseError, XARFValidationError } from './errors';
 import { schemaRegistry } from './schema-registry';
 import { validator as schemaValidator } from './schema-validator';
+import {
+  validateContactInfo as validateContactInfoUtil,
+  validateTimestamp,
+} from './validation-utils';
 import type { XARFReport, MessagingReport, ConnectionReport, ContentReport } from './types';
 import { isXARFv3, convertV3toV4, getV3DeprecationWarning, type XARFv3Report } from './v3-legacy';
 
@@ -167,17 +171,8 @@ export class XARFParser {
    * @returns True if structure is valid
    */
   private validateStructure(data: Record<string, unknown>): boolean {
-    const requiredFields = new Set([
-      'xarf_version',
-      'report_id',
-      'timestamp',
-      'reporter',
-      'sender',
-      'source_identifier',
-      'category',
-      'type',
-      'evidence_source',
-    ]);
+    // Get required fields from schema registry (single source of truth)
+    const requiredFields = schemaRegistry.getRequiredFields();
 
     // Check required fields
     const dataKeys = new Set(Object.keys(data));
@@ -194,21 +189,19 @@ export class XARFParser {
     }
 
     // Validate reporter structure
-    if (!this.validateContactInfo(data.reporter as Record<string, unknown>, 'reporter')) {
+    if (!this.validateContactInfoStructure(data.reporter as Record<string, unknown>, 'reporter')) {
       return false;
     }
 
     // Validate sender structure
-    if (!this.validateContactInfo(data.sender as Record<string, unknown>, 'sender')) {
+    if (!this.validateContactInfoStructure(data.sender as Record<string, unknown>, 'sender')) {
       return false;
     }
 
     // Validate timestamp format
-    try {
-      const timestamp = data.timestamp as string;
-      new Date(timestamp.replace('Z', '+00:00'));
-    } catch {
-      this.errors.push(`Invalid timestamp format: ${data.timestamp}`);
+    const timestampResult = validateTimestamp(data.timestamp as string);
+    if (!timestampResult.valid) {
+      this.errors.push(timestampResult.error!);
       return false;
     }
 
@@ -320,53 +313,20 @@ export class XARFParser {
 
   /**
    * Validate ContactInfo structure (reporter or sender)
+   * Uses shared validation utility for consistent validation across the codebase.
    * @param contactInfo - Contact information object to validate
    * @param fieldName - Name of the field being validated (for error messages)
    * @returns True if contact info is valid, false otherwise
    */
-  private validateContactInfo(contactInfo: Record<string, unknown>, fieldName: string): boolean {
-    if (typeof contactInfo !== 'object' || contactInfo === null) {
-      this.errors.push(`${fieldName} must be an object`);
+  private validateContactInfoStructure(
+    contactInfo: Record<string, unknown>,
+    fieldName: string
+  ): boolean {
+    const result = validateContactInfoUtil(contactInfo, fieldName);
+    if (!result.valid) {
+      this.errors.push(...result.errors);
       return false;
     }
-
-    const contactRequired = new Set(['org', 'contact', 'domain']);
-    const contactKeys = new Set(Object.keys(contactInfo));
-    const missingContact = Array.from(contactRequired).filter((field) => !contactKeys.has(field));
-    if (missingContact.length > 0) {
-      this.errors.push(`Missing ${fieldName} fields: ${missingContact.join(', ')}`);
-      return false;
-    }
-
-    // Validate email format for contact
-    const contact = contactInfo.contact as string;
-    if (
-      typeof contact !== 'string' ||
-      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(contact)
-    ) {
-      this.errors.push(`${fieldName}.contact must be a valid email address`);
-      return false;
-    }
-
-    // Validate domain format
-    const domain = contactInfo.domain as string;
-    if (
-      typeof domain !== 'string' ||
-      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
-        domain
-      )
-    ) {
-      this.errors.push(`${fieldName}.domain must be a valid hostname`);
-      return false;
-    }
-
-    // Validate org is non-empty string
-    const org = contactInfo.org as string;
-    if (typeof org !== 'string' || org.trim().length === 0) {
-      this.errors.push(`${fieldName}.org must be a non-empty string`);
-      return false;
-    }
-
     return true;
   }
 
