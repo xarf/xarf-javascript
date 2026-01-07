@@ -16,7 +16,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should detect missing reporter.contact', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -37,7 +37,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should detect missing reporter.domain', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -65,7 +65,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should handle invalid timestamp that causes exception', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -94,7 +94,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should validate invalid evidence_source', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -121,7 +121,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should validate invalid severity', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -149,7 +149,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should detect start time after end time in occurrence', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -183,7 +183,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should detect occurrence without start or end', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -213,7 +213,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should error for invalid connection type', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -243,7 +243,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should error for invalid content type', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -272,7 +272,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should handle infrastructure category with no specific validation', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -301,7 +301,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should validate invalid port number (non-integer)', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -331,7 +331,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should validate port number too high', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -361,7 +361,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should validate negative port number', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',
@@ -393,7 +393,7 @@ describe('XARFValidator Edge Cases', () => {
     it('should catch URL parsing error', async () => {
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test Org',

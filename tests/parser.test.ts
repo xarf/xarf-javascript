@@ -106,7 +106,7 @@ describe('XARFParser', () => {
     it('should parse from JSON string', () => {
       const reportData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -134,7 +134,7 @@ describe('XARFParser', () => {
     it('should handle on_behalf_of field', () => {
       const reportData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Reporter Org',
@@ -190,7 +190,7 @@ describe('XARFParser', () => {
     it('should return false for invalid version', () => {
       const invalidData = {
         xarf_version: '3.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -234,7 +234,7 @@ describe('XARFParser', () => {
     it('should return false for invalid reporter contact', () => {
       const invalidData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -263,7 +263,7 @@ describe('XARFParser', () => {
     it('should handle unsupported category', () => {
       const reportData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -287,7 +287,8 @@ describe('XARFParser', () => {
       expect(report.category).toBe('invalid_category');
       const errors = parser.getErrors();
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0]).toContain('Unsupported category');
+      // Schema validation catches invalid category as enum violation
+      expect(errors.some((e) => e.includes('category'))).toBe(true);
     });
   });
 
@@ -295,7 +296,7 @@ describe('XARFParser', () => {
     it('should validate messaging reports', () => {
       const invalidMessaging = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -323,7 +324,7 @@ describe('XARFParser', () => {
     it('should validate connection reports require destination_ip', () => {
       const invalidConnection = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -352,7 +353,7 @@ describe('XARFParser', () => {
     it('should validate content reports require url', () => {
       const invalidContent = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',

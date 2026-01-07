@@ -8,6 +8,7 @@
 import { randomBytes, randomUUID, createHash } from 'crypto';
 import { XARFError } from './errors';
 import { schemaRegistry } from './schema-registry';
+import { validator as schemaValidator } from './schema-validator';
 import type {
   XARFReport,
   XARFCategory,
@@ -21,14 +22,12 @@ import type {
 } from './types';
 
 /**
- * Generator options for creating XARF reports
+ * Base generator options shared by all categories
  *
  * Supports both camelCase (backward compatibility) and snake_case (XARF spec) field names.
  * Snake_case is preferred and matches the XARF specification.
  */
-export interface GeneratorOptions {
-  category: XARFCategory;
-
+export interface BaseGeneratorOptions {
   // Type field (XARF spec uses "type")
   type?: string; // XARF spec field name
   reportType?: string; // Backward compatibility (deprecated)
@@ -64,9 +63,159 @@ export interface GeneratorOptions {
   occurrence?: TimeOccurrence;
   target?: Target;
 
-  // Additional fields (use snake_case directly)
+  // Additional fields for backward compatibility and extra fields
   additionalFields?: Record<string, unknown>;
 }
+
+/**
+ * Content category options with required url field
+ */
+export interface ContentGeneratorOptions extends BaseGeneratorOptions {
+  category: 'content';
+  /** URL of the malicious content (required for content reports) */
+  url?: string;
+  /** Fully qualified domain name */
+  domain?: string;
+  /** Domain registrar */
+  registrar?: string;
+  /** DNS nameservers */
+  nameservers?: string[];
+  /** Screenshot URL */
+  screenshot_url?: string;
+  /** When content was verified */
+  verified_at?: string;
+  /** How content was verified */
+  verification_method?: string;
+  /** Primary attack vector */
+  attack_vector?: string;
+  /** Impersonated brand */
+  target_brand?: string;
+  /** Hosting provider */
+  hosting_provider?: string;
+  /** Autonomous System Number */
+  asn?: number;
+  /** ISO country code */
+  country_code?: string;
+  /** Allow any additional content fields from schema */
+  [key: string]: unknown;
+}
+
+/**
+ * Connection category options with required destination_ip and protocol fields
+ */
+export interface ConnectionGeneratorOptions extends BaseGeneratorOptions {
+  category: 'connection';
+  /** Destination IP address (required for connection reports) */
+  destination_ip?: string;
+  /** Network protocol (required for connection reports) */
+  protocol?: string;
+  /** Destination port number */
+  destination_port?: number;
+  /** Attack vector type */
+  attack_vector?: string;
+  /** Peak packets per second */
+  peak_pps?: number;
+  /** Peak bits per second */
+  peak_bps?: number;
+  /** Duration in seconds */
+  duration_seconds?: number;
+  /** Allow any additional connection fields from schema */
+  [key: string]: unknown;
+}
+
+/**
+ * Messaging category options with protocol-specific fields
+ */
+export interface MessagingGeneratorOptions extends BaseGeneratorOptions {
+  category: 'messaging';
+  /** Messaging protocol (smtp, sms, etc.) */
+  protocol?: string;
+  /** SMTP envelope from address */
+  smtp_from?: string;
+  /** SMTP envelope to address */
+  smtp_to?: string;
+  /** Email subject line */
+  subject?: string;
+  /** Message-ID header */
+  message_id?: string;
+  /** Sender display name */
+  sender_name?: string;
+  /** Allow any additional messaging fields from schema */
+  [key: string]: unknown;
+}
+
+/**
+ * Infrastructure category options
+ */
+export interface InfrastructureGeneratorOptions extends BaseGeneratorOptions {
+  category: 'infrastructure';
+  /** Command and control server details */
+  c2_server?: string;
+  /** Malware family name */
+  malware_family?: string;
+  /** Botnet name */
+  botnet_name?: string;
+  /** Allow any additional infrastructure fields from schema */
+  [key: string]: unknown;
+}
+
+/**
+ * Copyright category options
+ */
+export interface CopyrightGeneratorOptions extends BaseGeneratorOptions {
+  category: 'copyright';
+  /** URL of infringing content */
+  url?: string;
+  /** Title of copyrighted work */
+  title?: string;
+  /** Copyright holder information */
+  copyright_holder?: string;
+  /** Allow any additional copyright fields from schema */
+  [key: string]: unknown;
+}
+
+/**
+ * Vulnerability category options
+ */
+export interface VulnerabilityGeneratorOptions extends BaseGeneratorOptions {
+  category: 'vulnerability';
+  /** CVE identifier */
+  cve_id?: string;
+  /** Affected service or software */
+  service?: string;
+  /** Port number of vulnerable service */
+  port?: number;
+  /** Allow any additional vulnerability fields from schema */
+  [key: string]: unknown;
+}
+
+/**
+ * Reputation category options
+ */
+export interface ReputationGeneratorOptions extends BaseGeneratorOptions {
+  category: 'reputation';
+  /** Name of blocklist */
+  blocklist_name?: string;
+  /** Threat type classification */
+  threat_type?: string;
+  /** Allow any additional reputation fields from schema */
+  [key: string]: unknown;
+}
+
+/**
+ * Discriminated union type for all generator options
+ *
+ * Provides type-safe, category-specific fields while maintaining
+ * backward compatibility through additionalFields.
+ */
+export type GeneratorOptions =
+  | ContentGeneratorOptions
+  | ConnectionGeneratorOptions
+  | MessagingGeneratorOptions
+  | InfrastructureGeneratorOptions
+  | CopyrightGeneratorOptions
+  | VulnerabilityGeneratorOptions
+  | ReputationGeneratorOptions;
 
 /**
  * Generator for creating XARF v4.0.0 compliant reports
@@ -253,11 +402,14 @@ export class XARFGenerator {
     // Validate optional fields
     this.validateOptionalFields(severity, confidence, occurrence, onBehalfOf);
 
-    // Validate category-specific required fields
-    this.validateCategoryRequirements(category, validatedReportType, additionalFields);
+    // Extract category-specific fields from options using schema registry
+    const categoryFields = this.extractCategoryFields(options, validatedReportType);
 
-    // Build and return complete report
-    return this.buildCompleteReport(
+    // Merge category fields with additionalFields (additionalFields takes precedence for overrides)
+    const mergedFields = { ...categoryFields, ...additionalFields };
+
+    // Build the report
+    const report = this.buildCompleteReport(
       {
         category,
         reportType: validatedReportType,
@@ -267,8 +419,53 @@ export class XARFGenerator {
         sender: validatedSender,
         onBehalfOf,
       },
-      { description, evidence, severity, confidence, tags, occurrence, target, additionalFields }
+      {
+        description,
+        evidence,
+        severity,
+        confidence,
+        tags,
+        occurrence,
+        target,
+        additionalFields: mergedFields,
+      }
     );
+
+    // Validate against schema to ensure the report is valid
+    // This catches any missing required fields defined in type-specific schemas
+    const validationResult = schemaValidator.validate(report);
+    if (!validationResult.valid) {
+      throw new XARFError(`Generated report is invalid: ${validationResult.errors.join('; ')}`);
+    }
+
+    return report;
+  }
+
+  /**
+   * Extract category-specific fields from generator options using schema registry.
+   * Fields are discovered dynamically from the JSON schema for the category/type.
+   * @param options - Generator options containing category-specific fields
+   * @param reportType - The validated report type
+   * @returns Object containing only the category-specific fields
+   */
+  private extractCategoryFields(
+    options: GeneratorOptions,
+    reportType: string
+  ): Record<string, unknown> {
+    const fields: Record<string, unknown> = {};
+
+    // Get field names from schema registry
+    const fieldNames = schemaRegistry.getCategoryFields(options.category, reportType);
+
+    // Extract values from options
+    const optionsRecord = options as unknown as Record<string, unknown>;
+    for (const fieldName of fieldNames) {
+      if (optionsRecord[fieldName] !== undefined) {
+        fields[fieldName] = optionsRecord[fieldName];
+      }
+    }
+
+    return fields;
   }
 
   /**
@@ -528,75 +725,6 @@ export class XARFGenerator {
       )
     ) {
       throw new XARFError(`${fieldName}.domain must be a valid hostname`);
-    }
-  }
-
-  /**
-   * Validate connection category required fields
-   * @param fields - Additional fields to check
-   * @throws {XARFError} If required fields are missing
-   */
-  private validateConnectionRequirements(fields: Record<string, unknown>): void {
-    if (!fields.destination_ip) {
-      throw new XARFError('destination_ip is required for connection reports');
-    }
-    if (!fields.protocol) {
-      throw new XARFError('protocol is required for connection reports');
-    }
-  }
-
-  /**
-   * Validate messaging category required fields
-   * @param fields - Additional fields to check
-   * @param reportType - Report type
-   * @throws {XARFError} If required fields are missing
-   */
-  private validateMessagingRequirements(fields: Record<string, unknown>, reportType: string): void {
-    if (fields.protocol === 'smtp' && !fields.smtp_from) {
-      throw new XARFError('smtp_from is required for SMTP messaging reports');
-    }
-    if (
-      fields.protocol === 'smtp' &&
-      (reportType === 'spam' || reportType === 'phishing') &&
-      !fields.subject
-    ) {
-      throw new XARFError(`subject is required for ${reportType} reports with SMTP protocol`);
-    }
-  }
-
-  /**
-   * Validate category-specific required fields
-   * @param category - Report category
-   * @param reportType - Report type
-   * @param additionalFields - Additional fields to check
-   * @throws {XARFError} If required fields are missing
-   */
-  private validateCategoryRequirements(
-    category: XARFCategory,
-    reportType: string,
-    additionalFields?: Record<string, unknown>
-  ): void {
-    const fields = additionalFields || {};
-
-    switch (category) {
-      case 'connection':
-        this.validateConnectionRequirements(fields);
-        break;
-      case 'content':
-        if (!fields.url) {
-          throw new XARFError('url is required for content reports');
-        }
-        break;
-      case 'messaging':
-        this.validateMessagingRequirements(fields, reportType);
-        break;
-      // Other categories don't have strict required fields beyond base XARF fields
-      case 'infrastructure':
-      case 'copyright':
-      case 'vulnerability':
-      case 'reputation':
-        // No additional required fields
-        break;
     }
   }
 

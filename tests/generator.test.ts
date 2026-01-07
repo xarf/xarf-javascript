@@ -173,7 +173,7 @@ describe('XARFGenerator', () => {
         evidence: [evidence],
         severity: 'high',
         confidence: 0.95,
-        tags: ['phishing', 'test'],
+        tags: ['type:phishing', 'source:test'],
         target: { url: 'http://evil.example.com' },
         occurrence: {
           start: '2024-01-15T10:00:00Z',
@@ -186,7 +186,7 @@ describe('XARFGenerator', () => {
       expect(report.evidence).toHaveLength(1);
       expect(report.severity).toBe('high');
       expect(report.confidence).toBe(0.95);
-      expect(report.tags).toContain('phishing');
+      expect(report.tags).toContain('type:phishing');
       expect(report.target?.url).toBe('http://evil.example.com');
       expect(report.occurrence).toBeDefined();
       expect(report.url).toBe('http://phishing.example.com');

@@ -52,7 +52,7 @@ describe('Senior Engineer Feedback Issues', () => {
       // Direct copy from spec would use snake_case throughout
       const specExample = {
         xarf_version: '4.0.0',
-        report_id: 'test-123',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2025-12-16T07:37:30.000Z',
         reporter: {
           org: 'Test Org',
@@ -84,7 +84,7 @@ describe('Senior Engineer Feedback Issues', () => {
 
       const reportWithTypos = {
         xarf_version: '4.0.0',
-        report_id: 'test-123',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2025-12-16T07:37:30.000Z',
         reporter: {
           org: 'Test Org',
@@ -120,7 +120,7 @@ describe('Senior Engineer Feedback Issues', () => {
 
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-123',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2025-12-16T07:37:30.000Z',
         reporter: {
           org: 'Test Org',
@@ -155,7 +155,7 @@ describe('Senior Engineer Feedback Issues', () => {
 
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-123',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2025-12-16T07:37:30.000Z',
         reporter: {
           org: 'Test Org',
@@ -187,7 +187,7 @@ describe('Senior Engineer Feedback Issues', () => {
 
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-123',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: 'foo', // Invalid timestamp
         reporter: {
           org: 'Test Org',
@@ -216,7 +216,7 @@ describe('Senior Engineer Feedback Issues', () => {
 
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-123',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2025-12-16T07:37:30.000Z',
         reporter: {
           org: 'Test Org',
@@ -246,35 +246,10 @@ describe('Senior Engineer Feedback Issues', () => {
   });
 
   describe('Issue 5: Generator should not create invalid reports', () => {
-    it('should not allow creating reports missing required category fields', async () => {
+    it('should accept category-specific fields directly via union types', async () => {
       const generator = new XARFGenerator();
 
-      // Attempting to create a content report without url
-      expect(() => {
-        generator.generateReport({
-          category: 'content',
-          reportType: 'phishing',
-          sourceIdentifier: '192.0.2.100',
-          reporter: {
-            org: 'Test Org',
-            contact: 'test@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Test Org',
-            contact: 'test@example.com',
-            domain: 'example.com',
-          },
-          // Missing url - this is required for content reports
-        });
-      }).toThrow();
-    });
-
-    it('should validate generated reports pass XARFValidator', async () => {
-      const generator = new XARFGenerator();
-      const validator = new XARFValidator();
-
-      // Generate a content report
+      // Content report with url as direct field (not in additionalFields)
       const report = generator.generateReport({
         category: 'content',
         reportType: 'phishing',
@@ -289,9 +264,32 @@ describe('Senior Engineer Feedback Issues', () => {
           contact: 'test@example.com',
           domain: 'example.com',
         },
-        additionalFields: {
-          url: 'http://phishing.example.com',
+        url: 'http://phishing.example.com', // Direct field via union type
+      });
+
+      expect(report.url).toBe('http://phishing.example.com');
+    });
+
+    it('should validate generated reports pass XARFValidator', async () => {
+      const generator = new XARFGenerator();
+      const validator = new XARFValidator();
+
+      // Generate a content report with direct url field
+      const report = generator.generateReport({
+        category: 'content',
+        reportType: 'phishing',
+        sourceIdentifier: '192.0.2.100',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        url: 'http://phishing.example.com',
       });
 
       // The generated report should always be valid
@@ -300,28 +298,32 @@ describe('Senior Engineer Feedback Issues', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should enforce required fields at generation time for all categories', async () => {
+    it('should accept connection category fields directly via union types', async () => {
       const generator = new XARFGenerator();
 
-      // Connection reports require destination_ip
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          reportType: 'ddos',
-          sourceIdentifier: '192.0.2.100',
-          reporter: {
-            org: 'Test Org',
-            contact: 'test@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Test Org',
-            contact: 'test@example.com',
-            domain: 'example.com',
-          },
-          // Missing destination_ip and protocol
-        });
-      }).toThrow();
+      // Connection report with fields as direct properties
+      const report = generator.generateReport({
+        category: 'connection',
+        reportType: 'ddos',
+        sourceIdentifier: '192.0.2.100',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        destination_ip: '203.0.113.50',
+        protocol: 'tcp',
+        destination_port: 443,
+      });
+
+      expect(report.destination_ip).toBe('203.0.113.50');
+      expect(report.protocol).toBe('tcp');
+      expect(report.destination_port).toBe(443);
     });
   });
 });

@@ -4,6 +4,7 @@
 
 import { XARFParseError, XARFValidationError } from './errors';
 import { schemaRegistry } from './schema-registry';
+import { validator as schemaValidator } from './schema-validator';
 import type { XARFReport, MessagingReport, ConnectionReport, ContentReport } from './types';
 import { isXARFv3, convertV3toV4, getV3DeprecationWarning, type XARFv3Report } from './v3-legacy';
 
@@ -215,7 +216,18 @@ export class XARFParser {
     this.checkForUnknownProperties(data);
 
     // Category-specific validation
-    return this.validateCategorySpecific(data);
+    if (!this.validateCategorySpecific(data)) {
+      return false;
+    }
+
+    // Schema validation - validates against JSON schema for complete validation
+    const schemaResult = schemaValidator.validate(data as XARFReport);
+    if (!schemaResult.valid) {
+      this.errors.push(...schemaResult.errors);
+      return false;
+    }
+
+    return true;
   }
 
   /**

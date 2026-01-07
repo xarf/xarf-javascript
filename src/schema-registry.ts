@@ -33,6 +33,7 @@ interface SchemaDefinition {
   properties?: Record<string, SchemaPropertyDef>;
   allOf?: SchemaDefinition[];
   $defs?: Record<string, SchemaDefinition>;
+  $ref?: string;
   [key: string]: unknown;
 }
 
@@ -435,6 +436,151 @@ export class SchemaRegistry {
    */
   isLoaded(): boolean {
     return this.coreSchema !== null;
+  }
+
+  /**
+   * Get category-specific field names for a given category/type combination.
+   * These are fields defined in the type schema that are NOT part of core schema.
+   * @param category - The category
+   * @param type - The type
+   * @returns Array of field names specific to this category/type
+   */
+  getCategoryFields(category: string, type: string): string[] {
+    const schema = this.getTypeSchema(category, type);
+    if (!schema) {
+      return [];
+    }
+
+    const coreFields = this.getCorePropertyNames();
+    const categoryFields: string[] = [];
+
+    // Extract properties from allOf structure
+    this.extractFieldsFromSchema(schema, coreFields, categoryFields);
+
+    return categoryFields;
+  }
+
+  /**
+   * Extract category-specific fields from a schema, excluding core fields
+   * @param schema - Schema definition to extract from
+   * @param coreFields - Set of core field names to exclude
+   * @param result - Array to collect field names
+   */
+  private extractFieldsFromSchema(
+    schema: SchemaDefinition,
+    coreFields: Set<string>,
+    result: string[]
+  ): void {
+    this.extractDirectProperties(schema, coreFields, result);
+    this.extractFromAllOf(schema, coreFields, result);
+  }
+
+  /**
+   * Extract fields from direct schema properties
+   * @param schema - Schema definition to extract from
+   * @param coreFields - Set of core field names to exclude
+   * @param result - Array to collect field names
+   */
+  private extractDirectProperties(
+    schema: SchemaDefinition,
+    coreFields: Set<string>,
+    result: string[]
+  ): void {
+    if (!schema.properties) {
+      return;
+    }
+    for (const fieldName of Object.keys(schema.properties)) {
+      const isExcluded =
+        coreFields.has(fieldName) || fieldName === 'category' || fieldName === 'type';
+      if (!isExcluded && !result.includes(fieldName)) {
+        result.push(fieldName);
+      }
+    }
+  }
+
+  /**
+   * Extract fields from allOf schema composition
+   * @param schema - Schema definition to extract from
+   * @param coreFields - Set of core field names to exclude
+   * @param result - Array to collect field names
+   */
+  private extractFromAllOf(
+    schema: SchemaDefinition,
+    coreFields: Set<string>,
+    result: string[]
+  ): void {
+    if (!schema.allOf) {
+      return;
+    }
+    for (const subSchema of schema.allOf) {
+      this.processSubSchema(subSchema, coreFields, result);
+    }
+  }
+
+  /**
+   * Process a sub-schema from allOf, handling $ref and inline schemas
+   * @param subSchema - Sub-schema to process
+   * @param coreFields - Set of core field names to exclude
+   * @param result - Array to collect field names
+   */
+  private processSubSchema(
+    subSchema: SchemaDefinition,
+    coreFields: Set<string>,
+    result: string[]
+  ): void {
+    if (subSchema.$ref) {
+      this.processSchemaReference(subSchema.$ref, coreFields, result);
+      return;
+    }
+    this.extractFieldsFromSchema(subSchema, coreFields, result);
+  }
+
+  /**
+   * Process a schema $ref, loading base schemas if needed
+   * @param ref - Schema reference string (e.g., "./content-base.json")
+   * @param coreFields - Set of core field names to exclude
+   * @param result - Array to collect field names
+   */
+  private processSchemaReference(ref: string, coreFields: Set<string>, result: string[]): void {
+    if (!ref.includes('-base.json')) {
+      return;
+    }
+    const baseSchema = this.loadBaseSchema(ref);
+    if (baseSchema) {
+      this.extractFieldsFromSchema(baseSchema, coreFields, result);
+    }
+  }
+
+  /**
+   * Load a base schema referenced by $ref
+   * @param ref - Schema reference (e.g., "./content-base.json")
+   * @returns Schema definition or null
+   */
+  private loadBaseSchema(ref: string): SchemaDefinition | null {
+    // Extract filename from ref
+    const filename = ref.replace(/^\.\//, '').replace(/^\.\.\//, '');
+    const schemaPath = path.join(this.schemasDir, 'types', filename);
+    return this.loadSchema(schemaPath);
+  }
+
+  /**
+   * Get all category-specific fields across all types for a category.
+   * Useful for building union type interfaces.
+   * @param category - The category
+   * @returns Set of all field names used by any type in this category
+   */
+  getAllFieldsForCategory(category: string): Set<string> {
+    const allFields = new Set<string>();
+    const types = this.getTypesForCategory(category);
+
+    for (const type of types) {
+      const fields = this.getCategoryFields(category, type);
+      for (const field of fields) {
+        allFields.add(field);
+      }
+    }
+
+    return allFields;
   }
 }
 

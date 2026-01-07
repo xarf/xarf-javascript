@@ -301,7 +301,7 @@ describe('XARFValidator', () => {
           content_type: 'text/plain',
           description: 'Sample evidence',
           payload: 'evidence data',
-          hash: 'abc123',
+          hash: 'sha256:abc123def456',
         },
       ];
 

@@ -92,9 +92,9 @@ export class XARFValidator {
 
   /**
    * Create a new XARF validator
-   * @param useSchemaValidation - Enable JSON schema validation (default: false - experimental)
+   * @param useSchemaValidation - Enable JSON schema validation (default: true)
    */
-  constructor(useSchemaValidation = false) {
+  constructor(useSchemaValidation = true) {
     this.useSchemaValidation = useSchemaValidation;
     this.schemaValidator = new SchemaValidator();
     this.schemasDir = this.findSchemasDir();

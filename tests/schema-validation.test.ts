@@ -15,7 +15,8 @@ describe('JSON Schema Validation', () => {
 
   beforeEach(() => {
     schemaValidator = new SchemaValidator();
-    handCodedValidator = new XARFValidator();
+    // Disable schema validation to test hand-coded validation alone
+    handCodedValidator = new XARFValidator(false);
   });
 
   const createValidReport = (category: XARFCategory = 'connection'): XARFReport => ({
