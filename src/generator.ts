@@ -20,14 +20,12 @@ import type {
 } from './types';
 
 /**
- * Generator options for creating XARF reports
+ * Base generator options shared by all categories
  *
  * Supports both camelCase (backward compatibility) and snake_case (XARF spec) field names.
  * Snake_case is preferred and matches the XARF specification.
  */
-export interface GeneratorOptions {
-  category: XARFCategory;
-
+export interface BaseGeneratorOptions {
   // Type field (XARF spec uses "type")
   type?: string; // XARF spec field name
   reportType?: string; // Backward compatibility (deprecated)
@@ -63,9 +61,117 @@ export interface GeneratorOptions {
   occurrence?: TimeOccurrence;
   target?: Target;
 
-  // Additional fields (use snake_case directly)
+  // Additional fields for backward compatibility and extra fields
   additionalFields?: Record<string, unknown>;
 }
+
+/**
+ * Content category options with required url field
+ */
+export interface ContentGeneratorOptions extends BaseGeneratorOptions {
+  category: 'content';
+  /** URL of the malicious content (required for content reports) */
+  url?: string;
+  /** MIME type of the content */
+  content_type?: string;
+}
+
+/**
+ * Connection category options with required destination_ip and protocol fields
+ */
+export interface ConnectionGeneratorOptions extends BaseGeneratorOptions {
+  category: 'connection';
+  /** Destination IP address (required for connection reports) */
+  destination_ip?: string;
+  /** Network protocol (required for connection reports) */
+  protocol?: string;
+  /** Destination port number */
+  destination_port?: number;
+  /** Type of attack (e.g., syn_flood, udp_flood) */
+  attack_type?: string;
+  /** Number of packets observed */
+  packet_count?: number;
+}
+
+/**
+ * Messaging category options with protocol-specific fields
+ */
+export interface MessagingGeneratorOptions extends BaseGeneratorOptions {
+  category: 'messaging';
+  /** Messaging protocol (smtp, http, etc.) */
+  protocol?: string;
+  /** SMTP envelope from address */
+  smtp_from?: string;
+  /** SMTP envelope to address */
+  smtp_to?: string;
+  /** Email subject line (required for spam/phishing with SMTP) */
+  subject?: string;
+  /** Message-ID header */
+  message_id?: string;
+}
+
+/**
+ * Infrastructure category options
+ */
+export interface InfrastructureGeneratorOptions extends BaseGeneratorOptions {
+  category: 'infrastructure';
+  /** Command and control server details */
+  c2_server?: string;
+  /** Malware family name */
+  malware_family?: string;
+}
+
+/**
+ * Copyright category options
+ */
+export interface CopyrightGeneratorOptions extends BaseGeneratorOptions {
+  category: 'copyright';
+  /** URL of infringing content */
+  url?: string;
+  /** Title of copyrighted work */
+  title?: string;
+  /** Copyright holder information */
+  copyright_holder?: string;
+}
+
+/**
+ * Vulnerability category options
+ */
+export interface VulnerabilityGeneratorOptions extends BaseGeneratorOptions {
+  category: 'vulnerability';
+  /** CVE identifier */
+  cve_id?: string;
+  /** Affected service or software */
+  service?: string;
+  /** Port number of vulnerable service */
+  port?: number;
+}
+
+/**
+ * Reputation category options
+ */
+export interface ReputationGeneratorOptions extends BaseGeneratorOptions {
+  category: 'reputation';
+  /** Name of blocklist */
+  blocklist_name?: string;
+  /** Threat type classification */
+  threat_type?: string;
+}
+
+/**
+ * Discriminated union type for all generator options
+ *
+ * Provides type-safe, category-specific fields while maintaining
+ * backward compatibility through additionalFields.
+ */
+export type GeneratorOptions =
+  | ContentGeneratorOptions
+  | ConnectionGeneratorOptions
+  | MessagingGeneratorOptions
+  | InfrastructureGeneratorOptions
+  | CopyrightGeneratorOptions
+  | VulnerabilityGeneratorOptions
+  | ReputationGeneratorOptions;
 
 /**
  * Generator for creating XARF v4.0.0 compliant reports
@@ -239,6 +345,38 @@ export class XARFGenerator {
   }
 
   /**
+   * Category-specific field names for extraction
+   */
+  private static readonly CATEGORY_FIELDS: Record<string, string[]> = {
+    content: ['url', 'content_type'],
+    connection: ['destination_ip', 'protocol', 'destination_port', 'attack_type', 'packet_count'],
+    messaging: ['protocol', 'smtp_from', 'smtp_to', 'subject', 'message_id'],
+    infrastructure: ['c2_server', 'malware_family'],
+    copyright: ['url', 'title', 'copyright_holder'],
+    vulnerability: ['cve_id', 'service', 'port'],
+    reputation: ['blocklist_name', 'threat_type'],
+  };
+
+  /**
+   * Extract category-specific fields from options
+   * @param options - Generator options
+   * @returns Object containing category-specific fields
+   */
+  private extractCategoryFields(options: GeneratorOptions): Record<string, unknown> {
+    const fields: Record<string, unknown> = {};
+    const fieldNames = XARFGenerator.CATEGORY_FIELDS[options.category] || [];
+    const optionsRecord = options as unknown as Record<string, unknown>;
+
+    for (const fieldName of fieldNames) {
+      if (optionsRecord[fieldName] !== undefined) {
+        fields[fieldName] = optionsRecord[fieldName];
+      }
+    }
+
+    return fields;
+  }
+
+  /**
    * Generate a complete XARF v4.0.0 report
    * @param options - Report generation options
    * @returns Complete XARF report object
@@ -265,6 +403,12 @@ export class XARFGenerator {
     const evidenceSource = options.evidence_source ?? options.evidenceSource ?? 'automated_scan';
     const onBehalfOf = options.on_behalf_of ?? options.onBehalfOf;
 
+    // Extract category-specific fields from options
+    const categoryFields = this.extractCategoryFields(options);
+
+    // Merge category fields with additionalFields (additionalFields takes precedence for overrides)
+    const mergedFields = { ...categoryFields, ...additionalFields };
+
     // Validate all required fields
     this.validateRequiredOptions(sourceIdentifier, reportType, reporter, sender);
 
@@ -280,8 +424,8 @@ export class XARFGenerator {
     // Validate optional fields
     this.validateOptionalFields(severity, confidence, occurrence, onBehalfOf);
 
-    // Validate category-specific required fields
-    this.validateCategoryRequirements(category, validatedReportType, additionalFields);
+    // Validate category-specific required fields (using merged fields)
+    this.validateCategoryRequirements(category, validatedReportType, mergedFields);
 
     // Build and return complete report
     return this.buildCompleteReport(
@@ -294,7 +438,16 @@ export class XARFGenerator {
         sender: validatedSender,
         onBehalfOf,
       },
-      { description, evidence, severity, confidence, tags, occurrence, target, additionalFields }
+      {
+        description,
+        evidence,
+        severity,
+        confidence,
+        tags,
+        occurrence,
+        target,
+        additionalFields: mergedFields,
+      }
     );
   }
 

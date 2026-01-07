@@ -6,7 +6,18 @@
  */
 
 export { XARFParser } from './parser';
-export { XARFGenerator, type GeneratorOptions } from './generator';
+export {
+  XARFGenerator,
+  type GeneratorOptions,
+  type BaseGeneratorOptions,
+  type ContentGeneratorOptions,
+  type ConnectionGeneratorOptions,
+  type MessagingGeneratorOptions,
+  type InfrastructureGeneratorOptions,
+  type CopyrightGeneratorOptions,
+  type VulnerabilityGeneratorOptions,
+  type ReputationGeneratorOptions,
+} from './generator';
 export {
   XARFValidator,
   type ValidationResult,

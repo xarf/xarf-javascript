@@ -1,0 +1,233 @@
+/**
+ * Tests for discriminated union types in GeneratorOptions
+ */
+
+import { XARFGenerator } from '../src/generator';
+import type {
+  ContentGeneratorOptions,
+  ConnectionGeneratorOptions,
+  MessagingGeneratorOptions,
+} from '../src/generator';
+
+describe('GeneratorOptions Union Types', () => {
+  let generator: XARFGenerator;
+
+  const baseOptions = {
+    reporter: {
+      org: 'Test Org',
+      contact: 'abuse@example.com',
+      domain: 'example.com',
+    },
+    sender: {
+      org: 'Test Org',
+      contact: 'abuse@example.com',
+      domain: 'example.com',
+    },
+    source_identifier: '192.0.2.1',
+  };
+
+  beforeEach(() => {
+    generator = new XARFGenerator();
+  });
+
+  describe('Content category with direct url field', () => {
+    it('should accept url as a direct field', () => {
+      const options: ContentGeneratorOptions = {
+        ...baseOptions,
+        category: 'content',
+        type: 'phishing_site',
+        url: 'http://malicious.example.com',
+      };
+
+      const report = generator.generateReport(options);
+
+      expect(report.category).toBe('content');
+      expect(report.url).toBe('http://malicious.example.com');
+    });
+
+    it('should accept content_type as a direct field', () => {
+      const options: ContentGeneratorOptions = {
+        ...baseOptions,
+        category: 'content',
+        type: 'phishing_site',
+        url: 'http://malicious.example.com',
+        content_type: 'text/html',
+      };
+
+      const report = generator.generateReport(options);
+
+      expect(report.content_type).toBe('text/html');
+    });
+
+    it('should still work with additionalFields for backward compatibility', () => {
+      const report = generator.generateReport({
+        ...baseOptions,
+        category: 'content',
+        type: 'phishing_site',
+        additionalFields: {
+          url: 'http://legacy.example.com',
+        },
+      });
+
+      expect(report.url).toBe('http://legacy.example.com');
+    });
+
+    it('should allow additionalFields to override direct fields', () => {
+      const options: ContentGeneratorOptions = {
+        ...baseOptions,
+        category: 'content',
+        type: 'phishing_site',
+        url: 'http://direct.example.com',
+        additionalFields: {
+          url: 'http://override.example.com',
+        },
+      };
+
+      const report = generator.generateReport(options);
+
+      expect(report.url).toBe('http://override.example.com');
+    });
+  });
+
+  describe('Connection category with direct fields', () => {
+    it('should accept destination_ip and protocol as direct fields', () => {
+      const options: ConnectionGeneratorOptions = {
+        ...baseOptions,
+        category: 'connection',
+        type: 'ddos',
+        destination_ip: '203.0.113.10',
+        protocol: 'tcp',
+      };
+
+      const report = generator.generateReport(options);
+
+      expect(report.category).toBe('connection');
+      expect(report.destination_ip).toBe('203.0.113.10');
+      expect(report.protocol).toBe('tcp');
+    });
+
+    it('should accept optional connection fields', () => {
+      const options: ConnectionGeneratorOptions = {
+        ...baseOptions,
+        category: 'connection',
+        type: 'ddos',
+        destination_ip: '203.0.113.10',
+        protocol: 'tcp',
+        destination_port: 80,
+        attack_type: 'syn_flood',
+        packet_count: 1000000,
+      };
+
+      const report = generator.generateReport(options);
+
+      expect(report.destination_port).toBe(80);
+      expect(report.attack_type).toBe('syn_flood');
+      expect(report.packet_count).toBe(1000000);
+    });
+
+    it('should still work with additionalFields for backward compatibility', () => {
+      const report = generator.generateReport({
+        ...baseOptions,
+        category: 'connection',
+        type: 'ddos',
+        additionalFields: {
+          destination_ip: '203.0.113.20',
+          protocol: 'udp',
+        },
+      });
+
+      expect(report.destination_ip).toBe('203.0.113.20');
+      expect(report.protocol).toBe('udp');
+    });
+  });
+
+  describe('Messaging category with direct fields', () => {
+    it('should accept protocol and smtp fields directly', () => {
+      const options: MessagingGeneratorOptions = {
+        ...baseOptions,
+        category: 'messaging',
+        type: 'spam',
+        protocol: 'smtp',
+        smtp_from: 'spammer@evil.example.com',
+        subject: 'You won!',
+      };
+
+      const report = generator.generateReport(options);
+
+      expect(report.category).toBe('messaging');
+      expect(report.protocol).toBe('smtp');
+      expect(report.smtp_from).toBe('spammer@evil.example.com');
+      expect(report.subject).toBe('You won!');
+    });
+
+    it('should accept optional messaging fields', () => {
+      const options: MessagingGeneratorOptions = {
+        ...baseOptions,
+        category: 'messaging',
+        type: 'spam',
+        protocol: 'smtp',
+        smtp_from: 'spammer@evil.example.com',
+        smtp_to: 'victim@example.com',
+        subject: 'You won!',
+        message_id: '<123456@evil.example.com>',
+      };
+
+      const report = generator.generateReport(options);
+
+      expect(report.smtp_to).toBe('victim@example.com');
+      expect(report.message_id).toBe('<123456@evil.example.com>');
+    });
+  });
+
+  describe('Mixed direct fields and additionalFields', () => {
+    it('should merge direct fields with additionalFields', () => {
+      const options: ConnectionGeneratorOptions = {
+        ...baseOptions,
+        category: 'connection',
+        type: 'ddos',
+        destination_ip: '203.0.113.10',
+        protocol: 'tcp',
+        additionalFields: {
+          destination_port: 443,
+          custom_field: 'custom_value',
+        },
+      };
+
+      const report = generator.generateReport(options);
+
+      expect(report.destination_ip).toBe('203.0.113.10');
+      expect(report.protocol).toBe('tcp');
+      expect(report.destination_port).toBe(443);
+      expect(report.custom_field).toBe('custom_value');
+    });
+  });
+
+  describe('Type safety with discriminated unions', () => {
+    it('should provide type-safe access to category-specific fields', () => {
+      // This test verifies TypeScript compile-time type checking
+      // The ContentGeneratorOptions type enforces url is available
+      const contentOptions: ContentGeneratorOptions = {
+        ...baseOptions,
+        category: 'content',
+        type: 'phishing_site',
+        url: 'http://test.example.com',
+      };
+
+      // The ConnectionGeneratorOptions type enforces destination_ip and protocol are available
+      const connectionOptions: ConnectionGeneratorOptions = {
+        ...baseOptions,
+        category: 'connection',
+        type: 'ddos',
+        destination_ip: '192.0.2.1',
+        protocol: 'tcp',
+      };
+
+      const contentReport = generator.generateReport(contentOptions);
+      const connectionReport = generator.generateReport(connectionOptions);
+
+      expect(contentReport.url).toBeDefined();
+      expect(connectionReport.destination_ip).toBeDefined();
+      expect(connectionReport.protocol).toBeDefined();
+    });
+  });
+});
