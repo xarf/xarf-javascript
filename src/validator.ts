@@ -217,6 +217,34 @@ export class XARFValidator {
   }
 
   /**
+   * Collect unknown fields from the report that are not defined in the schema
+   * @param report - XARF report to check
+   */
+  private collectUnknownFields(report: XARFReport): void {
+    // Get all known fields from core schema
+    const knownFields = new Set(schemaRegistry.getCorePropertyNames());
+
+    // Add category-specific fields if category and type are present
+    if (report.category && report.type) {
+      const categoryFields = schemaRegistry.getCategoryFields(report.category, report.type);
+      for (const field of categoryFields) {
+        knownFields.add(field);
+      }
+    }
+
+    // Check all fields in the report
+    for (const fieldName of Object.keys(report)) {
+      if (!knownFields.has(fieldName)) {
+        this.warnings.push({
+          field: fieldName,
+          message: `Unknown field '${fieldName}' is not defined in the XARF schema`,
+          value: report[fieldName as keyof XARFReport],
+        });
+      }
+    }
+  }
+
+  /**
    * Validate a XARF report comprehensively
    * @param report - The XARF report to validate
    * @param strict - If true, warnings are treated as errors
@@ -250,6 +278,9 @@ export class XARFValidator {
 
     // Validate category-specific requirements
     this.validateCategorySpecific(report);
+
+    // Check for unknown fields
+    this.collectUnknownFields(report);
 
     // 3. Merge and deduplicate errors (schema errors take priority)
     this.deduplicateErrors();

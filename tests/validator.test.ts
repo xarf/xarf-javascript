@@ -390,4 +390,70 @@ describe('XARFValidator', () => {
       expect(confidenceInfo!.message).toContain('RECOMMENDED');
     });
   });
+
+  describe('unknown fields detection', () => {
+    it('should warn about unknown fields in report', () => {
+      const report = createValidReport();
+      (report as any).unknownField = 'some value';
+      (report as any).anotherUnknown = 123;
+
+      const result = validator.validate(report);
+
+      expect(result.valid).toBe(true); // Unknown fields are warnings, not errors
+      expect(result.warnings.length).toBeGreaterThanOrEqual(2);
+      const unknownFieldWarnings = result.warnings.filter((w) =>
+        w.message.includes('Unknown field')
+      );
+      expect(unknownFieldWarnings.length).toBe(2);
+      expect(unknownFieldWarnings.map((w) => w.field)).toContain('unknownField');
+      expect(unknownFieldWarnings.map((w) => w.field)).toContain('anotherUnknown');
+    });
+
+    it('should include the unknown field value in warning', () => {
+      const report = createValidReport();
+      (report as any).customField = 'test value';
+
+      const result = validator.validate(report);
+
+      const warning = result.warnings.find((w) => w.field === 'customField');
+      expect(warning).toBeDefined();
+      expect(warning!.value).toBe('test value');
+    });
+
+    it('should not warn about known core schema fields', () => {
+      const report = createValidReport();
+      report.description = 'This is a description';
+      report.confidence = 0.95;
+      report.tags = ['test'];
+
+      const result = validator.validate(report);
+
+      const unknownFieldWarnings = result.warnings.filter((w) =>
+        w.message.includes('Unknown field')
+      );
+      expect(unknownFieldWarnings.map((w) => w.field)).not.toContain('description');
+      expect(unknownFieldWarnings.map((w) => w.field)).not.toContain('confidence');
+      expect(unknownFieldWarnings.map((w) => w.field)).not.toContain('tags');
+    });
+
+    it('should not warn about known category-specific fields', () => {
+      const report = createValidReport();
+      // destination_port is a known connection category field
+      report.destination_port = 443;
+
+      const result = validator.validate(report);
+
+      const unknownFieldWarnings = result.warnings.filter((w) =>
+        w.message.includes('Unknown field')
+      );
+      expect(unknownFieldWarnings.map((w) => w.field)).not.toContain('destination_port');
+    });
+
+    it('should treat unknown fields as errors in strict mode', () => {
+      const report = createValidReport();
+      (report as any).unknownField = 'some value';
+
+      expect(() => validator.validate(report, true)).toThrow();
+    });
+  });
 });
