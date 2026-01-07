@@ -8,7 +8,7 @@
 import { randomBytes, randomUUID, createHash } from 'crypto';
 import { XARFError } from './errors';
 import { schemaRegistry } from './schema-registry';
-import { validator as schemaValidator } from './schema-validator';
+import { XARFValidator } from './validator';
 import { validateContactInfo as validateContactInfoUtil } from './validation-utils';
 import type {
   XARFReport,
@@ -423,34 +423,65 @@ export class XARFGenerator {
 
     // Validate against schema to ensure the report is valid
     // This catches any missing required fields defined in type-specific schemas
-    const validationResult = schemaValidator.validate(report);
-    if (!validationResult.valid) {
-      throw new XARFError(`Generated report is invalid: ${validationResult.errors.join('; ')}`);
+    // and warns about unknown fields that were passed in
+    const xarfValidator = new XARFValidator();
+    const validationResult = xarfValidator.validate(report, false);
+    if (!validationResult.valid || validationResult.warnings.length > 0) {
+      const allIssues = [...validationResult.errors, ...validationResult.warnings];
+      const messages = allIssues.map((e) => `${e.field}: ${e.message}`);
+      throw new XARFError(`Generated report is invalid: ${messages.join('; ')}`);
     }
 
     return report;
   }
 
   /**
-   * Extract category-specific fields from generator options using schema registry.
-   * Fields are discovered dynamically from the JSON schema for the category/type.
+   * Base fields that are handled explicitly by the generator.
+   * Any fields not in this set will be passed through to the report,
+   * where XARFValidator will catch unknown fields.
+   */
+  private static readonly BASE_FIELDS = new Set([
+    'category',
+    'reporter',
+    'sender',
+    'description',
+    'evidence',
+    'severity',
+    'confidence',
+    'tags',
+    'occurrence',
+    'target',
+    'additionalFields',
+    'type',
+    'reportType',
+    'source_identifier',
+    'sourceIdentifier',
+    'evidence_source',
+    'evidenceSource',
+    'on_behalf_of',
+    'onBehalfOf',
+  ]);
+
+  /**
+   * Extract category-specific fields from generator options.
+   * Passes through all fields that aren't base generator options,
+   * allowing XARFValidator to detect unknown fields.
    * @param options - Generator options containing category-specific fields
-   * @param reportType - The validated report type
-   * @returns Object containing only the category-specific fields
+   * @param _reportType - The validated report type (unused, kept for API compatibility)
+   * @returns Object containing category-specific and any unknown fields
    */
   private extractCategoryFields(
     options: GeneratorOptions,
-    reportType: string
+    _reportType: string
   ): Record<string, unknown> {
     const fields: Record<string, unknown> = {};
 
-    // Get field names from schema registry
-    const fieldNames = schemaRegistry.getCategoryFields(options.category, reportType);
-
-    // Extract values from options
+    // Extract all fields that aren't base fields
+    // This allows unknown fields to pass through to the report
+    // where XARFValidator will catch them
     const optionsRecord = options as unknown as Record<string, unknown>;
-    for (const fieldName of fieldNames) {
-      if (optionsRecord[fieldName] !== undefined) {
+    for (const fieldName of Object.keys(optionsRecord)) {
+      if (!XARFGenerator.BASE_FIELDS.has(fieldName) && optionsRecord[fieldName] !== undefined) {
         fields[fieldName] = optionsRecord[fieldName];
       }
     }

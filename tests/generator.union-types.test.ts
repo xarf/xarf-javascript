@@ -208,7 +208,7 @@ describe('GeneratorOptions Union Types', () => {
         source_port: 12345,
         additionalFields: {
           destination_port: 443,
-          custom_field: 'custom_value',
+          peak_pps: 1000000,
         },
       };
 
@@ -217,7 +217,22 @@ describe('GeneratorOptions Union Types', () => {
       expect(report.destination_ip).toBe('203.0.113.10');
       expect(report.protocol).toBe('tcp');
       expect(report.destination_port).toBe(443);
-      expect(report.custom_field).toBe('custom_value');
+      expect(report.peak_pps).toBe(1000000);
+    });
+
+    it('should reject unknown fields in additionalFields', () => {
+      const options: ConnectionGeneratorOptions = {
+        ...baseOptions,
+        category: 'connection',
+        type: 'ddos',
+        destination_ip: '203.0.113.10',
+        protocol: 'tcp',
+        additionalFields: {
+          custom_field: 'custom_value',
+        },
+      };
+
+      expect(() => generator.generateReport(options)).toThrow(/custom_field.*Unknown field/);
     });
   });
 
