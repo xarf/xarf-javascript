@@ -251,12 +251,12 @@ describe('JSON Schema Validation', () => {
   });
 
   describe('4. Schema validation catches errors hand-coded validator misses', () => {
-    it('should catch when description exceeds maxLength', async () => {
+    it('should catch when description exceeds maxLength', () => {
       const report = createValidReport();
       report.description = 'x'.repeat(1001);
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       // Schema catches length violation
       expect(schemaResult.valid).toBe(false);
@@ -265,12 +265,12 @@ describe('JSON Schema Validation', () => {
       expect(handCodedResult.valid).toBe(true);
     });
 
-    it('should catch when tags array exceeds maxItems', async () => {
+    it('should catch when tags array exceeds maxItems', () => {
       const report = createValidReport();
       report.tags = Array(21).fill('tag:value');
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       // Schema catches array length violation
       expect(schemaResult.valid).toBe(false);
@@ -279,7 +279,7 @@ describe('JSON Schema Validation', () => {
       expect(handCodedResult.valid).toBe(true);
     });
 
-    it('should catch when evidence array exceeds maxItems', async () => {
+    it('should catch when evidence array exceeds maxItems', () => {
       const report = createValidReport();
       report.evidence = Array(51)
         .fill(null)
@@ -290,7 +290,7 @@ describe('JSON Schema Validation', () => {
         }));
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       // Schema catches array length violation
       expect(schemaResult.valid).toBe(false);
@@ -299,12 +299,12 @@ describe('JSON Schema Validation', () => {
       expect(handCodedResult.valid).toBe(true);
     });
 
-    it('should catch when reporter.org exceeds maxLength', async () => {
+    it('should catch when reporter.org exceeds maxLength', () => {
       const report = createValidReport();
       report.reporter.org = 'x'.repeat(201);
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       // Schema catches length violation
       expect(schemaResult.valid).toBe(false);
@@ -313,12 +313,12 @@ describe('JSON Schema Validation', () => {
       expect(handCodedResult.valid).toBe(true);
     });
 
-    it('should catch when source_port is out of valid range', async () => {
+    it('should catch when source_port is out of valid range', () => {
       const report = createValidReport();
       (report as any).source_port = 70000;
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       // Schema catches port range violation
       expect(schemaResult.valid).toBe(false);
@@ -327,12 +327,12 @@ describe('JSON Schema Validation', () => {
       expect(handCodedResult.valid).toBe(true);
     });
 
-    it('should catch additional properties in ContactInfo', async () => {
+    it('should catch additional properties in ContactInfo', () => {
       const report = createValidReport();
       (report.reporter as any).extra_field = 'value';
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       // Schema has additionalProperties: false for ContactInfo
       expect(schemaResult.valid).toBe(false);
@@ -343,9 +343,9 @@ describe('JSON Schema Validation', () => {
   });
 
   describe('5. Backward compatibility - existing tests still pass', () => {
-    it('should validate reports that pass hand-coded validator', async () => {
+    it('should validate reports that pass hand-coded validator', () => {
       const report = createValidReport('connection');
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       expect(handCodedResult.valid).toBe(true);
 
@@ -354,7 +354,7 @@ describe('JSON Schema Validation', () => {
       expect(schemaResult.valid).toBe(true);
     });
 
-    it('should validate messaging report with all fields', async () => {
+    it('should validate messaging report with all fields', () => {
       const report: XARFReport = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -379,14 +379,14 @@ describe('JSON Schema Validation', () => {
         subject: 'Get rich quick!',
       };
 
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
       expect(handCodedResult.valid).toBe(true);
 
       const schemaResult = schemaValidator.validateCore(report);
       expect(schemaResult.valid).toBe(true);
     });
 
-    it('should validate content report with URL', async () => {
+    it('should validate content report with URL', () => {
       const report: XARFReport = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -408,7 +408,7 @@ describe('JSON Schema Validation', () => {
         url: 'http://phishing.example.com',
       };
 
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
       expect(handCodedResult.valid).toBe(true);
 
       const schemaResult = schemaValidator.validateCore(report);
@@ -417,12 +417,12 @@ describe('JSON Schema Validation', () => {
   });
 
   describe('6. Reports that violate schema but not hand-coded rules', () => {
-    it('should catch report with legacy_version other than "3"', async () => {
+    it('should catch report with legacy_version other than "3"', () => {
       const report = createValidReport();
       (report as any).legacy_version = '2';
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       // Schema enforces legacy_version must be "3" if present
       expect(schemaResult.valid).toBe(false);
@@ -431,7 +431,7 @@ describe('JSON Schema Validation', () => {
       expect(handCodedResult.valid).toBe(true);
     });
 
-    it('should catch evidence item missing required payload field', async () => {
+    it('should catch evidence item missing required payload field', () => {
       const report = createValidReport();
       report.evidence = [
         {
@@ -441,7 +441,7 @@ describe('JSON Schema Validation', () => {
       ];
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       // Schema enforces required payload field
       expect(schemaResult.valid).toBe(false);
@@ -452,35 +452,35 @@ describe('JSON Schema Validation', () => {
   });
 
   describe('7. Compare schema vs hand-coded validator results', () => {
-    it('should both pass for valid report', async () => {
+    it('should both pass for valid report', () => {
       const report = createValidReport();
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       expect(schemaResult.valid).toBe(true);
       expect(handCodedResult.valid).toBe(true);
       expect(handCodedResult.errors.length).toBe(0);
     });
 
-    it('should both fail for report missing required field', async () => {
+    it('should both fail for report missing required field', () => {
       const report = createValidReport();
       delete (report as any).timestamp;
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       // Both should fail
       expect(schemaResult.valid).toBe(false);
       expect(handCodedResult.valid).toBe(false);
     });
 
-    it('should both fail for invalid email format', async () => {
+    it('should both fail for invalid email format', () => {
       const report = createValidReport();
       report.reporter.contact = 'invalid-email';
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       // Both should fail
       expect(schemaResult.valid).toBe(false);
@@ -488,12 +488,12 @@ describe('JSON Schema Validation', () => {
       expect(handCodedResult.errors.some((e) => e.field === 'reporter.contact')).toBe(true);
     });
 
-    it('should both fail for invalid confidence value', async () => {
+    it('should both fail for invalid confidence value', () => {
       const report = createValidReport();
       report.confidence = 2.5;
 
       const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = await handCodedValidator.validate(report);
+      const handCodedResult = handCodedValidator.validate(report);
 
       // Both should fail
       expect(schemaResult.valid).toBe(false);

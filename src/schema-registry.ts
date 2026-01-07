@@ -8,6 +8,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import type { XARFCategory, SeverityLevel } from './types';
+import { findSchemasDir, loadSchemaFile } from './schema-utils';
 
 /**
  * Schema property definition
@@ -79,7 +80,7 @@ export class SchemaRegistry {
    * Private constructor - use getInstance() instead
    */
   private constructor() {
-    this.schemasDir = this.findSchemasDir();
+    this.schemasDir = findSchemasDir();
     this.loadCoreSchema();
     this.scanTypeSchemas();
   }
@@ -103,48 +104,12 @@ export class SchemaRegistry {
   }
 
   /**
-   * Find the schemas directory
-   * @returns Path to schemas directory
-   */
-  private findSchemasDir(): string {
-    const possiblePaths = [
-      path.join(__dirname, 'schemas'),
-      path.join(__dirname, '..', 'schemas'),
-      path.join(__dirname, '..', '..', 'schemas'),
-      path.join(process.cwd(), 'schemas'),
-    ];
-
-    for (const p of possiblePaths) {
-      if (fs.existsSync(p) && fs.existsSync(path.join(p, 'xarf-core.json'))) {
-        return p;
-      }
-    }
-
-    return possiblePaths[0];
-  }
-
-  /**
-   * Load and parse a JSON schema file
-   * @param schemaPath - Path to schema file
-   * @returns Parsed schema or null if not found
-   */
-  private loadSchema(schemaPath: string): SchemaDefinition | null {
-    try {
-      if (!fs.existsSync(schemaPath)) {
-        return null;
-      }
-      const content = fs.readFileSync(schemaPath, 'utf-8');
-      return JSON.parse(content) as SchemaDefinition;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
    * Load the core schema
    */
   private loadCoreSchema(): void {
-    this.coreSchema = this.loadSchema(path.join(this.schemasDir, 'xarf-core.json'));
+    this.coreSchema = loadSchemaFile<SchemaDefinition>(
+      path.join(this.schemasDir, 'xarf-core.json')
+    );
   }
 
   /**
@@ -164,7 +129,7 @@ export class SchemaRegistry {
           const match = file.match(/^([^-]+)-(.+)\.json$/);
           if (match) {
             const schemaPath = path.join(typesDir, file);
-            const schema = this.loadSchema(schemaPath);
+            const schema = loadSchemaFile<SchemaDefinition>(schemaPath);
             if (schema) {
               this.typeSchemas.set(`${match[1]}/${match[2]}`, schema);
             }
@@ -560,7 +525,7 @@ export class SchemaRegistry {
     // Extract filename from ref
     const filename = ref.replace(/^\.\//, '').replace(/^\.\.\//, '');
     const schemaPath = path.join(this.schemasDir, 'types', filename);
-    return this.loadSchema(schemaPath);
+    return loadSchemaFile<SchemaDefinition>(schemaPath);
   }
 
   /**

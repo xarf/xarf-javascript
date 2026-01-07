@@ -9,19 +9,14 @@
  * Regular expression for validating email addresses
  * Matches standard email format: local@domain.tld
  */
-export const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 /**
  * Regular expression for validating domain/hostname
  * Matches valid hostnames per RFC 1123
  */
-export const DOMAIN_REGEX =
+const DOMAIN_REGEX =
   /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-
-/**
- * Required fields for ContactInfo objects (reporter, sender, on_behalf_of)
- */
-export const CONTACT_REQUIRED_FIELDS = ['org', 'contact', 'domain'] as const;
 
 /**
  * Validation result for individual field checks
@@ -134,61 +129,4 @@ export function validateTimestamp(timestamp: string | undefined | null): FieldVa
   }
 
   return { valid: true };
-}
-
-/**
- * Safely extract error message from unknown error type
- * Handles Error objects, strings, and other types consistently
- * @param error - Unknown error value
- * @returns Error message string
- */
-export function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
-}
-
-/**
- * Check if a value is a non-empty string
- * @param value - Value to check
- * @returns True if value is a non-empty string
- */
-export function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
-}
-
-/**
- * Check if a value is a valid port number (1-65535)
- * @param port - Port number to validate
- * @returns Validation result with error message if invalid
- */
-export function validatePort(port: number | undefined | null): FieldValidationResult {
-  if (port === undefined || port === null) {
-    return { valid: true }; // Port is optional
-  }
-  if (typeof port !== 'number' || !Number.isInteger(port)) {
-    return { valid: false, error: 'Port must be an integer' };
-  }
-  if (port < 1 || port > 65535) {
-    return { valid: false, error: `Port must be between 1 and 65535, got ${port}` };
-  }
-  return { valid: true };
-}
-
-/**
- * Check if a value is a valid URL
- * @param url - URL string to validate
- * @returns Validation result with error message if invalid
- */
-export function validateUrl(url: string | undefined | null): FieldValidationResult {
-  if (!url || typeof url !== 'string') {
-    return { valid: false, error: 'URL is required' };
-  }
-  try {
-    new URL(url);
-    return { valid: true };
-  } catch {
-    return { valid: false, error: `Invalid URL format: ${url}` };
-  }
 }

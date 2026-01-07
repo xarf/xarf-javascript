@@ -36,129 +36,129 @@ describe('XARFValidator', () => {
   });
 
   describe('validate', () => {
-    it('should validate correct report', async () => {
+    it('should validate correct report', () => {
       const report = createValidReport();
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should detect missing required fields', async () => {
+    it('should detect missing required fields', () => {
       const report: any = {
         xarf_version: '4.0.0',
         // Missing other required fields
       };
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
     });
 
-    it('should detect invalid XARF version', async () => {
+    it('should detect invalid XARF version', () => {
       const report = createValidReport();
       report.xarf_version = '3.0.0';
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'xarf_version')).toBe(true);
     });
 
-    it('should detect invalid category', async () => {
+    it('should detect invalid category', () => {
       const report = createValidReport();
       (report as any).category = 'invalid';
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'category')).toBe(true);
     });
 
-    it('should detect invalid reporter domain', async () => {
+    it('should detect invalid reporter domain', () => {
       const report = createValidReport();
       (report.reporter as any).domain = 'invalid domain with spaces';
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'reporter.domain')).toBe(true);
     });
 
-    it('should detect invalid confidence', async () => {
+    it('should detect invalid confidence', () => {
       const report = createValidReport();
       report.confidence = 1.5;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'confidence')).toBe(true);
     });
 
-    it('should validate occurrence time range', async () => {
+    it('should validate occurrence time range', () => {
       const report = createValidReport();
       report.occurrence = {
         start: '2024-01-15T12:00:00Z',
         end: '2024-01-15T10:00:00Z', // End before start
       };
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'occurrence')).toBe(true);
     });
 
-    it('should throw in strict mode', async () => {
+    it('should throw in strict mode', () => {
       const report = createValidReport();
       report.xarf_version = '3.0.0';
 
-      await expect(validator.validate(report, true)).rejects.toThrow(XARFValidationError);
+      expect(() => validator.validate(report, true)).toThrow(XARFValidationError);
     });
 
-    it('should convert warnings to errors in strict mode', async () => {
+    it('should convert warnings to errors in strict mode', () => {
       const report = createValidReport();
       report.report_id = 'not-a-uuid';
 
-      await expect(validator.validate(report, true)).rejects.toThrow(XARFValidationError);
+      expect(() => validator.validate(report, true)).toThrow(XARFValidationError);
     });
   });
 
   describe('format validation', () => {
-    it('should warn about invalid UUID format', async () => {
+    it('should warn about invalid UUID format', () => {
       const report = createValidReport();
       report.report_id = 'not-a-valid-uuid';
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.warnings.some((w) => w.field === 'report_id')).toBe(true);
     });
 
-    it('should error on invalid email format', async () => {
+    it('should error on invalid email format', () => {
       const report = createValidReport();
       report.reporter.contact = 'not-an-email';
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'reporter.contact')).toBe(true);
     });
 
-    it('should detect invalid timestamp', async () => {
+    it('should detect invalid timestamp', () => {
       const report = createValidReport();
       report.timestamp = 'invalid-timestamp';
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'timestamp')).toBe(true);
     });
 
-    it('should detect invalid version format', async () => {
+    it('should detect invalid version format', () => {
       const report = createValidReport();
       report.xarf_version = '4.0';
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'xarf_version')).toBe(true);
@@ -166,7 +166,7 @@ describe('XARFValidator', () => {
   });
 
   describe('category-specific validation', () => {
-    it('should validate messaging reports', async () => {
+    it('should validate messaging reports', () => {
       const report: XARFReport = {
         ...createValidReport(),
         category: 'messaging',
@@ -175,24 +175,24 @@ describe('XARFValidator', () => {
         smtp_from: 'spammer@example.com',
       };
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
       expect(result.valid).toBe(true);
     });
 
-    it('should detect invalid messaging type', async () => {
+    it('should detect invalid messaging type', () => {
       const report: XARFReport = {
         ...createValidReport(),
         category: 'messaging',
         type: 'invalid_type',
       };
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'type')).toBe(true);
     });
 
-    it('should require smtp_from for SMTP messaging', async () => {
+    it('should require smtp_from for SMTP messaging', () => {
       const report: XARFReport = {
         ...createValidReport(),
         category: 'messaging',
@@ -200,40 +200,40 @@ describe('XARFValidator', () => {
         protocol: 'smtp',
       };
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'smtp_from')).toBe(true);
     });
 
-    it('should validate connection reports', async () => {
+    it('should validate connection reports', () => {
       const report = createValidReport();
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
       expect(result.valid).toBe(true);
     });
 
-    it('should require destination_ip for connection reports', async () => {
+    it('should require destination_ip for connection reports', () => {
       const report: any = createValidReport();
       delete report.destination_ip;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'destination_ip')).toBe(true);
     });
 
-    it('should validate port numbers', async () => {
+    it('should validate port numbers', () => {
       const report = createValidReport();
       (report as any).destination_port = 70000;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
     });
 
-    it('should validate content reports', async () => {
+    it('should validate content reports', () => {
       const report: XARFReport = {
         ...createValidReport(),
         category: 'content',
@@ -243,11 +243,11 @@ describe('XARFValidator', () => {
       delete (report as any).destination_ip;
       delete (report as any).protocol;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
       expect(result.valid).toBe(true);
     });
 
-    it('should require url for content reports', async () => {
+    it('should require url for content reports', () => {
       const report: XARFReport = {
         ...createValidReport(),
         category: 'content',
@@ -256,13 +256,13 @@ describe('XARFValidator', () => {
       delete (report as any).destination_ip;
       delete (report as any).protocol;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'url')).toBe(true);
     });
 
-    it('should validate URL format', async () => {
+    it('should validate URL format', () => {
       const report: XARFReport = {
         ...createValidReport(),
         category: 'content',
@@ -272,7 +272,7 @@ describe('XARFValidator', () => {
       delete (report as any).destination_ip;
       delete (report as any).protocol;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'url')).toBe(true);
@@ -280,7 +280,7 @@ describe('XARFValidator', () => {
   });
 
   describe('on_behalf_of validation', () => {
-    it('should accept valid on_behalf_of', async () => {
+    it('should accept valid on_behalf_of', () => {
       const report = createValidReport();
       report.on_behalf_of = {
         org: 'Client Org',
@@ -288,13 +288,13 @@ describe('XARFValidator', () => {
         domain: 'client.example.com',
       };
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
       expect(result.valid).toBe(true);
     });
   });
 
   describe('evidence validation', () => {
-    it('should accept valid evidence', async () => {
+    it('should accept valid evidence', () => {
       const report = createValidReport();
       report.evidence = [
         {
@@ -305,35 +305,35 @@ describe('XARFValidator', () => {
         },
       ];
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
       expect(result.valid).toBe(true);
     });
   });
 
   describe('showMissingOptional flag', () => {
-    it('should not include info when showMissingOptional is false', async () => {
+    it('should not include info when showMissingOptional is false', () => {
       const report = createValidReport();
 
-      const result = await validator.validate(report, false, false);
+      const result = validator.validate(report, false, false);
 
       expect(result.valid).toBe(true);
       expect(result.info).toBeUndefined();
     });
 
-    it('should include info array when showMissingOptional is true', async () => {
+    it('should include info array when showMissingOptional is true', () => {
       const report = createValidReport();
 
-      const result = await validator.validate(report, false, true);
+      const result = validator.validate(report, false, true);
 
       expect(result.valid).toBe(true);
       expect(result.info).toBeDefined();
       expect(Array.isArray(result.info)).toBe(true);
     });
 
-    it('should list missing optional fields from core schema', async () => {
+    it('should list missing optional fields from core schema', () => {
       const report = createValidReport();
 
-      const result = await validator.validate(report, false, true);
+      const result = validator.validate(report, false, true);
 
       expect(result.info).toBeDefined();
       // Should include common optional fields like description, confidence, tags, etc.
@@ -343,11 +343,11 @@ describe('XARFValidator', () => {
       expect(infoFields).toContain('tags');
     });
 
-    it('should include type-specific optional fields', async () => {
+    it('should include type-specific optional fields', () => {
       const report = createValidReport();
       // This is a connection/ddos report
 
-      const result = await validator.validate(report, false, true);
+      const result = validator.validate(report, false, true);
 
       expect(result.info).toBeDefined();
       const infoFields = result.info!.map((i) => i.field);
@@ -355,12 +355,12 @@ describe('XARFValidator', () => {
       expect(infoFields).toContain('destination_port');
     });
 
-    it('should not list fields that are present in the report', async () => {
+    it('should not list fields that are present in the report', () => {
       const report = createValidReport();
       report.description = 'This is a test description';
       report.confidence = 0.95;
 
-      const result = await validator.validate(report, false, true);
+      const result = validator.validate(report, false, true);
 
       expect(result.info).toBeDefined();
       const infoFields = result.info!.map((i) => i.field);
@@ -368,10 +368,10 @@ describe('XARFValidator', () => {
       expect(infoFields).not.toContain('confidence');
     });
 
-    it('should include description from schema in info message', async () => {
+    it('should include description from schema in info message', () => {
       const report = createValidReport();
 
-      const result = await validator.validate(report, false, true);
+      const result = validator.validate(report, false, true);
 
       expect(result.info).toBeDefined();
       const descriptionInfo = result.info!.find((i) => i.field === 'description');
@@ -379,10 +379,10 @@ describe('XARFValidator', () => {
       expect(descriptionInfo!.message).toContain('OPTIONAL');
     });
 
-    it('should mark recommended fields appropriately', async () => {
+    it('should mark recommended fields appropriately', () => {
       const report = createValidReport();
 
-      const result = await validator.validate(report, false, true);
+      const result = validator.validate(report, false, true);
 
       expect(result.info).toBeDefined();
       const confidenceInfo = result.info!.find((i) => i.field === 'confidence');

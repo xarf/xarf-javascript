@@ -15,7 +15,7 @@ import { XARFValidator } from '../src/validator';
 
 describe('Senior Engineer Feedback Issues', () => {
   describe('Issue 1: Snake case vs camel case support', () => {
-    it('should accept snake_case properties from XARF spec examples', async () => {
+    it('should accept snake_case properties from XARF spec examples', () => {
       const parser = new XARFParser();
 
       // This is how it appears in XARF v4 spec examples
@@ -46,7 +46,7 @@ describe('Senior Engineer Feedback Issues', () => {
       expect(parser.getErrors()).toHaveLength(0);
     });
 
-    it('should work with XARF spec example directly copied', async () => {
+    it('should work with XARF spec example directly copied', () => {
       const parser = new XARFParser();
 
       // Direct copy from spec would use snake_case throughout
@@ -79,7 +79,7 @@ describe('Senior Engineer Feedback Issues', () => {
   });
 
   describe('Issue 2: Invalid properties should emit warnings', () => {
-    it('should warn when using incorrect property names', async () => {
+    it('should warn when using incorrect property names', () => {
       const parser = new XARFParser();
 
       const reportWithTypos = {
@@ -115,7 +115,7 @@ describe('Senior Engineer Feedback Issues', () => {
       expect(warnings.some((w) => w.includes('severety') || w.includes('unknown'))).toBe(true);
     });
 
-    it('should warn about misspelled category-specific fields', async () => {
+    it('should warn about misspelled category-specific fields', () => {
       const parser = new XARFParser();
 
       const report = {
@@ -150,7 +150,7 @@ describe('Senior Engineer Feedback Issues', () => {
   });
 
   describe('Issue 3: ReportType should alias to type', () => {
-    it('should accept ReportType as alias for type field', async () => {
+    it('should accept ReportType as alias for type field', () => {
       const parser = new XARFParser();
 
       const report = {
@@ -182,7 +182,7 @@ describe('Senior Engineer Feedback Issues', () => {
   });
 
   describe('Issue 4: Timestamp validation should enforce ISO format', () => {
-    it('should throw error for invalid timestamp format', async () => {
+    it('should throw error for invalid timestamp format', () => {
       const validator = new XARFValidator();
 
       const report = {
@@ -206,12 +206,12 @@ describe('Senior Engineer Feedback Issues', () => {
         url: 'http://phishing.example.com',
       } as any;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'timestamp')).toBe(true);
     });
 
-    it('should reject invalid occurrence timestamps', async () => {
+    it('should reject invalid occurrence timestamps', () => {
       const validator = new XARFValidator();
 
       const report = {
@@ -239,14 +239,14 @@ describe('Senior Engineer Feedback Issues', () => {
         },
       } as any;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field.includes('occurrence'))).toBe(true);
     });
   });
 
   describe('Issue 5: Generator should not create invalid reports', () => {
-    it('should accept category-specific fields directly via union types', async () => {
+    it('should accept category-specific fields directly via union types', () => {
       const generator = new XARFGenerator();
 
       // Content report with url as direct field (not in additionalFields)
@@ -270,7 +270,7 @@ describe('Senior Engineer Feedback Issues', () => {
       expect(report.url).toBe('http://phishing.example.com');
     });
 
-    it('should validate generated reports pass XARFValidator', async () => {
+    it('should validate generated reports pass XARFValidator', () => {
       const generator = new XARFGenerator();
       const validator = new XARFValidator();
 
@@ -293,12 +293,12 @@ describe('Senior Engineer Feedback Issues', () => {
       });
 
       // The generated report should always be valid
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should accept connection category fields directly via union types', async () => {
+    it('should accept connection category fields directly via union types', () => {
       const generator = new XARFGenerator();
 
       // Connection report with fields as direct properties

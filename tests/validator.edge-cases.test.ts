@@ -13,7 +13,7 @@ describe('XARFValidator Edge Cases', () => {
   });
 
   describe('validateRequiredFields edge cases', () => {
-    it('should detect missing reporter.contact', async () => {
+    it('should detect missing reporter.contact', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -28,13 +28,13 @@ describe('XARFValidator Edge Cases', () => {
         evidence_source: 'spamtrap',
       } as unknown as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'reporter.contact')).toBe(true);
     });
 
-    it('should detect missing reporter.domain', async () => {
+    it('should detect missing reporter.domain', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -54,7 +54,7 @@ describe('XARFValidator Edge Cases', () => {
         evidence_source: 'spamtrap',
       } as unknown as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'reporter.domain')).toBe(true);
@@ -62,7 +62,7 @@ describe('XARFValidator Edge Cases', () => {
   });
 
   describe('validateFormats edge cases', () => {
-    it('should handle invalid timestamp that causes exception', async () => {
+    it('should handle invalid timestamp that causes exception', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -83,7 +83,7 @@ describe('XARFValidator Edge Cases', () => {
         evidence_source: 'spamtrap',
       } as unknown as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       // Valid timestamp should pass
       expect(result.valid).toBe(true);
@@ -91,7 +91,7 @@ describe('XARFValidator Edge Cases', () => {
   });
 
   describe('validateValues edge cases', () => {
-    it('should validate invalid evidence_source', async () => {
+    it('should validate invalid evidence_source', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -112,13 +112,13 @@ describe('XARFValidator Edge Cases', () => {
         evidence_source: 'invalid_source',
       } as unknown as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'evidence_source')).toBe(true);
     });
 
-    it('should validate invalid severity', async () => {
+    it('should validate invalid severity', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -140,13 +140,13 @@ describe('XARFValidator Edge Cases', () => {
         severity: 'extreme',
       } as unknown as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'severity')).toBe(true);
     });
 
-    it('should detect start time after end time in occurrence', async () => {
+    it('should detect start time after end time in occurrence', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -171,7 +171,7 @@ describe('XARFValidator Edge Cases', () => {
         },
       } as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'occurrence')).toBe(true);
@@ -180,7 +180,7 @@ describe('XARFValidator Edge Cases', () => {
       ).toBe(true);
     });
 
-    it('should detect occurrence without start or end', async () => {
+    it('should detect occurrence without start or end', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -202,7 +202,7 @@ describe('XARFValidator Edge Cases', () => {
         occurrence: {} as any,
       } as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'occurrence')).toBe(true);
@@ -210,7 +210,7 @@ describe('XARFValidator Edge Cases', () => {
   });
 
   describe('validateCategorySpecific edge cases', () => {
-    it('should error for invalid connection type', async () => {
+    it('should error for invalid connection type', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -233,14 +233,14 @@ describe('XARFValidator Edge Cases', () => {
         protocol: 'tcp',
       } as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'type')).toBe(true);
       expect(result.errors.some((e) => e.message.includes('Invalid type'))).toBe(true);
     });
 
-    it('should error for invalid content type', async () => {
+    it('should error for invalid content type', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -262,14 +262,14 @@ describe('XARFValidator Edge Cases', () => {
         url: 'http://example.com',
       } as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'type')).toBe(true);
       expect(result.errors.some((e) => e.message.includes('Invalid type'))).toBe(true);
     });
 
-    it('should handle infrastructure category with no specific validation', async () => {
+    it('should handle infrastructure category with no specific validation', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -290,7 +290,7 @@ describe('XARFValidator Edge Cases', () => {
         evidence_source: 'honeypot',
       } as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       // Should validate without category-specific errors
       expect(result.valid).toBe(true);
@@ -298,7 +298,7 @@ describe('XARFValidator Edge Cases', () => {
   });
 
   describe('validateConnectionReport edge cases', () => {
-    it('should validate invalid port number (non-integer)', async () => {
+    it('should validate invalid port number (non-integer)', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -322,13 +322,13 @@ describe('XARFValidator Edge Cases', () => {
         destination_port: 'not-a-number',
       } as unknown as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
     });
 
-    it('should validate port number too high', async () => {
+    it('should validate port number too high', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -352,13 +352,13 @@ describe('XARFValidator Edge Cases', () => {
         destination_port: 70000,
       } as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
     });
 
-    it('should validate negative port number', async () => {
+    it('should validate negative port number', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -382,7 +382,7 @@ describe('XARFValidator Edge Cases', () => {
         destination_port: -1,
       } as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
@@ -390,7 +390,7 @@ describe('XARFValidator Edge Cases', () => {
   });
 
   describe('validateContentReport edge cases', () => {
-    it('should catch URL parsing error', async () => {
+    it('should catch URL parsing error', () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -412,7 +412,7 @@ describe('XARFValidator Edge Cases', () => {
         url: 'not-a-valid-url',
       } as XARFReport;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'url')).toBe(true);

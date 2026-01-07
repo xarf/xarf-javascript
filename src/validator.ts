@@ -9,7 +9,7 @@ import type { XARFReport } from './types';
 import { SchemaValidator } from './schema-validator';
 import { schemaRegistry } from './schema-registry';
 import { validateEmail, validateDomain } from './validation-utils';
-import * as fs from 'fs';
+import { findSchemasDir, loadSchemaFile } from './schema-utils';
 import * as path from 'path';
 
 /**
@@ -98,45 +98,7 @@ export class XARFValidator {
   constructor(useSchemaValidation = true) {
     this.useSchemaValidation = useSchemaValidation;
     this.schemaValidator = new SchemaValidator();
-    this.schemasDir = this.findSchemasDir();
-  }
-
-  /**
-   * Find the schemas directory
-   * @returns Path to schemas directory
-   */
-  private findSchemasDir(): string {
-    const possiblePaths = [
-      path.join(__dirname, 'schemas'),
-      path.join(__dirname, '..', 'schemas'),
-      path.join(__dirname, '..', '..', 'schemas'),
-      path.join(process.cwd(), 'schemas'),
-    ];
-
-    for (const p of possiblePaths) {
-      if (fs.existsSync(p) && fs.existsSync(path.join(p, 'xarf-core.json'))) {
-        return p;
-      }
-    }
-
-    return possiblePaths[0];
-  }
-
-  /**
-   * Load and parse a JSON schema file
-   * @param schemaPath - Path to schema file
-   * @returns Parsed schema or null if not found
-   */
-  private loadSchema(schemaPath: string): SchemaDefinition | null {
-    try {
-      if (!fs.existsSync(schemaPath)) {
-        return null;
-      }
-      const content = fs.readFileSync(schemaPath, 'utf-8');
-      return JSON.parse(content) as SchemaDefinition;
-    } catch {
-      return null;
-    }
+    this.schemasDir = findSchemasDir();
   }
 
   /**
@@ -147,7 +109,9 @@ export class XARFValidator {
     if (this.coreSchemaCache) {
       return this.coreSchemaCache;
     }
-    this.coreSchemaCache = this.loadSchema(path.join(this.schemasDir, 'xarf-core.json'));
+    this.coreSchemaCache = loadSchemaFile<SchemaDefinition>(
+      path.join(this.schemasDir, 'xarf-core.json')
+    );
     return this.coreSchemaCache;
   }
 
@@ -164,7 +128,7 @@ export class XARFValidator {
     }
 
     const schemaPath = path.join(this.schemasDir, 'types', `${category}-${type}.json`);
-    const schema = this.loadSchema(schemaPath);
+    const schema = loadSchemaFile<SchemaDefinition>(schemaPath);
     if (schema) {
       this.typeSchemaCache.set(cacheKey, schema);
     }
@@ -260,18 +224,14 @@ export class XARFValidator {
    * @returns Validation result with errors, warnings, and optionally info
    * @throws {XARFValidationError} If strict mode and validation fails
    */
-  async validate(
-    report: XARFReport,
-    strict = false,
-    showMissingOptional = false
-  ): Promise<ValidationResult> {
+  validate(report: XARFReport, strict = false, showMissingOptional = false): ValidationResult {
     this.errors = [];
     this.warnings = [];
     this.info = [];
 
     // 1. Run schema validation first (if enabled)
     if (this.useSchemaValidation) {
-      const schemaResult = await this.validateWithSchema(report);
+      const schemaResult = this.validateWithSchema(report);
       if (!schemaResult.valid) {
         // Schema validation errors are primary - add them first
         this.errors.push(...schemaResult.errors);
@@ -337,9 +297,9 @@ export class XARFValidator {
    * @param report - The XARF report to validate
    * @returns Validation result from schema validation
    */
-  async validateWithSchema(report: XARFReport): Promise<ValidationResult> {
+  validateWithSchema(report: XARFReport): ValidationResult {
     try {
-      const schemaResult = await this.schemaValidator.validate(report);
+      const schemaResult = this.schemaValidator.validate(report);
 
       // Convert schema validation errors to our format
       const errors: ValidationError[] = schemaResult.errors.map((err) => ({
