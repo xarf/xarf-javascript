@@ -12,6 +12,7 @@ export {
   type ValidationResult,
   type ValidationError,
   type ValidationWarning,
+  type ValidationInfo,
 } from './validator';
 export { SchemaValidator, validator } from './schema-validator';
 export { XARFError, XARFValidationError, XARFParseError, XARFSchemaError } from './errors';

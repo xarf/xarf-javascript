@@ -7,6 +7,8 @@
 import { XARFValidationError } from './errors';
 import type { XARFReport, XARFCategory } from './types';
 import { SchemaValidator } from './schema-validator';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Validation result with detailed error information
@@ -15,6 +17,7 @@ export interface ValidationResult {
   valid: boolean;
   errors: ValidationError[];
   warnings: ValidationWarning[];
+  info?: ValidationInfo[];
 }
 
 /**
@@ -36,6 +39,42 @@ export interface ValidationWarning {
 }
 
 /**
+ * Validation info details (for missing optional fields)
+ */
+export interface ValidationInfo {
+  field: string;
+  message: string;
+}
+
+/**
+ * Schema property definition
+ */
+interface SchemaPropertyDef {
+  type?: string;
+  description?: string;
+  'x-recommended'?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Schema definition structure
+ */
+interface SchemaDefinition {
+  required?: string[];
+  properties?: Record<string, SchemaPropertyDef>;
+  allOf?: SchemaDefinition[];
+  [key: string]: unknown;
+}
+
+/**
+ * Optional field info extracted from schema
+ */
+interface OptionalFieldInfo {
+  description: string;
+  recommended: boolean;
+}
+
+/**
  * XARF Report Validator
  *
  * Provides comprehensive validation for XARF v4.0.0 reports
@@ -43,8 +82,12 @@ export interface ValidationWarning {
 export class XARFValidator {
   private errors: ValidationError[] = [];
   private warnings: ValidationWarning[] = [];
+  private info: ValidationInfo[] = [];
   private schemaValidator: SchemaValidator;
   private useSchemaValidation: boolean;
+  private schemasDir: string;
+  private coreSchemaCache: SchemaDefinition | null = null;
+  private typeSchemaCache: Map<string, SchemaDefinition> = new Map();
 
   /**
    * Create a new XARF validator
@@ -53,18 +96,176 @@ export class XARFValidator {
   constructor(useSchemaValidation = false) {
     this.useSchemaValidation = useSchemaValidation;
     this.schemaValidator = new SchemaValidator();
+    this.schemasDir = this.findSchemasDir();
+  }
+
+  /**
+   * Find the schemas directory
+   * @returns Path to schemas directory
+   */
+  private findSchemasDir(): string {
+    const possiblePaths = [
+      path.join(__dirname, 'schemas'),
+      path.join(__dirname, '..', 'schemas'),
+      path.join(__dirname, '..', '..', 'schemas'),
+      path.join(process.cwd(), 'schemas'),
+    ];
+
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p) && fs.existsSync(path.join(p, 'xarf-core.json'))) {
+        return p;
+      }
+    }
+
+    return possiblePaths[0];
+  }
+
+  /**
+   * Load and parse a JSON schema file
+   * @param schemaPath - Path to schema file
+   * @returns Parsed schema or null if not found
+   */
+  private loadSchema(schemaPath: string): SchemaDefinition | null {
+    try {
+      if (!fs.existsSync(schemaPath)) {
+        return null;
+      }
+      const content = fs.readFileSync(schemaPath, 'utf-8');
+      return JSON.parse(content) as SchemaDefinition;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get the core schema definition
+   * @returns Core schema or null
+   */
+  private getCoreSchema(): SchemaDefinition | null {
+    if (this.coreSchemaCache) {
+      return this.coreSchemaCache;
+    }
+    this.coreSchemaCache = this.loadSchema(path.join(this.schemasDir, 'xarf-core.json'));
+    return this.coreSchemaCache;
+  }
+
+  /**
+   * Get a type-specific schema definition
+   * @param category - Report category
+   * @param type - Report type
+   * @returns Type schema or null
+   */
+  private getTypeSchema(category: string, type: string): SchemaDefinition | null {
+    const cacheKey = `${category}-${type}`;
+    if (this.typeSchemaCache.has(cacheKey)) {
+      return this.typeSchemaCache.get(cacheKey) || null;
+    }
+
+    const schemaPath = path.join(this.schemasDir, 'types', `${category}-${type}.json`);
+    const schema = this.loadSchema(schemaPath);
+    if (schema) {
+      this.typeSchemaCache.set(cacheKey, schema);
+    }
+    return schema;
+  }
+
+  /**
+   * Extract optional fields from schema properties
+   * @param properties - Schema properties object
+   * @param required - Set of required field names
+   * @param optionalFields - Map to add optional fields to
+   */
+  private extractFromProperties(
+    properties: Record<string, SchemaPropertyDef>,
+    required: Set<string>,
+    optionalFields: Map<string, OptionalFieldInfo>
+  ): void {
+    for (const [fieldName, fieldDef] of Object.entries(properties)) {
+      if (!required.has(fieldName) && fieldName !== '_internal') {
+        optionalFields.set(fieldName, {
+          description: fieldDef.description || `Optional field: ${fieldName}`,
+          recommended: fieldDef['x-recommended'] === true,
+        });
+      }
+    }
+  }
+
+  /**
+   * Extract optional fields from a schema
+   * @param schema - Schema definition
+   * @returns Map of field name to description
+   */
+  private extractOptionalFields(schema: SchemaDefinition): Map<string, OptionalFieldInfo> {
+    const optionalFields = new Map<string, OptionalFieldInfo>();
+    const required = new Set(schema.required || []);
+
+    if (schema.properties) {
+      this.extractFromProperties(schema.properties, required, optionalFields);
+    }
+
+    // Handle allOf for type schemas
+    if (schema.allOf) {
+      for (const subSchema of schema.allOf) {
+        if (subSchema.properties) {
+          const subRequired = new Set([...required, ...(subSchema.required || [])]);
+          this.extractFromProperties(subSchema.properties, subRequired, optionalFields);
+        }
+      }
+    }
+
+    return optionalFields;
+  }
+
+  /**
+   * Collect missing optional fields from the report
+   * @param report - XARF report to check
+   */
+  private collectMissingOptionalFields(report: XARFReport): void {
+    const coreSchema = this.getCoreSchema();
+    if (!coreSchema) {
+      return;
+    }
+
+    // Get optional fields from core schema
+    const optionalFields = this.extractOptionalFields(coreSchema);
+
+    // Get type-specific optional fields
+    const typeSchema = this.getTypeSchema(report.category, report.type);
+    if (typeSchema) {
+      const typeOptionalFields = this.extractOptionalFields(typeSchema);
+      for (const [field, info] of typeOptionalFields) {
+        optionalFields.set(field, info);
+      }
+    }
+
+    // Check which optional fields are missing
+    for (const [fieldName, fieldInfo] of optionalFields) {
+      if (!(fieldName in report) || report[fieldName as keyof XARFReport] === undefined) {
+        const prefix = fieldInfo.recommended ? 'RECOMMENDED' : 'OPTIONAL';
+        this.info.push({
+          field: fieldName,
+          message: `${prefix}: ${fieldInfo.description}`,
+        });
+      }
+    }
   }
 
   /**
    * Validate a XARF report comprehensively
    * @param report - The XARF report to validate
    * @param strict - If true, warnings are treated as errors
-   * @returns Validation result with errors and warnings
+   * @param showMissingOptional - If true, includes info about missing optional fields
+   * @returns Validation result with errors, warnings, and optionally info
    * @throws {XARFValidationError} If strict mode and validation fails
    */
-  async validate(report: XARFReport, strict = false): Promise<ValidationResult> {
+  async validate(
+    report: XARFReport,
+    strict = false,
+    showMissingOptional = false
+  ): Promise<ValidationResult> {
     this.errors = [];
     this.warnings = [];
+    this.info = [];
 
     // 1. Run schema validation first (if enabled)
     if (this.useSchemaValidation) {
@@ -103,11 +304,21 @@ export class XARFValidator {
       this.warnings = [];
     }
 
+    // 5. Collect missing optional fields if requested
+    if (showMissingOptional) {
+      this.collectMissingOptionalFields(report);
+    }
+
     const result: ValidationResult = {
       valid: this.errors.length === 0,
       errors: [...this.errors],
       warnings: [...this.warnings],
     };
+
+    // Only include info array if showMissingOptional is enabled
+    if (showMissingOptional) {
+      result.info = [...this.info];
+    }
 
     if (strict && !result.valid) {
       throw new XARFValidationError(

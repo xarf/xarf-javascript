@@ -309,4 +309,85 @@ describe('XARFValidator', () => {
       expect(result.valid).toBe(true);
     });
   });
+
+  describe('showMissingOptional flag', () => {
+    it('should not include info when showMissingOptional is false', async () => {
+      const report = createValidReport();
+
+      const result = await validator.validate(report, false, false);
+
+      expect(result.valid).toBe(true);
+      expect(result.info).toBeUndefined();
+    });
+
+    it('should include info array when showMissingOptional is true', async () => {
+      const report = createValidReport();
+
+      const result = await validator.validate(report, false, true);
+
+      expect(result.valid).toBe(true);
+      expect(result.info).toBeDefined();
+      expect(Array.isArray(result.info)).toBe(true);
+    });
+
+    it('should list missing optional fields from core schema', async () => {
+      const report = createValidReport();
+
+      const result = await validator.validate(report, false, true);
+
+      expect(result.info).toBeDefined();
+      // Should include common optional fields like description, confidence, tags, etc.
+      const infoFields = result.info!.map((i) => i.field);
+      expect(infoFields).toContain('description');
+      expect(infoFields).toContain('confidence');
+      expect(infoFields).toContain('tags');
+    });
+
+    it('should include type-specific optional fields', async () => {
+      const report = createValidReport();
+      // This is a connection/ddos report
+
+      const result = await validator.validate(report, false, true);
+
+      expect(result.info).toBeDefined();
+      const infoFields = result.info!.map((i) => i.field);
+      // Connection DDoS specific optional fields
+      expect(infoFields).toContain('destination_port');
+    });
+
+    it('should not list fields that are present in the report', async () => {
+      const report = createValidReport();
+      report.description = 'This is a test description';
+      report.confidence = 0.95;
+
+      const result = await validator.validate(report, false, true);
+
+      expect(result.info).toBeDefined();
+      const infoFields = result.info!.map((i) => i.field);
+      expect(infoFields).not.toContain('description');
+      expect(infoFields).not.toContain('confidence');
+    });
+
+    it('should include description from schema in info message', async () => {
+      const report = createValidReport();
+
+      const result = await validator.validate(report, false, true);
+
+      expect(result.info).toBeDefined();
+      const descriptionInfo = result.info!.find((i) => i.field === 'description');
+      expect(descriptionInfo).toBeDefined();
+      expect(descriptionInfo!.message).toContain('OPTIONAL');
+    });
+
+    it('should mark recommended fields appropriately', async () => {
+      const report = createValidReport();
+
+      const result = await validator.validate(report, false, true);
+
+      expect(result.info).toBeDefined();
+      const confidenceInfo = result.info!.find((i) => i.field === 'confidence');
+      expect(confidenceInfo).toBeDefined();
+      expect(confidenceInfo!.message).toContain('RECOMMENDED');
+    });
+  });
 });
