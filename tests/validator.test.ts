@@ -237,7 +237,7 @@ describe('XARFValidator', () => {
       const report: XARFReport = {
         ...createValidReport(),
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         url: 'http://phishing.example.com',
       };
       delete (report as any).destination_ip;
@@ -251,7 +251,7 @@ describe('XARFValidator', () => {
       const report: XARFReport = {
         ...createValidReport(),
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
       };
       delete (report as any).destination_ip;
       delete (report as any).protocol;
@@ -266,7 +266,7 @@ describe('XARFValidator', () => {
       const report: XARFReport = {
         ...createValidReport(),
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         url: 'not-a-valid-url',
       };
       delete (report as any).destination_ip;

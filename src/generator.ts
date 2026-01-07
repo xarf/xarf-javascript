@@ -7,6 +7,7 @@
 
 import { randomBytes, randomUUID, createHash } from 'crypto';
 import { XARFError } from './errors';
+import { schemaRegistry } from './schema-registry';
 import type {
   XARFReport,
   XARFCategory,
@@ -77,90 +78,62 @@ export class XARFGenerator {
   // XARF v4.0.0 specification constants
   static readonly XARF_VERSION = '4.0.0';
 
-  // Valid categories as per XARF spec (7 total)
-  static readonly VALID_CATEGORIES = new Set<XARFCategory>([
-    'messaging',
-    'connection',
-    'content',
-    'infrastructure',
-    'copyright',
-    'vulnerability',
-    'reputation',
-  ]);
+  // Cache for schema-derived values
+  private static _validCategories: Set<XARFCategory> | null = null;
+  private static _eventTypes: Record<string, string[]> | null = null;
+  private static _validEvidenceSources: Set<string> | null = null;
+  private static _validSeverities: Set<SeverityLevel> | null = null;
 
-  // Valid types per category
-  static readonly EVENT_TYPES: Record<string, string[]> = {
-    messaging: ['spam', 'phishing', 'social_engineering', 'bulk_messaging'],
-    connection: [
-      'ddos',
-      'port_scan',
-      'login_attack',
-      'ip_spoofing',
-      'compromised',
-      'botnet',
-      'malicious_traffic',
-      'sql_injection',
-      'reconnaissance',
-      'scraping',
-      'vuln_scanning',
-      'bot',
-      'infected_host',
-    ],
-    content: [
-      'phishing_site',
-      'malware_distribution',
-      'defacement',
-      'spamvertised',
-      'web_hack',
-      'illegal',
-      'malicious',
-      'policy_violation',
-      'phishing',
-      'malware',
-      'fraud',
-      'exposed_data',
-      'csam',
-      'csem',
-      'brand_infringement',
-      'suspicious_registration',
-      'remote_compromise',
-    ],
-    infrastructure: ['botnet', 'compromised_server'],
-    copyright: [
-      'infringement',
-      'dmca',
-      'trademark',
-      'p2p',
-      'cyberlocker',
-      'link_site',
-      'ugc_platform',
-      'usenet',
-      'copyright',
-    ],
-    vulnerability: ['cve', 'misconfiguration', 'open_service'],
-    reputation: ['blocklist', 'threat_intelligence'],
-  };
+  /**
+   * Valid categories as per XARF spec (dynamically loaded from schema)
+   * @returns Set of valid XARF categories
+   */
+  static get VALID_CATEGORIES(): Set<XARFCategory> {
+    if (!XARFGenerator._validCategories) {
+      XARFGenerator._validCategories = schemaRegistry.getCategories();
+    }
+    return XARFGenerator._validCategories;
+  }
 
-  // Valid evidence sources
-  static readonly VALID_EVIDENCE_SOURCES = new Set<EvidenceSource>([
-    'spamtrap',
-    'honeypot',
-    'user_report',
-    'automated_scan',
-    'manual_analysis',
-    'vulnerability_scan',
-    'researcher_analysis',
-    'threat_intelligence',
-    'flow_analysis',
-    'ids_ips',
-    'siem',
-  ]);
+  /**
+   * Valid types per category (dynamically loaded from schema)
+   * @returns Record mapping categories to their valid types
+   */
+  static get EVENT_TYPES(): Record<string, string[]> {
+    if (!XARFGenerator._eventTypes) {
+      XARFGenerator._eventTypes = {};
+      const allTypes = schemaRegistry.getAllTypes();
+      for (const [category, types] of allTypes) {
+        XARFGenerator._eventTypes[category] = Array.from(types);
+      }
+    }
+    return XARFGenerator._eventTypes;
+  }
+
+  /**
+   * Valid evidence sources (dynamically loaded from schema)
+   * @returns Set of valid evidence sources
+   */
+  static get VALID_EVIDENCE_SOURCES(): Set<string> {
+    if (!XARFGenerator._validEvidenceSources) {
+      XARFGenerator._validEvidenceSources = schemaRegistry.getEvidenceSources();
+    }
+    return XARFGenerator._validEvidenceSources;
+  }
 
   // Valid reporter types
   static readonly VALID_REPORTER_TYPES = new Set<ReporterType>(['automated', 'manual', 'hybrid']);
 
-  // Valid severity levels
-  static readonly VALID_SEVERITIES = new Set<SeverityLevel>(['low', 'medium', 'high', 'critical']);
+  /**
+   * Valid severity levels (dynamically loaded from schema)
+   * @returns Set of valid severity levels
+   */
+  static get VALID_SEVERITIES(): Set<SeverityLevel> {
+    if (!XARFGenerator._validSeverities) {
+      XARFGenerator._validSeverities = schemaRegistry.getSeverities();
+    }
+    return XARFGenerator._validSeverities;
+  }
 
   // Evidence content types by category
   static readonly EVIDENCE_CONTENT_TYPES: Record<string, string[]> = {

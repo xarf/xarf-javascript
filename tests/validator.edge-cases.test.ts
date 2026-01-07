@@ -210,7 +210,7 @@ describe('XARFValidator Edge Cases', () => {
   });
 
   describe('validateCategorySpecific edge cases', () => {
-    it('should warn about uncommon connection type', async () => {
+    it('should error for invalid connection type', async () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: 'test-id',
@@ -227,7 +227,7 @@ describe('XARFValidator Edge Cases', () => {
         },
         source_identifier: '192.0.2.1',
         category: 'connection',
-        type: 'sql_injection',
+        type: 'invalid_connection_type',
         evidence_source: 'ids_ips',
         destination_ip: '203.0.113.1',
         protocol: 'tcp',
@@ -235,11 +235,12 @@ describe('XARFValidator Edge Cases', () => {
 
       const result = await validator.validate(report);
 
-      expect(result.warnings.length).toBeGreaterThan(0);
-      expect(result.warnings.some((w) => w.field === 'type')).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'type')).toBe(true);
+      expect(result.errors.some((e) => e.message.includes('Invalid type'))).toBe(true);
     });
 
-    it('should warn about uncommon content type', async () => {
+    it('should error for invalid content type', async () => {
       const report = {
         xarf_version: '4.0.0',
         report_id: 'test-id',
@@ -256,15 +257,16 @@ describe('XARFValidator Edge Cases', () => {
         },
         source_identifier: '192.0.2.1',
         category: 'content',
-        type: 'fraud',
+        type: 'invalid_content_type',
         evidence_source: 'user_report',
         url: 'http://example.com',
       } as XARFReport;
 
       const result = await validator.validate(report);
 
-      expect(result.warnings.length).toBeGreaterThan(0);
-      expect(result.warnings.some((w) => w.field === 'type')).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'type')).toBe(true);
+      expect(result.errors.some((e) => e.message.includes('Invalid type'))).toBe(true);
     });
 
     it('should handle infrastructure category with no specific validation', async () => {
@@ -405,7 +407,7 @@ describe('XARFValidator Edge Cases', () => {
         },
         source_identifier: '192.0.2.1',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'user_report',
         url: 'not-a-valid-url',
       } as XARFReport;

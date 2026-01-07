@@ -34,7 +34,7 @@ describe('JSON Schema Validation', () => {
     },
     source_identifier: '192.0.2.100',
     category,
-    type: category === 'messaging' ? 'spam' : category === 'connection' ? 'ddos' : 'phishing_site',
+    type: category === 'messaging' ? 'spam' : category === 'connection' ? 'ddos' : 'phishing',
     evidence_source: 'honeypot',
     ...(category === 'connection' && {
       destination_ip: '203.0.113.10',
@@ -402,7 +402,7 @@ describe('JSON Schema Validation', () => {
         },
         source_identifier: '192.0.2.100',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'automated_scan',
         url: 'http://phishing.example.com',
       };

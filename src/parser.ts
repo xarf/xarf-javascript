@@ -3,6 +3,7 @@
  */
 
 import { XARFParseError, XARFValidationError } from './errors';
+import { schemaRegistry } from './schema-registry';
 import type { XARFReport, MessagingReport, ConnectionReport, ContentReport } from './types';
 import { isXARFv3, convertV3toV4, getV3DeprecationWarning, type XARFv3Report } from './v3-legacy';
 
@@ -15,7 +16,6 @@ export class XARFParser {
   private strict: boolean;
   private errors: string[] = [];
   private warnings: string[] = [];
-  private readonly supportedCategories = new Set(['messaging', 'connection', 'content']);
 
   /**
    * Initialize parser
@@ -106,8 +106,9 @@ export class XARFParser {
 
     const reportCategory = data.category as string;
 
-    if (!this.supportedCategories.has(reportCategory)) {
-      const errorMsg = `Unsupported category '${reportCategory}' in alpha version. Supported: ${Array.from(this.supportedCategories).join(', ')}`;
+    if (!schemaRegistry.isValidCategory(reportCategory)) {
+      const validCategories = Array.from(schemaRegistry.getCategories()).join(', ');
+      const errorMsg = `Unsupported category '${reportCategory}'. Supported: ${validCategories}`;
       if (this.strict) {
         throw new XARFValidationError(errorMsg);
       }
@@ -380,13 +381,13 @@ export class XARFParser {
   /**
    * Validate messaging category reports
    * @param data - Parsed XARF report data
-   * @param reportType - Type of messaging report (spam, phishing, social_engineering)
+   * @param reportType - Type of messaging report (spam, phishing, etc.)
    * @returns True if validation passes, false otherwise
    */
   private validateMessaging(data: Record<string, unknown>, reportType: string): boolean {
-    const validTypes = new Set(['spam', 'phishing', 'social_engineering']);
-    if (!validTypes.has(reportType)) {
-      this.errors.push(`Invalid messaging type: ${reportType}`);
+    if (!schemaRegistry.isValidType('messaging', reportType)) {
+      const validTypes = Array.from(schemaRegistry.getTypesForCategory('messaging')).join(', ');
+      this.errors.push(`Invalid messaging type: ${reportType}. Valid types: ${validTypes}`);
       return false;
     }
 
@@ -408,13 +409,13 @@ export class XARFParser {
   /**
    * Validate connection category reports
    * @param data - Parsed XARF report data
-   * @param reportType - Type of connection report (ddos, port_scan, login_attack, ip_spoofing)
+   * @param reportType - Type of connection report (ddos, port_scan, etc.)
    * @returns True if validation passes, false otherwise
    */
   private validateConnection(data: Record<string, unknown>, reportType: string): boolean {
-    const validTypes = new Set(['ddos', 'port_scan', 'login_attack', 'ip_spoofing']);
-    if (!validTypes.has(reportType)) {
-      this.errors.push(`Invalid connection type: ${reportType}`);
+    if (!schemaRegistry.isValidType('connection', reportType)) {
+      const validTypes = Array.from(schemaRegistry.getTypesForCategory('connection')).join(', ');
+      this.errors.push(`Invalid connection type: ${reportType}. Valid types: ${validTypes}`);
       return false;
     }
 
@@ -435,19 +436,13 @@ export class XARFParser {
   /**
    * Validate content category reports
    * @param data - Parsed XARF report data
-   * @param reportType - Type of content report (phishing_site, malware_distribution, etc.)
+   * @param reportType - Type of content report (phishing, malware, etc.)
    * @returns True if validation passes, false otherwise
    */
   private validateContent(data: Record<string, unknown>, reportType: string): boolean {
-    const validTypes = new Set([
-      'phishing_site',
-      'malware_distribution',
-      'defacement',
-      'spamvertised',
-      'web_hack',
-    ]);
-    if (!validTypes.has(reportType)) {
-      this.errors.push(`Invalid content type: ${reportType}`);
+    if (!schemaRegistry.isValidType('content', reportType)) {
+      const validTypes = Array.from(schemaRegistry.getTypesForCategory('content')).join(', ');
+      this.errors.push(`Invalid content type: ${reportType}. Valid types: ${validTypes}`);
       return false;
     }
 

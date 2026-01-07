@@ -35,7 +35,7 @@ describe('Senior Engineer Feedback Issues', () => {
         },
         source_identifier: '192.0.2.100',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'honeypot',
         url: 'http://phishing.example.com',
       };
@@ -98,7 +98,7 @@ describe('Senior Engineer Feedback Issues', () => {
         },
         source_identifier: '192.0.2.100',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'honeypot',
         url: 'http://phishing.example.com',
         // Typo - should be 'severity' not 'severety'
@@ -134,7 +134,7 @@ describe('Senior Engineer Feedback Issues', () => {
         },
         source_identifier: '192.0.2.100',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'honeypot',
         url: 'http://phishing.example.com',
         // Typo: should be 'content_type' not 'contentType'
@@ -201,7 +201,7 @@ describe('Senior Engineer Feedback Issues', () => {
         },
         source_identifier: '192.0.2.100',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'honeypot',
         url: 'http://phishing.example.com',
       } as any;
@@ -230,7 +230,7 @@ describe('Senior Engineer Feedback Issues', () => {
         },
         source_identifier: '192.0.2.100',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'honeypot',
         url: 'http://phishing.example.com',
         occurrence: {
@@ -253,7 +253,7 @@ describe('Senior Engineer Feedback Issues', () => {
       expect(() => {
         generator.generateReport({
           category: 'content',
-          reportType: 'phishing_site',
+          reportType: 'phishing',
           sourceIdentifier: '192.0.2.100',
           reporter: {
             org: 'Test Org',
@@ -277,7 +277,7 @@ describe('Senior Engineer Feedback Issues', () => {
       // Generate a content report
       const report = generator.generateReport({
         category: 'content',
-        reportType: 'phishing_site',
+        reportType: 'phishing',
         sourceIdentifier: '192.0.2.100',
         reporter: {
           org: 'Test Org',

@@ -5,8 +5,9 @@
  */
 
 import { XARFValidationError } from './errors';
-import type { XARFReport, XARFCategory } from './types';
+import type { XARFReport } from './types';
 import { SchemaValidator } from './schema-validator';
+import { schemaRegistry } from './schema-registry';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -664,6 +665,46 @@ export class XARFValidator {
   }
 
   /**
+   * Validate an enum value against schema-derived options
+   * @param fieldName - Name of the field being validated
+   * @param value - The value to validate
+   * @param validOptions - Set of valid options from schema
+   * @param fieldLabel - Human-readable label for error messages
+   */
+  private validateEnumValue(
+    fieldName: string,
+    value: string | undefined,
+    validOptions: Set<string>,
+    fieldLabel: string
+  ): void {
+    if (value && !validOptions.has(value)) {
+      this.errors.push({
+        field: fieldName,
+        message: `Invalid ${fieldLabel} (must be one of: ${Array.from(validOptions).join(', ')})`,
+        value,
+      });
+    }
+  }
+
+  /**
+   * Validate type for category (dynamically from schema)
+   * @param report - XARF report to validate
+   */
+  private validateTypeForCategory(report: XARFReport): void {
+    if (!report.category || !report.type) {
+      return;
+    }
+    const validTypes = schemaRegistry.getTypesForCategory(report.category);
+    if (validTypes.size > 0 && !validTypes.has(report.type)) {
+      this.errors.push({
+        field: 'type',
+        message: `Invalid type for category '${report.category}' (must be one of: ${Array.from(validTypes).join(', ')})`,
+        value: report.type,
+      });
+    }
+  }
+
+  /**
    * Validate field values
    * @param report - XARF report to validate for correct field values
    */
@@ -677,62 +718,22 @@ export class XARFValidator {
       });
     }
 
-    // Validate category (7 total per XARF v4.0.0 spec)
-    const validCategories = new Set<XARFCategory>([
-      'messaging',
-      'connection',
-      'content',
-      'infrastructure',
-      'copyright',
-      'vulnerability',
-      'reputation',
-    ]);
-    if (report.category && !validCategories.has(report.category)) {
-      this.errors.push({
-        field: 'category',
-        message: `Invalid category (must be one of: ${Array.from(validCategories).join(', ')})`,
-        value: report.category,
-      });
-    }
+    // Validate category (dynamically from schema)
+    this.validateEnumValue('category', report.category, schemaRegistry.getCategories(), 'category');
 
-    // Validate evidence source (expanded list from xarf-core.json spec)
-    const validEvidenceSources = new Set([
-      'spamtrap',
-      'user_complaint',
-      'automated_filter',
-      'honeypot',
-      'crawler',
-      'user_report',
-      'automated_scan',
-      'spam_analysis',
-      'firewall_logs',
-      'ids_detection',
-      'flow_analysis',
-      'vulnerability_scan',
-      'researcher_analysis',
-      'automated_discovery',
-      'traffic_analysis',
-      'threat_intelligence',
-      'ids_ips',
-      'siem',
-    ]);
-    if (report.evidence_source && !validEvidenceSources.has(report.evidence_source)) {
-      this.errors.push({
-        field: 'evidence_source',
-        message: `Invalid evidence source (must be one of: ${Array.from(validEvidenceSources).join(', ')})`,
-        value: report.evidence_source,
-      });
-    }
+    // Validate evidence source (dynamically from schema)
+    this.validateEnumValue(
+      'evidence_source',
+      report.evidence_source,
+      schemaRegistry.getEvidenceSources(),
+      'evidence source'
+    );
 
-    // Validate severity if present
-    const validSeverities = new Set(['low', 'medium', 'high', 'critical']);
-    if (report.severity && !validSeverities.has(report.severity)) {
-      this.errors.push({
-        field: 'severity',
-        message: `Invalid severity (must be one of: ${Array.from(validSeverities).join(', ')})`,
-        value: report.severity,
-      });
-    }
+    // Validate severity if present (dynamically from schema)
+    this.validateEnumValue('severity', report.severity, schemaRegistry.getSeverities(), 'severity');
+
+    // Validate type for category (dynamically from schema)
+    this.validateTypeForCategory(report);
 
     // Validate occurrence times
     this.validateOccurrence(report.occurrence);
@@ -761,15 +762,6 @@ export class XARFValidator {
    * @param report - XARF report with messaging category to validate
    */
   private validateMessagingReport(report: XARFReport): void {
-    const validTypes = new Set(['spam', 'phishing', 'social_engineering', 'bulk_messaging']);
-    if (!validTypes.has(report.type)) {
-      this.errors.push({
-        field: 'type',
-        message: `Invalid messaging type (must be one of: ${Array.from(validTypes).join(', ')})`,
-        value: report.type,
-      });
-    }
-
     // Check for email-specific fields
     if (report.protocol === 'smtp') {
       if (!report.smtp_from) {
@@ -786,23 +778,6 @@ export class XARFValidator {
    * @param report - XARF report with connection category to validate
    */
   private validateConnectionReport(report: XARFReport): void {
-    const validTypes = new Set([
-      'ddos',
-      'port_scan',
-      'login_attack',
-      'ip_spoofing',
-      'compromised',
-      'botnet',
-      'malicious_traffic',
-    ]);
-    if (!validTypes.has(report.type)) {
-      this.warnings.push({
-        field: 'type',
-        message: `Uncommon connection type: ${report.type}`,
-        value: report.type,
-      });
-    }
-
     // Check for required connection fields
     if (!report.destination_ip) {
       this.errors.push({
@@ -836,21 +811,6 @@ export class XARFValidator {
    * @param report - XARF report with content category to validate
    */
   private validateContentReport(report: XARFReport): void {
-    const validTypes = new Set([
-      'phishing_site',
-      'malware_distribution',
-      'defacement',
-      'spamvertised',
-      'web_hack',
-    ]);
-    if (!validTypes.has(report.type)) {
-      this.warnings.push({
-        field: 'type',
-        message: `Uncommon content type: ${report.type}`,
-        value: report.type,
-      });
-    }
-
     // URL is required for content reports
     if (!report.url) {
       this.errors.push({

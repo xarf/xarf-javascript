@@ -23,7 +23,7 @@ describe('XARFParser Edge Cases', () => {
           domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
-        category: 'infrastructure',
+        category: 'invalid_category',
         type: 'botnet',
         evidence_source: 'honeypot',
       };
@@ -183,7 +183,7 @@ describe('XARFParser Edge Cases', () => {
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
-        type: 'social_engineering',
+        type: 'bulk_messaging',
         evidence_source: 'spamtrap',
         protocol: 'smtp',
         smtp_from: 'sender@example.com',
@@ -192,7 +192,7 @@ describe('XARFParser Edge Cases', () => {
       const parser = new XARFParser(false);
       const result = parser.validate(reportData);
 
-      // Should pass because subject is only required for spam/phishing
+      // Should pass because subject is only required for spam
       expect(result).toBe(true);
     });
 
@@ -226,7 +226,7 @@ describe('XARFParser Edge Cases', () => {
       expect(parser.getErrors().some((e) => e.includes('subject required'))).toBe(true);
     });
 
-    it('should require subject for phishing with smtp protocol', () => {
+    it('should reject invalid messaging type', () => {
       const invalidData = {
         xarf_version: '4.0.0',
         report_id: 'test-id',
@@ -243,17 +243,17 @@ describe('XARFParser Edge Cases', () => {
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
-        type: 'phishing',
+        type: 'invalid_type',
         evidence_source: 'spamtrap',
         protocol: 'smtp',
-        smtp_from: 'phisher@example.com',
+        smtp_from: 'test@example.com',
       };
 
       const parser = new XARFParser(false);
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('subject required'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('Invalid messaging type'))).toBe(true);
     });
 
     it('should validate connection report missing protocol', () => {

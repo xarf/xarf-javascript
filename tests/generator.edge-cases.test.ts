@@ -363,9 +363,9 @@ describe('XARFGenerator Edge Cases', () => {
       }> = [
         { category: 'messaging', type: 'spam' },
         { category: 'connection', type: 'ddos' },
-        { category: 'content', type: 'phishing_site' },
+        { category: 'content', type: 'phishing' },
         { category: 'infrastructure', type: 'botnet' },
-        { category: 'copyright', type: 'infringement' },
+        { category: 'copyright', type: 'copyright' },
         { category: 'vulnerability', type: 'cve' },
         { category: 'reputation', type: 'blocklist' },
       ];

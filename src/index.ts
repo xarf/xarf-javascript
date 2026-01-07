@@ -15,6 +15,7 @@ export {
   type ValidationInfo,
 } from './validator';
 export { SchemaValidator, validator } from './schema-validator';
+export { SchemaRegistry, schemaRegistry, type FieldMetadata } from './schema-registry';
 export { XARFError, XARFValidationError, XARFParseError, XARFSchemaError } from './errors';
 export type {
   XARFReport,

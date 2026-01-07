@@ -90,7 +90,7 @@ describe('XARFParser', () => {
         },
         source_identifier: '192.0.2.300',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'user_report',
         url: 'http://phishing.example.com',
       };
@@ -99,7 +99,7 @@ describe('XARFParser', () => {
       const report = parser.parse(reportData) as ContentReport;
 
       expect(report.category).toBe('content');
-      expect(report.type).toBe('phishing_site');
+      expect(report.type).toBe('phishing');
       expect(report.url).toBe('http://phishing.example.com');
     });
 
@@ -260,7 +260,7 @@ describe('XARFParser', () => {
       expect(errors.some((e) => e.includes('valid email address'))).toBe(true);
     });
 
-    it('should handle unsupported category in alpha', () => {
+    it('should handle unsupported category', () => {
       const reportData = {
         xarf_version: '4.0.0',
         report_id: 'test-id',
@@ -276,17 +276,17 @@ describe('XARFParser', () => {
           domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
-        category: 'vulnerability',
-        type: 'cve',
-        evidence_source: 'vulnerability_scan',
+        category: 'invalid_category',
+        type: 'test',
+        evidence_source: 'honeypot',
       };
 
       const parser = new XARFParser(false);
       const report = parser.parse(reportData);
 
-      expect(report.category).toBe('vulnerability');
+      expect(report.category).toBe('invalid_category');
       const errors = parser.getErrors();
-      expect(errors.length).toBe(1);
+      expect(errors.length).toBeGreaterThan(0);
       expect(errors[0]).toContain('Unsupported category');
     });
   });
@@ -366,7 +366,7 @@ describe('XARFParser', () => {
         },
         source_identifier: '192.0.2.1',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'user_report',
       };
 

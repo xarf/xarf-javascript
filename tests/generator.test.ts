@@ -157,7 +157,7 @@ describe('XARFGenerator', () => {
       const evidence = generator.addEvidence('text/plain', 'Test', 'data');
       const report = generator.generateReport({
         category: 'content',
-        reportType: 'phishing_site',
+        reportType: 'phishing',
         sourceIdentifier: '192.0.2.100',
         reporter: {
           org: 'Example Org',
@@ -331,7 +331,7 @@ describe('XARFGenerator', () => {
     });
 
     it('should generate sample without optional fields', () => {
-      const report = generator.generateSampleReport('content', 'phishing_site', false, false);
+      const report = generator.generateSampleReport('content', 'phishing', false, false);
 
       expect(report.severity).toBeUndefined();
       expect(report.target).toBeUndefined();

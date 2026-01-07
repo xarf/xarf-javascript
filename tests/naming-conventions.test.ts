@@ -257,7 +257,7 @@ describe('Field Naming Convention Support', () => {
     it('should output snake_case even when input uses camelCase', () => {
       const report = generator.generateReport({
         category: 'content',
-        reportType: 'phishing_site', // camelCase input
+        reportType: 'phishing', // camelCase input
         sourceIdentifier: '192.0.2.100', // camelCase input
         evidenceSource: 'user_report', // camelCase input
         reporter: {
