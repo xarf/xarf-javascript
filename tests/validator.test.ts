@@ -28,11 +28,13 @@ describe('XARFValidator', () => {
       domain: 'example.com',
     },
     source_identifier: '192.0.2.100',
+    source_port: 12345,
     category: 'connection',
     type: 'ddos',
     evidence_source: 'honeypot',
     destination_ip: '203.0.113.10',
     protocol: 'tcp',
+    first_seen: '2024-01-15T09:00:00Z',
   });
 
   describe('validate', () => {

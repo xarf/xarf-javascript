@@ -101,7 +101,9 @@ export interface XARFReport {
   source_identifier: string;
   category: XARFCategory;
   type: string;
-  evidence_source: EvidenceSource;
+
+  // Recommended fields (optional per XARF schema)
+  evidence_source?: EvidenceSource;
 
   // Optional base fields
   on_behalf_of?: ContactInfo;

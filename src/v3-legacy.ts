@@ -239,9 +239,12 @@ function addConnectionFields(v4Report: XARFReport, v3Report: XARFv3Report['Repor
   Object.assign(v4Report, {
     destination_ip: v3Report.DestinationIp || 'unknown',
     protocol: v3Report.Protocol || 'tcp',
-    source_port: v3Report.Source?.Port || v3Report.SourcePort,
+    // source_port is required when source_identifier is an IP (min value is 1)
+    source_port: v3Report.Source?.Port || v3Report.SourcePort || 1,
     destination_port: v3Report.DestinationPort,
     attempt_count: v3Report.AttackCount,
+    // first_seen is required for connection types in v4
+    first_seen: v3Report.Date,
   });
 }
 
@@ -282,7 +285,8 @@ function convertWithMapping(
   const reporterInfo = v3Report.ReporterInfo;
 
   const sourceIdentifier = extractSourceIdentifier(report, warnings);
-  const evidenceSource = (report.AdditionalInfo?.DetectionMethod as string) || 'manual_analysis';
+  // Only set evidence_source if explicitly provided in v3 report - it's optional in v4
+  const evidenceSource = report.AdditionalInfo?.DetectionMethod as string | undefined;
   const evidence = convertEvidence(report.Attachment || report.Samples);
   const contactInfo = extractContactInfo(reporterInfo);
 
@@ -295,7 +299,6 @@ function convertWithMapping(
     source_identifier: sourceIdentifier,
     category: mapping.category,
     type: mapping.type,
-    evidence_source: evidenceSource as EvidenceSource,
     description: report.AttackDescription,
     evidence,
     _internal: {
@@ -304,6 +307,11 @@ function convertWithMapping(
       converted_at: new Date().toISOString(),
     },
   };
+
+  // Only add evidence_source if explicitly provided
+  if (evidenceSource) {
+    v4Report.evidence_source = evidenceSource as EvidenceSource;
+  }
 
   addCategorySpecificFields(v4Report, mapping.category, report, sourceIdentifier, evidence);
 

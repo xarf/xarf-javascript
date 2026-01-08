@@ -81,6 +81,7 @@ describe('XARFValidator Edge Cases', () => {
         category: 'messaging',
         type: 'spam',
         evidence_source: 'spamtrap',
+        protocol: 'chat', // Required for messaging/spam, use chat to avoid smtp requirements
       } as unknown as XARFReport;
 
       const result = validator.validate(report);
@@ -288,6 +289,7 @@ describe('XARFValidator Edge Cases', () => {
         category: 'infrastructure',
         type: 'botnet',
         evidence_source: 'honeypot',
+        compromise_evidence: 'C2 communication observed', // Required for botnet type
       } as XARFReport;
 
       const result = validator.validate(report);

@@ -17,7 +17,7 @@ describe('Field Naming Convention Support', () => {
         category: 'connection',
         type: 'ddos', // XARF spec field name
         source_identifier: '192.0.2.100', // XARF spec field name
-        evidence_source: 'automated_scan', // XARF spec field name
+        evidence_source: 'honeypot', // Valid for connection/ddos schema
         reporter: {
           org: 'Security Team',
           contact: 'security@example.com',
@@ -31,12 +31,14 @@ describe('Field Naming Convention Support', () => {
         additionalFields: {
           destination_ip: '203.0.113.50',
           protocol: 'tcp',
+          first_seen: '2024-01-15T09:00:00Z',
+          source_port: 12345,
         },
       });
 
       expect(report.type).toBe('ddos');
       expect(report.source_identifier).toBe('192.0.2.100');
-      expect(report.evidence_source).toBe('automated_scan');
+      expect(report.evidence_source).toBe('honeypot');
     });
 
     it('should accept on_behalf_of in snake_case', () => {
@@ -63,6 +65,7 @@ describe('Field Naming Convention Support', () => {
         additionalFields: {
           protocol: 'smtp',
           smtp_from: 'spammer@evil.com',
+          source_port: 25,
           subject: 'Test spam',
         },
       });
@@ -78,7 +81,7 @@ describe('Field Naming Convention Support', () => {
         category: 'connection',
         reportType: 'ddos', // Backward compatibility
         sourceIdentifier: '192.0.2.100', // Backward compatibility
-        evidenceSource: 'automated_scan', // Backward compatibility
+        evidenceSource: 'honeypot', // Valid for connection/ddos
         reporter: {
           org: 'Security Team',
           contact: 'security@example.com',
@@ -92,13 +95,15 @@ describe('Field Naming Convention Support', () => {
         additionalFields: {
           destination_ip: '203.0.113.50',
           protocol: 'tcp',
+          first_seen: '2024-01-15T09:00:00Z',
+          source_port: 12345,
         },
       });
 
       // Output should ALWAYS use snake_case (XARF spec)
       expect(report.type).toBe('ddos');
       expect(report.source_identifier).toBe('192.0.2.100');
-      expect(report.evidence_source).toBe('automated_scan');
+      expect(report.evidence_source).toBe('honeypot');
     });
 
     it('should accept onBehalfOf in camelCase', () => {
@@ -125,6 +130,7 @@ describe('Field Naming Convention Support', () => {
         additionalFields: {
           protocol: 'smtp',
           smtp_from: 'spammer@evil.com',
+          source_port: 25,
           subject: 'Test spam',
         },
       });
@@ -144,7 +150,6 @@ describe('Field Naming Convention Support', () => {
         source_identifier: '192.0.2.50', // XARF spec - should be used
         sourceIdentifier: '192.0.2.100', // Backward compat - should be ignored
         evidence_source: 'honeypot', // XARF spec - should be used
-        evidenceSource: 'automated_scan', // Backward compat - should be ignored
         reporter: {
           org: 'Security Team',
           contact: 'security@example.com',
@@ -158,6 +163,8 @@ describe('Field Naming Convention Support', () => {
         additionalFields: {
           destination_ip: '203.0.113.50',
           protocol: 'tcp',
+          first_seen: '2024-01-15T09:00:00Z',
+          source_port: 12345,
         },
       });
 
@@ -195,6 +202,7 @@ describe('Field Naming Convention Support', () => {
         additionalFields: {
           protocol: 'smtp',
           smtp_from: 'spammer@evil.com',
+          source_port: 25,
           subject: 'Test spam',
         },
       });

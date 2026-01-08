@@ -106,6 +106,8 @@ describe('GeneratorOptions Union Types', () => {
         type: 'ddos',
         destination_ip: '203.0.113.10',
         protocol: 'tcp',
+        first_seen: '2024-01-15T09:00:00Z',
+        source_port: 12345,
       };
 
       const report = generator.generateReport(options);
@@ -122,6 +124,8 @@ describe('GeneratorOptions Union Types', () => {
         type: 'ddos',
         destination_ip: '203.0.113.10',
         protocol: 'tcp',
+        first_seen: '2024-01-15T09:00:00Z',
+        source_port: 12345,
         destination_port: 80,
         attack_vector: 'syn_flood',
         peak_pps: 1000000,
@@ -142,6 +146,8 @@ describe('GeneratorOptions Union Types', () => {
         additionalFields: {
           destination_ip: '203.0.113.20',
           protocol: 'udp',
+          first_seen: '2024-01-15T09:00:00Z',
+          source_port: 12345,
         },
       });
 
@@ -158,6 +164,7 @@ describe('GeneratorOptions Union Types', () => {
         type: 'spam',
         protocol: 'smtp',
         smtp_from: 'spammer@evil.example.com',
+        source_port: 25,
         subject: 'You won!',
       };
 
@@ -176,6 +183,7 @@ describe('GeneratorOptions Union Types', () => {
         type: 'spam',
         protocol: 'smtp',
         smtp_from: 'spammer@evil.example.com',
+        source_port: 25,
         smtp_to: 'victim@example.com',
         subject: 'You won!',
         message_id: '<123456@evil.example.com>',
@@ -196,6 +204,8 @@ describe('GeneratorOptions Union Types', () => {
         type: 'ddos',
         destination_ip: '203.0.113.10',
         protocol: 'tcp',
+        first_seen: '2024-01-15T09:00:00Z',
+        source_port: 12345,
         additionalFields: {
           destination_port: 443,
           custom_field: 'custom_value',
@@ -229,6 +239,8 @@ describe('GeneratorOptions Union Types', () => {
         type: 'ddos',
         destination_ip: '192.0.2.1',
         protocol: 'tcp',
+        first_seen: '2024-01-15T09:00:00Z',
+        source_port: 12345,
       };
 
       const contentReport = generator.generateReport(contentOptions);
@@ -266,6 +278,7 @@ describe('GeneratorOptions Union Types', () => {
         type: 'spam',
         protocol: 'smtp',
         smtp_from: 'spam@evil.example.com',
+        source_port: 25,
         sender_name: 'Nigerian Prince',
       };
 

@@ -65,11 +65,13 @@ describe('Senior Engineer Feedback Issues', () => {
           domain: 'example.com',
         },
         source_identifier: '192.0.2.100',
+        source_port: 12345,
         category: 'connection',
         type: 'ddos',
         evidence_source: 'honeypot',
         destination_ip: '203.0.113.10',
         protocol: 'tcp',
+        first_seen: '2025-12-16T07:00:00.000Z',
       };
 
       const parsed = parser.parse(specExample);
@@ -319,6 +321,8 @@ describe('Senior Engineer Feedback Issues', () => {
         destination_ip: '203.0.113.50',
         protocol: 'tcp',
         destination_port: 443,
+        first_seen: '2024-01-15T09:00:00Z',
+        source_port: 12345,
       });
 
       expect(report.destination_ip).toBe('203.0.113.50');

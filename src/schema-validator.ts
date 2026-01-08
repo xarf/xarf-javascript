@@ -279,11 +279,6 @@ export class SchemaValidator {
             unknown
           >;
 
-          // Type schemas have `allOf: [{ $ref: "../xarf-core.json" }, { ... }]`
-          // The master schema already includes the core schema via allOf
-          // So we need to extract just the type-specific part (second element of allOf)
-          const modifiedSchema = this.extractTypeSpecificSchema(schema);
-
           // Build the FULL URL that AJV will resolve
           // Master schema id is https://xarf.org/schemas/v4/xarf-v4-master.json
           // When it references "types/messaging-spam.json", AJV resolves to full URL
@@ -292,7 +287,7 @@ export class SchemaValidator {
 
           // Add schema under the FULL URL (what AJV resolves to)
           if (!this.ajv.getSchema(fullUrl)) {
-            const schemaWithFullId = { ...modifiedSchema, $id: fullUrl };
+            const schemaWithFullId = { ...schema, $id: fullUrl };
             this.ajv.addSchema(schemaWithFullId);
           }
         } catch (error) {
@@ -302,29 +297,6 @@ export class SchemaValidator {
         }
       }
     }
-  }
-
-  /**
-   * Extract type-specific schema part, removing the $ref to core schema
-   * Type schemas have structure: { allOf: [{ $ref: "../xarf-core.json" }, { type-specific }] }
-   * We only need the type-specific part since master schema already includes core
-   * @param schema - Type schema with allOf structure containing core ref and type-specific rules
-   * @returns Extracted type-specific schema without core reference
-   */
-  private extractTypeSpecificSchema(schema: Record<string, unknown>): Record<string, unknown> {
-    // If schema has allOf array with 2 elements
-    if (
-      schema.allOf &&
-      Array.isArray(schema.allOf) &&
-      schema.allOf.length === 2 &&
-      typeof schema.allOf[1] === 'object'
-    ) {
-      // Return just the type-specific part (second element of allOf)
-      return { ...schema, allOf: undefined, ...schema.allOf[1] };
-    }
-
-    // Otherwise return as-is
-    return schema;
   }
 
   /**
@@ -420,6 +392,7 @@ export class SchemaValidator {
 
   /**
    * Validate a XARF report against the appropriate schema
+   * Validates against both the core schema and the type-specific schema
    * @param report - The XARF report to validate
    * @returns ValidationResult with status and any error messages
    * @example
@@ -436,29 +409,44 @@ export class SchemaValidator {
       // Ensure schemas are loaded
       this.loadMasterSchema();
 
-      // Get the compiled master schema
-      const masterSchema = this.ajv.getSchema('https://xarf.org/schemas/v4/xarf-v4-master.json');
+      const allErrors: string[] = [];
 
-      if (!masterSchema) {
-        throw new Error('Master schema not found after loading');
+      // First validate against core schema
+      const coreSchema = this.ajv.getSchema('https://xarf.org/schemas/v4/xarf-core.json');
+      if (coreSchema) {
+        const coreValid = coreSchema(report);
+        if (!coreValid) {
+          allErrors.push(...this.formatValidationErrors(coreSchema.errors || []));
+        }
       }
 
-      // Validate the report
-      const valid = masterSchema(report);
+      // Then validate against type-specific schema if available
+      // The master schema's anyOf+if/then structure doesn't enforce type schemas properly,
+      // so we validate directly against the type-specific schema
+      const category = (report as Record<string, unknown>).category as string | undefined;
+      const type = (report as Record<string, unknown>).type as string | undefined;
 
-      if (valid) {
-        return {
-          valid: true,
-          errors: [],
-        };
+      if (category && type) {
+        const typeSchemaId = `https://xarf.org/schemas/v4/types/${category}-${type}.json`;
+        const typeSchema = this.ajv.getSchema(typeSchemaId);
+
+        if (typeSchema) {
+          const typeValid = typeSchema(report);
+          if (!typeValid) {
+            // Filter out duplicate errors from core schema that type schema also inherits
+            const typeErrors = this.formatValidationErrors(typeSchema.errors || []);
+            for (const err of typeErrors) {
+              if (!allErrors.includes(err)) {
+                allErrors.push(err);
+              }
+            }
+          }
+        }
       }
-
-      // Format validation errors
-      const errors = this.formatValidationErrors(masterSchema.errors || []);
 
       return {
-        valid: false,
-        errors,
+        valid: allErrors.length === 0,
+        errors: allErrors,
       };
     } catch (error) {
       // Handle unexpected validation errors

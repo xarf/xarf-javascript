@@ -109,6 +109,8 @@ describe('XARFGenerator', () => {
         additionalFields: {
           destination_ip: '203.0.113.10',
           protocol: 'tcp',
+          first_seen: '2024-01-15T09:00:00Z',
+          source_port: 12345,
         },
       });
 
@@ -145,6 +147,11 @@ describe('XARFGenerator', () => {
           org: 'Client Org',
           contact: 'client@example.com',
           domain: 'client.example.com',
+        },
+        additionalFields: {
+          protocol: 'smtp',
+          smtp_from: 'spammer@evil.com',
+          source_port: 25,
         },
       });
 

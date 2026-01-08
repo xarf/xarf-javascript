@@ -110,6 +110,10 @@ export interface ConnectionGeneratorOptions extends BaseGeneratorOptions {
   destination_ip?: string;
   /** Network protocol (required for connection reports) */
   protocol?: string;
+  /** Source port number (required when source_identifier is an IP) */
+  source_port?: number;
+  /** First seen timestamp (required for connection types) */
+  first_seen?: string;
   /** Destination port number */
   destination_port?: number;
   /** Attack vector type */
@@ -131,6 +135,8 @@ export interface MessagingGeneratorOptions extends BaseGeneratorOptions {
   category: 'messaging';
   /** Messaging protocol (smtp, sms, etc.) */
   protocol?: string;
+  /** Source port number (required when protocol is smtp) */
+  source_port?: number;
   /** SMTP envelope from address */
   smtp_from?: string;
   /** SMTP envelope to address */
@@ -368,7 +374,7 @@ export class XARFGenerator {
     // Normalize field names: prefer snake_case (XARF spec), fall back to camelCase (backward compat)
     const reportType = options.type ?? options.reportType;
     const sourceIdentifier = options.source_identifier ?? options.sourceIdentifier;
-    const evidenceSource = options.evidence_source ?? options.evidenceSource ?? 'automated_scan';
+    const evidenceSource = options.evidence_source ?? options.evidenceSource;
     const onBehalfOf = options.on_behalf_of ?? options.onBehalfOf;
 
     // Validate all required fields
@@ -449,6 +455,11 @@ export class XARFGenerator {
       }
     }
 
+    // Also extract source_port if provided (it's in core schema but commonly needed)
+    if (optionsRecord['source_port'] !== undefined) {
+      fields['source_port'] = optionsRecord['source_port'];
+    }
+
     return fields;
   }
 
@@ -493,7 +504,7 @@ export class XARFGenerator {
   private validateCategoryAndType(
     category: XARFCategory,
     reportType: string,
-    evidenceSource: EvidenceSource
+    evidenceSource?: EvidenceSource
   ): void {
     if (!XARFGenerator.VALID_CATEGORIES.has(category)) {
       throw new XARFError(
@@ -508,7 +519,7 @@ export class XARFGenerator {
       );
     }
 
-    if (!XARFGenerator.VALID_EVIDENCE_SOURCES.has(evidenceSource)) {
+    if (evidenceSource !== undefined && !XARFGenerator.VALID_EVIDENCE_SOURCES.has(evidenceSource)) {
       throw new XARFError(
         `Invalid evidence_source '${evidenceSource}'. Must be one of: ${Array.from(XARFGenerator.VALID_EVIDENCE_SOURCES).join(', ')}`
       );
@@ -624,7 +635,7 @@ export class XARFGenerator {
       category: XARFCategory;
       reportType: string;
       sourceIdentifier: string;
-      evidenceSource: EvidenceSource;
+      evidenceSource?: EvidenceSource;
       reporter: { org: string; contact: string; domain: string };
       sender: { org: string; contact: string; domain: string };
       onBehalfOf?: { org: string; contact: string; domain: string };
@@ -657,8 +668,11 @@ export class XARFGenerator {
       source_identifier: required.sourceIdentifier,
       category: required.category,
       type: required.reportType,
-      evidence_source: required.evidenceSource,
     };
+
+    if (required.evidenceSource) {
+      report.evidence_source = required.evidenceSource;
+    }
 
     if (required.onBehalfOf) {
       report.on_behalf_of = {
@@ -805,6 +819,10 @@ export class XARFGenerator {
       case 'connection':
         fields.destination_ip = `203.0.113.${Math.floor(Math.random() * 256)}`;
         fields.protocol = ['tcp', 'udp', 'icmp'][Math.floor(Math.random() * 3)];
+        // first_seen is required for connection types
+        fields.first_seen = new Date(Date.now() - Math.floor(Math.random() * 3600000)).toISOString();
+        // source_port is required when source_identifier is an IP
+        fields.source_port = 1024 + Math.floor(Math.random() * 64000);
         if (includeOptional) {
           fields.destination_port = [80, 443, 22, 25, 53][Math.floor(Math.random() * 5)];
         }
@@ -818,9 +836,12 @@ export class XARFGenerator {
         break;
 
       case 'messaging':
-        fields.protocol = ['smtp', 'http'][Math.floor(Math.random() * 2)];
+        // Use valid protocol values from messaging schema
+        fields.protocol = ['smtp', 'sms', 'chat'][Math.floor(Math.random() * 3)];
         if (fields.protocol === 'smtp') {
           fields.smtp_from = `spammer${Math.floor(Math.random() * 100)}@evil.example.com`;
+          // source_port is required when protocol is smtp
+          fields.source_port = 25 + Math.floor(Math.random() * 100);
           if (reportType === 'spam' || reportType === 'phishing') {
             fields.subject = `Sample ${reportType} subject`;
           }
@@ -828,6 +849,36 @@ export class XARFGenerator {
             fields.smtp_to = `victim@example.com`;
           }
         }
+        break;
+
+      case 'infrastructure':
+        // compromise_evidence is required for botnet type
+        if (reportType === 'botnet') {
+          fields.compromise_evidence = 'C2 communication observed';
+        }
+        // compromise_method is required for compromised_server type
+        if (reportType === 'compromised_server') {
+          fields.compromise_method = 'unauthorized_access';
+        }
+        break;
+
+      case 'copyright':
+        // infringing_url is required for most copyright types
+        fields.infringing_url = `http://pirate${Math.floor(Math.random() * 1000)}.example.com/content`;
+        break;
+
+      case 'vulnerability':
+        // service is required for all vulnerability types
+        fields.service = 'http';
+        if (reportType === 'cve') {
+          fields.service_port = 80;
+          fields.cve_id = 'CVE-2024-12345';
+        }
+        break;
+
+      case 'reputation':
+        // threat_type is required for reputation types
+        fields.threat_type = 'spam_source';
         break;
     }
 
