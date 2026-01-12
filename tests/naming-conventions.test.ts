@@ -40,7 +40,6 @@ describe('Field Naming Convention Support', () => {
       expect(report.source_identifier).toBe('192.0.2.100');
       expect(report.evidence_source).toBe('honeypot');
     });
-
   });
 
   describe('camelCase (backward compatibility)', () => {
@@ -73,7 +72,6 @@ describe('Field Naming Convention Support', () => {
       expect(report.source_identifier).toBe('192.0.2.100');
       expect(report.evidence_source).toBe('honeypot');
     });
-
   });
 
   describe('snake_case takes precedence', () => {
@@ -108,7 +106,6 @@ describe('Field Naming Convention Support', () => {
       expect(report.source_identifier).toBe('192.0.2.50');
       expect(report.evidence_source).toBe('honeypot');
     });
-
   });
 
   describe('error messages', () => {

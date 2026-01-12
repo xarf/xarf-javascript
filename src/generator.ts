@@ -851,7 +851,9 @@ export class XARFGenerator {
         fields.destination_ip = `203.0.113.${Math.floor(Math.random() * 256)}`;
         fields.protocol = ['tcp', 'udp', 'icmp'][Math.floor(Math.random() * 3)];
         // first_seen is required for connection types
-        fields.first_seen = new Date(Date.now() - Math.floor(Math.random() * 3600000)).toISOString();
+        fields.first_seen = new Date(
+          Date.now() - Math.floor(Math.random() * 3600000)
+        ).toISOString();
         // source_port is required when source_identifier is an IP
         fields.source_port = 1024 + Math.floor(Math.random() * 64000);
         if (includeOptional) {
