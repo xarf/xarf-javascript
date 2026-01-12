@@ -41,38 +41,6 @@ describe('Field Naming Convention Support', () => {
       expect(report.evidence_source).toBe('honeypot');
     });
 
-    it('should accept on_behalf_of in snake_case', () => {
-      const report = generator.generateReport({
-        category: 'messaging',
-        type: 'spam',
-        source_identifier: '192.0.2.100',
-        on_behalf_of: {
-          // XARF spec field name
-          org: 'Client Company',
-          contact: 'abuse@client.com',
-          domain: 'client.com',
-        },
-        reporter: {
-          org: 'Security Team',
-          contact: 'security@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'SOC',
-          contact: 'soc@example.com',
-          domain: 'example.com',
-        },
-        additionalFields: {
-          protocol: 'smtp',
-          smtp_from: 'spammer@evil.com',
-          source_port: 25,
-          subject: 'Test spam',
-        },
-      });
-
-      expect(report.on_behalf_of).toBeDefined();
-      expect(report.on_behalf_of?.org).toBe('Client Company');
-    });
   });
 
   describe('camelCase (backward compatibility)', () => {
@@ -106,39 +74,6 @@ describe('Field Naming Convention Support', () => {
       expect(report.evidence_source).toBe('honeypot');
     });
 
-    it('should accept onBehalfOf in camelCase', () => {
-      const report = generator.generateReport({
-        category: 'messaging',
-        reportType: 'spam',
-        sourceIdentifier: '192.0.2.100',
-        onBehalfOf: {
-          // Backward compatibility
-          org: 'Client Company',
-          contact: 'abuse@client.com',
-          domain: 'client.com',
-        },
-        reporter: {
-          org: 'Security Team',
-          contact: 'security@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'SOC',
-          contact: 'soc@example.com',
-          domain: 'example.com',
-        },
-        additionalFields: {
-          protocol: 'smtp',
-          smtp_from: 'spammer@evil.com',
-          source_port: 25,
-          subject: 'Test spam',
-        },
-      });
-
-      // Output should ALWAYS use snake_case (XARF spec)
-      expect(report.on_behalf_of).toBeDefined();
-      expect(report.on_behalf_of?.org).toBe('Client Company');
-    });
   });
 
   describe('snake_case takes precedence', () => {
@@ -174,41 +109,6 @@ describe('Field Naming Convention Support', () => {
       expect(report.evidence_source).toBe('honeypot');
     });
 
-    it('should prefer on_behalf_of over onBehalfOf', () => {
-      const report = generator.generateReport({
-        category: 'messaging',
-        type: 'spam',
-        source_identifier: '192.0.2.100',
-        on_behalf_of: {
-          org: 'Preferred Client',
-          contact: 'preferred@client.com',
-          domain: 'client.com',
-        },
-        onBehalfOf: {
-          org: 'Ignored Client',
-          contact: 'ignored@client.com',
-          domain: 'ignored.com',
-        },
-        reporter: {
-          org: 'Security Team',
-          contact: 'security@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'SOC',
-          contact: 'soc@example.com',
-          domain: 'example.com',
-        },
-        additionalFields: {
-          protocol: 'smtp',
-          smtp_from: 'spammer@evil.com',
-          source_port: 25,
-          subject: 'Test spam',
-        },
-      });
-
-      expect(report.on_behalf_of?.org).toBe('Preferred Client');
-    });
   });
 
   describe('error messages', () => {

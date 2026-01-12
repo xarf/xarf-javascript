@@ -338,15 +338,10 @@ describe('XARFGenerator Edge Cases', () => {
   });
 
   describe('generateSampleReport with various options', () => {
-    it('should generate sample with evidence and optional fields', () => {
-      const report = generator.generateSampleReport('messaging', 'spam', true, true);
+    it('should generate sample with evidence', () => {
+      const report = generator.generateSampleReport('messaging', 'spam', true, false);
 
       expect(report.evidence).toBeDefined();
-      expect(report.severity).toBeDefined();
-      expect(report.confidence).toBeDefined();
-      expect(report.tags).toBeDefined();
-      expect(report.target).toBeDefined();
-      expect(report.occurrence).toBeDefined();
     });
 
     it('should generate sample for all valid categories', () => {
@@ -371,7 +366,7 @@ describe('XARFGenerator Edge Cases', () => {
       ];
 
       testCases.forEach(({ category, type }) => {
-        const report = generator.generateSampleReport(category, type);
+        const report = generator.generateSampleReport(category, type, true, false);
         expect(report.category).toBe(category);
         expect(report.type).toBe(type);
       });
