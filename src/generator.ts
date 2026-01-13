@@ -17,9 +17,6 @@ import type {
   EvidenceSource,
   SeverityLevel,
   XARFEvidence,
-  ContactInfo,
-  TimeOccurrence,
-  Target,
 } from './types';
 
 /**
@@ -52,17 +49,10 @@ export interface BaseGeneratorOptions {
   evidence_source?: EvidenceSource; // XARF spec field name
   evidenceSource?: EvidenceSource; // Backward compatibility (deprecated)
 
-  // On behalf of
-  on_behalf_of?: ContactInfo; // XARF spec field name
-  onBehalfOf?: ContactInfo; // Backward compatibility (deprecated)
-
   description?: string;
   evidence?: XARFEvidence[];
-  severity?: SeverityLevel;
   confidence?: number;
   tags?: string[];
-  occurrence?: TimeOccurrence;
-  target?: Target;
 
   // Additional fields for backward compatibility and extra fields
   additionalFields?: Record<string, unknown>;
@@ -363,11 +353,8 @@ export class XARFGenerator {
       sender,
       description,
       evidence,
-      severity,
       confidence,
       tags,
-      occurrence,
-      target,
       additionalFields,
     } = options;
 
@@ -375,7 +362,6 @@ export class XARFGenerator {
     const reportType = options.type ?? options.reportType;
     const sourceIdentifier = options.source_identifier ?? options.sourceIdentifier;
     const evidenceSource = options.evidence_source ?? options.evidenceSource;
-    const onBehalfOf = options.on_behalf_of ?? options.onBehalfOf;
 
     // Validate all required fields
     this.validateRequiredOptions(sourceIdentifier, reportType, reporter, sender);
@@ -390,7 +376,7 @@ export class XARFGenerator {
     this.validateCategoryAndType(category, validatedReportType, evidenceSource);
 
     // Validate optional fields
-    this.validateOptionalFields(severity, confidence, occurrence, onBehalfOf);
+    this.validateConfidence(confidence);
 
     // Extract category-specific fields from options using schema registry
     const categoryFields = this.extractCategoryFields(options, validatedReportType);
@@ -407,16 +393,12 @@ export class XARFGenerator {
         evidenceSource,
         reporter: validatedReporter,
         sender: validatedSender,
-        onBehalfOf,
       },
       {
         description,
         evidence,
-        severity,
         confidence,
         tags,
-        occurrence,
-        target,
         additionalFields: mergedFields,
       }
     );
@@ -446,11 +428,8 @@ export class XARFGenerator {
     'sender',
     'description',
     'evidence',
-    'severity',
     'confidence',
     'tags',
-    'occurrence',
-    'target',
     'additionalFields',
     'type',
     'reportType',
@@ -458,8 +437,6 @@ export class XARFGenerator {
     'sourceIdentifier',
     'evidence_source',
     'evidenceSource',
-    'on_behalf_of',
-    'onBehalfOf',
   ]);
 
   /**
@@ -558,39 +535,6 @@ export class XARFGenerator {
   }
 
   /**
-   * Validate optional fields
-   * @param severity - Optional severity level
-   * @param confidence - Optional confidence score
-   * @param occurrence - Optional occurrence time range
-   * @param onBehalfOf - Optional on_behalf_of contact info
-   * @throws {XARFError} If optional fields have invalid values
-   */
-  private validateOptionalFields(
-    severity: 'low' | 'medium' | 'high' | 'critical' | undefined,
-    confidence: number | undefined,
-    occurrence: { start: string; end: string } | undefined,
-    onBehalfOf: { org: string; contact: string; domain: string } | undefined
-  ): void {
-    this.validateSeverity(severity);
-    this.validateConfidence(confidence);
-    this.validateOccurrence(occurrence);
-    this.validateOnBehalfOf(onBehalfOf);
-  }
-
-  /**
-   * Validate severity level
-   * @param severity - Optional severity level
-   * @throws {XARFError} If severity is invalid
-   */
-  private validateSeverity(severity: 'low' | 'medium' | 'high' | 'critical' | undefined): void {
-    if (severity && !XARFGenerator.VALID_SEVERITIES.has(severity)) {
-      throw new XARFError(
-        `Invalid severity '${severity}'. Must be one of: ${Array.from(XARFGenerator.VALID_SEVERITIES).join(', ')}`
-      );
-    }
-  }
-
-  /**
    * Validate confidence score
    * @param confidence - Optional confidence score
    * @throws {XARFError} If confidence is out of range
@@ -598,30 +542,6 @@ export class XARFGenerator {
   private validateConfidence(confidence: number | undefined): void {
     if (confidence !== undefined && (confidence < 0.0 || confidence > 1.0)) {
       throw new XARFError('confidence must be between 0.0 and 1.0');
-    }
-  }
-
-  /**
-   * Validate occurrence time range
-   * @param occurrence - Optional occurrence time range
-   * @throws {XARFError} If occurrence is missing required fields
-   */
-  private validateOccurrence(occurrence: { start: string; end: string } | undefined): void {
-    if (occurrence && (!occurrence.start || !occurrence.end)) {
-      throw new XARFError("occurrence must contain 'start' and 'end' keys");
-    }
-  }
-
-  /**
-   * Validate on_behalf_of contact info
-   * @param onBehalfOf - Optional on_behalf_of contact info
-   * @throws {XARFError} If on_behalf_of is missing required fields
-   */
-  private validateOnBehalfOf(
-    onBehalfOf: { org: string; contact: string; domain: string } | undefined
-  ): void {
-    if (onBehalfOf && (!onBehalfOf.org || !onBehalfOf.contact || !onBehalfOf.domain)) {
-      throw new XARFError("on_behalf_of must contain 'org', 'contact', and 'domain' fields");
     }
   }
 
@@ -640,24 +560,11 @@ export class XARFGenerator {
    * @param required.sender.org - Sender organization name
    * @param required.sender.contact - Sender contact email address
    * @param required.sender.domain - Sender organization domain
-   * @param required.onBehalfOf - Optional on-behalf-of contact information
-   * @param required.onBehalfOf.org - On-behalf-of organization name
-   * @param required.onBehalfOf.contact - On-behalf-of contact email address
-   * @param required.onBehalfOf.domain - On-behalf-of organization domain
    * @param optional - Optional report fields (typed object with nested properties)
    * @param optional.description - Human-readable description of the abuse
    * @param optional.evidence - Array of evidence objects with payloads
-   * @param optional.severity - Severity level (low, medium, high, critical)
    * @param optional.confidence - Confidence score (0.0 to 1.0)
    * @param optional.tags - Additional classification tags
-   * @param optional.occurrence - Time range when abuse occurred
-   * @param optional.occurrence.start - Start time of abuse occurrence
-   * @param optional.occurrence.end - End time of abuse occurrence
-   * @param optional.target - Target information (victim)
-   * @param optional.target.ip - Target IP address
-   * @param optional.target.domain - Target domain name
-   * @param optional.target.url - Target URL
-   * @param optional.target.email - Target email address
    * @param optional.additionalFields - Additional category-specific fields
    * @returns Complete XARF report
    */
@@ -669,16 +576,12 @@ export class XARFGenerator {
       evidenceSource?: EvidenceSource;
       reporter: { org: string; contact: string; domain: string };
       sender: { org: string; contact: string; domain: string };
-      onBehalfOf?: { org: string; contact: string; domain: string };
     },
     optional: {
       description?: string;
       evidence?: XARFEvidence[];
-      severity?: 'low' | 'medium' | 'high' | 'critical';
       confidence?: number;
       tags?: string[];
-      occurrence?: { start: string; end: string };
-      target?: { ip?: string; domain?: string; url?: string; email?: string };
       additionalFields?: Record<string, unknown>;
     }
   ): XARFReport {
@@ -705,21 +608,10 @@ export class XARFGenerator {
       report.evidence_source = required.evidenceSource;
     }
 
-    if (required.onBehalfOf) {
-      report.on_behalf_of = {
-        org: required.onBehalfOf.org,
-        contact: required.onBehalfOf.contact,
-        domain: required.onBehalfOf.domain,
-      };
-    }
-
     if (optional.description) report.description = optional.description;
     if (optional.evidence) report.evidence = optional.evidence;
-    if (optional.severity) report.severity = optional.severity;
     if (optional.confidence !== undefined) report.confidence = optional.confidence;
     if (optional.tags) report.tags = optional.tags;
-    if (optional.occurrence) report.occurrence = optional.occurrence;
-    if (optional.target) report.target = optional.target;
     if (optional.additionalFields) Object.assign(report, optional.additionalFields);
 
     return report;
@@ -812,24 +704,8 @@ export class XARFGenerator {
     category: XARFCategory,
     reportType: string
   ): void {
-    const severities = Array.from(XARFGenerator.VALID_SEVERITIES);
-    options.severity = severities[Math.floor(Math.random() * severities.length)];
     options.confidence = Math.round((0.7 + Math.random() * 0.3) * 100) / 100;
     options.tags = [`category:${category}`, `type:${reportType}`, 'source:sample'];
-
-    const targetIp = `203.0.113.${Math.floor(Math.random() * 256)}`;
-    const ports = [53, 80, 443, 8080, 22, 25];
-    options.target = {
-      ip: targetIp,
-      port: ports[Math.floor(Math.random() * ports.length)],
-    };
-
-    const now = new Date();
-    const startTime = new Date(now.getTime() - Math.floor(Math.random() * 7200000));
-    options.occurrence = {
-      start: startTime.toISOString(),
-      end: now.toISOString(),
-    };
   }
 
   /**

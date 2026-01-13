@@ -98,19 +98,6 @@ describe('XARFValidator', () => {
       expect(result.errors.some((e) => e.field === 'confidence')).toBe(true);
     });
 
-    it('should validate occurrence time range', () => {
-      const report = createValidReport();
-      report.occurrence = {
-        start: '2024-01-15T12:00:00Z',
-        end: '2024-01-15T10:00:00Z', // End before start
-      };
-
-      const result = validator.validate(report);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'occurrence')).toBe(true);
-    });
-
     it('should throw in strict mode', () => {
       const report = createValidReport();
       report.xarf_version = '3.0.0';

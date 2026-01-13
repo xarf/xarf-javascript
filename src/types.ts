@@ -70,25 +70,6 @@ export interface XARFEvidence {
 }
 
 /**
- * Time occurrence range
- */
-export interface TimeOccurrence {
-  start: string;
-  end: string;
-}
-
-/**
- * Target information
- */
-export interface Target {
-  ip?: string;
-  port?: number;
-  url?: string;
-  domain?: string;
-  [key: string]: unknown;
-}
-
-/**
  * Base XARF Report structure
  */
 export interface XARFReport {
@@ -106,14 +87,10 @@ export interface XARFReport {
   evidence_source?: EvidenceSource;
 
   // Optional base fields
-  on_behalf_of?: ContactInfo;
   description?: string;
   evidence?: XARFEvidence[];
   tags?: string[];
-  severity?: SeverityLevel;
   confidence?: number;
-  occurrence?: TimeOccurrence;
-  target?: Target;
   _internal?: Record<string, unknown>;
 
   // Allow additional fields

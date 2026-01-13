@@ -212,39 +212,6 @@ describe('Senior Engineer Feedback Issues', () => {
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'timestamp')).toBe(true);
     });
-
-    it('should reject invalid occurrence timestamps', () => {
-      const validator = new XARFValidator();
-
-      const report = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2025-12-16T07:37:30.000Z',
-        reporter: {
-          org: 'Test Org',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Test Org',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.100',
-        category: 'content',
-        type: 'phishing',
-        evidence_source: 'honeypot',
-        url: 'http://phishing.example.com',
-        occurrence: {
-          start: 'foo', // Invalid
-          end: '2025-12-16T07:37:30.000Z',
-        },
-      } as any;
-
-      const result = validator.validate(report);
-      expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field.includes('occurrence'))).toBe(true);
-    });
   });
 
   describe('Issue 5: Generator should not create invalid reports', () => {

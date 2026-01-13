@@ -131,39 +131,6 @@ describe('XARFParser', () => {
       expect(report.type).toBe('spam');
     });
 
-    it('should handle on_behalf_of field', () => {
-      const reportData = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: {
-          org: 'Reporter Org',
-          contact: 'reporter@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Reporter Org',
-          contact: 'reporter@example.com',
-          domain: 'example.com',
-        },
-        on_behalf_of: {
-          org: 'Client Org',
-          contact: 'client@example.com',
-          domain: 'client.example.com',
-        },
-        source_identifier: '192.0.2.1',
-        category: 'messaging',
-        type: 'spam',
-        evidence_source: 'user_report',
-      };
-
-      const parser = new XARFParser();
-      const report = parser.parse(reportData);
-
-      expect(report.on_behalf_of).toBeDefined();
-      expect(report.on_behalf_of?.org).toBe('Client Org');
-    });
-
     it('should throw error for invalid JSON string', () => {
       const parser = new XARFParser();
 

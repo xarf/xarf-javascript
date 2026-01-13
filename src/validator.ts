@@ -559,95 +559,6 @@ export class XARFValidator {
   }
 
   /**
-   * Validate occurrence time range
-   * @param occurrence - Occurrence object with start and end times
-   */
-  private validateOccurrence(occurrence: { start: string; end: string } | undefined): void {
-    if (!occurrence) return;
-
-    if (!occurrence.start || !occurrence.end) {
-      this.errors.push({
-        field: 'occurrence',
-        message: 'Occurrence must have both start and end times',
-        value: occurrence,
-      });
-      return;
-    }
-
-    this.validateOccurrenceStart(occurrence.start);
-    this.validateOccurrenceEnd(occurrence.end);
-    this.validateOccurrenceTimeOrder(occurrence);
-  }
-
-  /**
-   * Validate occurrence start timestamp
-   * @param start - Start timestamp string
-   */
-  private validateOccurrenceStart(start: string): void {
-    try {
-      const startDate = new Date(start);
-      if (isNaN(startDate.getTime())) {
-        this.errors.push({
-          field: 'occurrence.start',
-          message: 'Invalid timestamp format for occurrence start',
-          value: start,
-        });
-      }
-    } catch {
-      this.errors.push({
-        field: 'occurrence.start',
-        message: 'Invalid timestamp format for occurrence start',
-        value: start,
-      });
-    }
-  }
-
-  /**
-   * Validate occurrence end timestamp
-   * @param end - End timestamp string
-   */
-  private validateOccurrenceEnd(end: string): void {
-    try {
-      const endDate = new Date(end);
-      if (isNaN(endDate.getTime())) {
-        this.errors.push({
-          field: 'occurrence.end',
-          message: 'Invalid timestamp format for occurrence end',
-          value: end,
-        });
-      }
-    } catch {
-      this.errors.push({
-        field: 'occurrence.end',
-        message: 'Invalid timestamp format for occurrence end',
-        value: end,
-      });
-    }
-  }
-
-  /**
-   * Validate occurrence time order (start before end)
-   * @param occurrence - Occurrence object with start and end times
-   * @param occurrence.start - Start timestamp string
-   * @param occurrence.end - End timestamp string
-   */
-  private validateOccurrenceTimeOrder(occurrence: { start: string; end: string }): void {
-    try {
-      const start = new Date(occurrence.start);
-      const end = new Date(occurrence.end);
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start > end) {
-        this.errors.push({
-          field: 'occurrence',
-          message: 'Occurrence start time must be before end time',
-          value: occurrence,
-        });
-      }
-    } catch {
-      // Already handled above
-    }
-  }
-
-  /**
    * Validate an enum value against schema-derived options
    * @param fieldName - Name of the field being validated
    * @param value - The value to validate
@@ -712,14 +623,8 @@ export class XARFValidator {
       'evidence source'
     );
 
-    // Validate severity if present (dynamically from schema)
-    this.validateEnumValue('severity', report.severity, schemaRegistry.getSeverities(), 'severity');
-
     // Validate type for category (dynamically from schema)
     this.validateTypeForCategory(report);
-
-    // Validate occurrence times
-    this.validateOccurrence(report.occurrence);
   }
 
   /**
