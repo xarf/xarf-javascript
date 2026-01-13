@@ -5,8 +5,12 @@
  */
 
 import { XARFValidationError } from './errors';
-import type { XARFReport, XARFCategory } from './types';
+import type { XARFReport } from './types';
 import { SchemaValidator } from './schema-validator';
+import { schemaRegistry } from './schema-registry';
+import { validateEmail, validateDomain } from './validation-utils';
+import { findSchemasDir, loadSchemaFile } from './schema-utils';
+import * as path from 'path';
 
 /**
  * Validation result with detailed error information
@@ -15,6 +19,7 @@ export interface ValidationResult {
   valid: boolean;
   errors: ValidationError[];
   warnings: ValidationWarning[];
+  info?: ValidationInfo[];
 }
 
 /**
@@ -36,6 +41,42 @@ export interface ValidationWarning {
 }
 
 /**
+ * Validation info details (for missing optional fields)
+ */
+export interface ValidationInfo {
+  field: string;
+  message: string;
+}
+
+/**
+ * Schema property definition
+ */
+interface SchemaPropertyDef {
+  type?: string;
+  description?: string;
+  'x-recommended'?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Schema definition structure
+ */
+interface SchemaDefinition {
+  required?: string[];
+  properties?: Record<string, SchemaPropertyDef>;
+  allOf?: SchemaDefinition[];
+  [key: string]: unknown;
+}
+
+/**
+ * Optional field info extracted from schema
+ */
+interface OptionalFieldInfo {
+  description: string;
+  recommended: boolean;
+}
+
+/**
  * XARF Report Validator
  *
  * Provides comprehensive validation for XARF v4.0.0 reports
@@ -43,32 +84,182 @@ export interface ValidationWarning {
 export class XARFValidator {
   private errors: ValidationError[] = [];
   private warnings: ValidationWarning[] = [];
+  private info: ValidationInfo[] = [];
   private schemaValidator: SchemaValidator;
   private useSchemaValidation: boolean;
+  private schemasDir: string;
+  private coreSchemaCache: SchemaDefinition | null = null;
+  private typeSchemaCache: Map<string, SchemaDefinition> = new Map();
 
   /**
    * Create a new XARF validator
-   * @param useSchemaValidation - Enable JSON schema validation (default: false - experimental)
+   * @param useSchemaValidation - Enable JSON schema validation (default: true)
    */
-  constructor(useSchemaValidation = false) {
+  constructor(useSchemaValidation = true) {
     this.useSchemaValidation = useSchemaValidation;
     this.schemaValidator = new SchemaValidator();
+    this.schemasDir = findSchemasDir();
+  }
+
+  /**
+   * Get the core schema definition
+   * @returns Core schema or null
+   */
+  private getCoreSchema(): SchemaDefinition | null {
+    if (this.coreSchemaCache) {
+      return this.coreSchemaCache;
+    }
+    this.coreSchemaCache = loadSchemaFile<SchemaDefinition>(
+      path.join(this.schemasDir, 'xarf-core.json')
+    );
+    return this.coreSchemaCache;
+  }
+
+  /**
+   * Get a type-specific schema definition
+   * @param category - Report category
+   * @param type - Report type
+   * @returns Type schema or null
+   */
+  private getTypeSchema(category: string, type: string): SchemaDefinition | null {
+    const cacheKey = `${category}-${type}`;
+    if (this.typeSchemaCache.has(cacheKey)) {
+      return this.typeSchemaCache.get(cacheKey) || null;
+    }
+
+    const schemaPath = path.join(this.schemasDir, 'types', `${category}-${type}.json`);
+    const schema = loadSchemaFile<SchemaDefinition>(schemaPath);
+    if (schema) {
+      this.typeSchemaCache.set(cacheKey, schema);
+    }
+    return schema;
+  }
+
+  /**
+   * Extract optional fields from schema properties
+   * @param properties - Schema properties object
+   * @param required - Set of required field names
+   * @param optionalFields - Map to add optional fields to
+   */
+  private extractFromProperties(
+    properties: Record<string, SchemaPropertyDef>,
+    required: Set<string>,
+    optionalFields: Map<string, OptionalFieldInfo>
+  ): void {
+    for (const [fieldName, fieldDef] of Object.entries(properties)) {
+      if (!required.has(fieldName) && fieldName !== '_internal') {
+        optionalFields.set(fieldName, {
+          description: fieldDef.description || `Optional field: ${fieldName}`,
+          recommended: fieldDef['x-recommended'] === true,
+        });
+      }
+    }
+  }
+
+  /**
+   * Extract optional fields from a schema
+   * @param schema - Schema definition
+   * @returns Map of field name to description
+   */
+  private extractOptionalFields(schema: SchemaDefinition): Map<string, OptionalFieldInfo> {
+    const optionalFields = new Map<string, OptionalFieldInfo>();
+    const required = new Set(schema.required || []);
+
+    if (schema.properties) {
+      this.extractFromProperties(schema.properties, required, optionalFields);
+    }
+
+    // Handle allOf for type schemas
+    if (schema.allOf) {
+      for (const subSchema of schema.allOf) {
+        if (subSchema.properties) {
+          const subRequired = new Set([...required, ...(subSchema.required || [])]);
+          this.extractFromProperties(subSchema.properties, subRequired, optionalFields);
+        }
+      }
+    }
+
+    return optionalFields;
+  }
+
+  /**
+   * Collect missing optional fields from the report
+   * @param report - XARF report to check
+   */
+  private collectMissingOptionalFields(report: XARFReport): void {
+    const coreSchema = this.getCoreSchema();
+    if (!coreSchema) {
+      return;
+    }
+
+    // Get optional fields from core schema
+    const optionalFields = this.extractOptionalFields(coreSchema);
+
+    // Get type-specific optional fields
+    const typeSchema = this.getTypeSchema(report.category, report.type);
+    if (typeSchema) {
+      const typeOptionalFields = this.extractOptionalFields(typeSchema);
+      for (const [field, info] of typeOptionalFields) {
+        optionalFields.set(field, info);
+      }
+    }
+
+    // Check which optional fields are missing
+    for (const [fieldName, fieldInfo] of optionalFields) {
+      if (!(fieldName in report) || report[fieldName as keyof XARFReport] === undefined) {
+        const prefix = fieldInfo.recommended ? 'RECOMMENDED' : 'OPTIONAL';
+        this.info.push({
+          field: fieldName,
+          message: `${prefix}: ${fieldInfo.description}`,
+        });
+      }
+    }
+  }
+
+  /**
+   * Collect unknown fields from the report that are not defined in the schema
+   * @param report - XARF report to check
+   */
+  private collectUnknownFields(report: XARFReport): void {
+    // Get all known fields from core schema
+    const knownFields = new Set(schemaRegistry.getCorePropertyNames());
+
+    // Add category-specific fields if category and type are present
+    if (report.category && report.type) {
+      const categoryFields = schemaRegistry.getCategoryFields(report.category, report.type);
+      for (const field of categoryFields) {
+        knownFields.add(field);
+      }
+    }
+
+    // Check all fields in the report
+    for (const fieldName of Object.keys(report)) {
+      if (!knownFields.has(fieldName)) {
+        this.warnings.push({
+          field: fieldName,
+          message: `Unknown field '${fieldName}' is not defined in the XARF schema`,
+          value: report[fieldName as keyof XARFReport],
+        });
+      }
+    }
   }
 
   /**
    * Validate a XARF report comprehensively
    * @param report - The XARF report to validate
    * @param strict - If true, warnings are treated as errors
-   * @returns Validation result with errors and warnings
+   * @param showMissingOptional - If true, includes info about missing optional fields
+   * @returns Validation result with errors, warnings, and optionally info
    * @throws {XARFValidationError} If strict mode and validation fails
    */
-  async validate(report: XARFReport, strict = false): Promise<ValidationResult> {
+  validate(report: XARFReport, strict = false, showMissingOptional = false): ValidationResult {
     this.errors = [];
     this.warnings = [];
+    this.info = [];
 
     // 1. Run schema validation first (if enabled)
     if (this.useSchemaValidation) {
-      const schemaResult = await this.validateWithSchema(report);
+      const schemaResult = this.validateWithSchema(report);
       if (!schemaResult.valid) {
         // Schema validation errors are primary - add them first
         this.errors.push(...schemaResult.errors);
@@ -88,6 +279,9 @@ export class XARFValidator {
     // Validate category-specific requirements
     this.validateCategorySpecific(report);
 
+    // Check for unknown fields
+    this.collectUnknownFields(report);
+
     // 3. Merge and deduplicate errors (schema errors take priority)
     this.deduplicateErrors();
 
@@ -103,11 +297,21 @@ export class XARFValidator {
       this.warnings = [];
     }
 
+    // 5. Collect missing optional fields if requested
+    if (showMissingOptional) {
+      this.collectMissingOptionalFields(report);
+    }
+
     const result: ValidationResult = {
       valid: this.errors.length === 0,
       errors: [...this.errors],
       warnings: [...this.warnings],
     };
+
+    // Only include info array if showMissingOptional is enabled
+    if (showMissingOptional) {
+      result.info = [...this.info];
+    }
 
     if (strict && !result.valid) {
       throw new XARFValidationError(
@@ -124,9 +328,9 @@ export class XARFValidator {
    * @param report - The XARF report to validate
    * @returns Validation result from schema validation
    */
-  async validateWithSchema(report: XARFReport): Promise<ValidationResult> {
+  validateWithSchema(report: XARFReport): ValidationResult {
     try {
-      const schemaResult = await this.schemaValidator.validate(report);
+      const schemaResult = this.schemaValidator.validate(report);
 
       // Convert schema validation errors to our format
       const errors: ValidationError[] = schemaResult.errors.map((err) => ({
@@ -178,17 +382,8 @@ export class XARFValidator {
    * @param report - XARF report to validate for required fields
    */
   private validateRequiredFields(report: XARFReport): void {
-    const required = [
-      'xarf_version',
-      'report_id',
-      'timestamp',
-      'reporter',
-      'sender',
-      'source_identifier',
-      'category',
-      'type',
-      'evidence_source',
-    ];
+    // Get required fields from schema registry (single source of truth)
+    const required = schemaRegistry.getRequiredFields();
 
     required.forEach((field) => {
       if (!(field in report) || report[field as keyof XARFReport] === undefined) {
@@ -253,28 +448,28 @@ export class XARFValidator {
   ): void {
     if (!contactInfo) return;
 
-    if (
-      contactInfo.contact &&
-      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(contactInfo.contact)
-    ) {
-      this.errors.push({
-        field: `${fieldPrefix}.contact`,
-        message: `${fieldPrefix.charAt(0).toUpperCase() + fieldPrefix.slice(1)} contact must be a valid email address`,
-        value: contactInfo.contact,
-      });
+    const capitalizedPrefix = fieldPrefix.charAt(0).toUpperCase() + fieldPrefix.slice(1);
+
+    if (contactInfo.contact) {
+      const emailResult = validateEmail(contactInfo.contact);
+      if (!emailResult.valid) {
+        this.errors.push({
+          field: `${fieldPrefix}.contact`,
+          message: `${capitalizedPrefix} contact must be a valid email address`,
+          value: contactInfo.contact,
+        });
+      }
     }
 
-    if (
-      contactInfo.domain &&
-      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
-        contactInfo.domain
-      )
-    ) {
-      this.errors.push({
-        field: `${fieldPrefix}.domain`,
-        message: `${fieldPrefix.charAt(0).toUpperCase() + fieldPrefix.slice(1)} domain must be a valid hostname`,
-        value: contactInfo.domain,
-      });
+    if (contactInfo.domain) {
+      const domainResult = validateDomain(contactInfo.domain);
+      if (!domainResult.valid) {
+        this.errors.push({
+          field: `${fieldPrefix}.domain`,
+          message: `${capitalizedPrefix} domain must be a valid hostname`,
+          value: contactInfo.domain,
+        });
+      }
     }
   }
 
@@ -364,91 +559,42 @@ export class XARFValidator {
   }
 
   /**
-   * Validate occurrence time range
-   * @param occurrence - Occurrence object with start and end times
+   * Validate an enum value against schema-derived options
+   * @param fieldName - Name of the field being validated
+   * @param value - The value to validate
+   * @param validOptions - Set of valid options from schema
+   * @param fieldLabel - Human-readable label for error messages
    */
-  private validateOccurrence(occurrence: { start: string; end: string } | undefined): void {
-    if (!occurrence) return;
-
-    if (!occurrence.start || !occurrence.end) {
+  private validateEnumValue(
+    fieldName: string,
+    value: string | undefined,
+    validOptions: Set<string>,
+    fieldLabel: string
+  ): void {
+    if (value && !validOptions.has(value)) {
       this.errors.push({
-        field: 'occurrence',
-        message: 'Occurrence must have both start and end times',
-        value: occurrence,
+        field: fieldName,
+        message: `Invalid ${fieldLabel} (must be one of: ${Array.from(validOptions).join(', ')})`,
+        value,
       });
+    }
+  }
+
+  /**
+   * Validate type for category (dynamically from schema)
+   * @param report - XARF report to validate
+   */
+  private validateTypeForCategory(report: XARFReport): void {
+    if (!report.category || !report.type) {
       return;
     }
-
-    this.validateOccurrenceStart(occurrence.start);
-    this.validateOccurrenceEnd(occurrence.end);
-    this.validateOccurrenceTimeOrder(occurrence);
-  }
-
-  /**
-   * Validate occurrence start timestamp
-   * @param start - Start timestamp string
-   */
-  private validateOccurrenceStart(start: string): void {
-    try {
-      const startDate = new Date(start);
-      if (isNaN(startDate.getTime())) {
-        this.errors.push({
-          field: 'occurrence.start',
-          message: 'Invalid timestamp format for occurrence start',
-          value: start,
-        });
-      }
-    } catch {
+    const validTypes = schemaRegistry.getTypesForCategory(report.category);
+    if (validTypes.size > 0 && !validTypes.has(report.type)) {
       this.errors.push({
-        field: 'occurrence.start',
-        message: 'Invalid timestamp format for occurrence start',
-        value: start,
+        field: 'type',
+        message: `Invalid type for category '${report.category}' (must be one of: ${Array.from(validTypes).join(', ')})`,
+        value: report.type,
       });
-    }
-  }
-
-  /**
-   * Validate occurrence end timestamp
-   * @param end - End timestamp string
-   */
-  private validateOccurrenceEnd(end: string): void {
-    try {
-      const endDate = new Date(end);
-      if (isNaN(endDate.getTime())) {
-        this.errors.push({
-          field: 'occurrence.end',
-          message: 'Invalid timestamp format for occurrence end',
-          value: end,
-        });
-      }
-    } catch {
-      this.errors.push({
-        field: 'occurrence.end',
-        message: 'Invalid timestamp format for occurrence end',
-        value: end,
-      });
-    }
-  }
-
-  /**
-   * Validate occurrence time order (start before end)
-   * @param occurrence - Occurrence object with start and end times
-   * @param occurrence.start - Start timestamp string
-   * @param occurrence.end - End timestamp string
-   */
-  private validateOccurrenceTimeOrder(occurrence: { start: string; end: string }): void {
-    try {
-      const start = new Date(occurrence.start);
-      const end = new Date(occurrence.end);
-      if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start > end) {
-        this.errors.push({
-          field: 'occurrence',
-          message: 'Occurrence start time must be before end time',
-          value: occurrence,
-        });
-      }
-    } catch {
-      // Already handled above
     }
   }
 
@@ -466,65 +612,19 @@ export class XARFValidator {
       });
     }
 
-    // Validate category (7 total per XARF v4.0.0 spec)
-    const validCategories = new Set<XARFCategory>([
-      'messaging',
-      'connection',
-      'content',
-      'infrastructure',
-      'copyright',
-      'vulnerability',
-      'reputation',
-    ]);
-    if (report.category && !validCategories.has(report.category)) {
-      this.errors.push({
-        field: 'category',
-        message: `Invalid category (must be one of: ${Array.from(validCategories).join(', ')})`,
-        value: report.category,
-      });
-    }
+    // Validate category (dynamically from schema)
+    this.validateEnumValue('category', report.category, schemaRegistry.getCategories(), 'category');
 
-    // Validate evidence source (expanded list from xarf-core.json spec)
-    const validEvidenceSources = new Set([
-      'spamtrap',
-      'user_complaint',
-      'automated_filter',
-      'honeypot',
-      'crawler',
-      'user_report',
-      'automated_scan',
-      'spam_analysis',
-      'firewall_logs',
-      'ids_detection',
-      'flow_analysis',
-      'vulnerability_scan',
-      'researcher_analysis',
-      'automated_discovery',
-      'traffic_analysis',
-      'threat_intelligence',
-      'ids_ips',
-      'siem',
-    ]);
-    if (report.evidence_source && !validEvidenceSources.has(report.evidence_source)) {
-      this.errors.push({
-        field: 'evidence_source',
-        message: `Invalid evidence source (must be one of: ${Array.from(validEvidenceSources).join(', ')})`,
-        value: report.evidence_source,
-      });
-    }
+    // Validate evidence source (dynamically from schema)
+    this.validateEnumValue(
+      'evidence_source',
+      report.evidence_source,
+      schemaRegistry.getEvidenceSources(),
+      'evidence source'
+    );
 
-    // Validate severity if present
-    const validSeverities = new Set(['low', 'medium', 'high', 'critical']);
-    if (report.severity && !validSeverities.has(report.severity)) {
-      this.errors.push({
-        field: 'severity',
-        message: `Invalid severity (must be one of: ${Array.from(validSeverities).join(', ')})`,
-        value: report.severity,
-      });
-    }
-
-    // Validate occurrence times
-    this.validateOccurrence(report.occurrence);
+    // Validate type for category (dynamically from schema)
+    this.validateTypeForCategory(report);
   }
 
   /**
@@ -550,15 +650,6 @@ export class XARFValidator {
    * @param report - XARF report with messaging category to validate
    */
   private validateMessagingReport(report: XARFReport): void {
-    const validTypes = new Set(['spam', 'phishing', 'social_engineering', 'bulk_messaging']);
-    if (!validTypes.has(report.type)) {
-      this.errors.push({
-        field: 'type',
-        message: `Invalid messaging type (must be one of: ${Array.from(validTypes).join(', ')})`,
-        value: report.type,
-      });
-    }
-
     // Check for email-specific fields
     if (report.protocol === 'smtp') {
       if (!report.smtp_from) {
@@ -575,23 +666,6 @@ export class XARFValidator {
    * @param report - XARF report with connection category to validate
    */
   private validateConnectionReport(report: XARFReport): void {
-    const validTypes = new Set([
-      'ddos',
-      'port_scan',
-      'login_attack',
-      'ip_spoofing',
-      'compromised',
-      'botnet',
-      'malicious_traffic',
-    ]);
-    if (!validTypes.has(report.type)) {
-      this.warnings.push({
-        field: 'type',
-        message: `Uncommon connection type: ${report.type}`,
-        value: report.type,
-      });
-    }
-
     // Check for required connection fields
     if (!report.destination_ip) {
       this.errors.push({
@@ -625,21 +699,6 @@ export class XARFValidator {
    * @param report - XARF report with content category to validate
    */
   private validateContentReport(report: XARFReport): void {
-    const validTypes = new Set([
-      'phishing_site',
-      'malware_distribution',
-      'defacement',
-      'spamvertised',
-      'web_hack',
-    ]);
-    if (!validTypes.has(report.type)) {
-      this.warnings.push({
-        field: 'type',
-        message: `Uncommon content type: ${report.type}`,
-        value: report.type,
-      });
-    }
-
     // URL is required for content reports
     if (!report.url) {
       this.errors.push({

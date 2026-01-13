@@ -90,7 +90,7 @@ describe('XARFParser', () => {
         },
         source_identifier: '192.0.2.300',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'user_report',
         url: 'http://phishing.example.com',
       };
@@ -99,14 +99,14 @@ describe('XARFParser', () => {
       const report = parser.parse(reportData) as ContentReport;
 
       expect(report.category).toBe('content');
-      expect(report.type).toBe('phishing_site');
+      expect(report.type).toBe('phishing');
       expect(report.url).toBe('http://phishing.example.com');
     });
 
     it('should parse from JSON string', () => {
       const reportData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -129,39 +129,6 @@ describe('XARFParser', () => {
 
       expect(report.category).toBe('messaging');
       expect(report.type).toBe('spam');
-    });
-
-    it('should handle on_behalf_of field', () => {
-      const reportData = {
-        xarf_version: '4.0.0',
-        report_id: 'test-id',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: {
-          org: 'Reporter Org',
-          contact: 'reporter@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Reporter Org',
-          contact: 'reporter@example.com',
-          domain: 'example.com',
-        },
-        on_behalf_of: {
-          org: 'Client Org',
-          contact: 'client@example.com',
-          domain: 'client.example.com',
-        },
-        source_identifier: '192.0.2.1',
-        category: 'messaging',
-        type: 'spam',
-        evidence_source: 'user_report',
-      };
-
-      const parser = new XARFParser();
-      const report = parser.parse(reportData);
-
-      expect(report.on_behalf_of).toBeDefined();
-      expect(report.on_behalf_of?.org).toBe('Client Org');
     });
 
     it('should throw error for invalid JSON string', () => {
@@ -190,7 +157,7 @@ describe('XARFParser', () => {
     it('should return false for invalid version', () => {
       const invalidData = {
         xarf_version: '3.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -234,7 +201,7 @@ describe('XARFParser', () => {
     it('should return false for invalid reporter contact', () => {
       const invalidData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -257,13 +224,13 @@ describe('XARFParser', () => {
 
       expect(result).toBe(false);
       const errors = parser.getErrors();
-      expect(errors.some((e) => e.includes('valid email address'))).toBe(true);
+      expect(errors.some((e) => e.includes('Invalid email format'))).toBe(true);
     });
 
-    it('should handle unsupported category in alpha', () => {
+    it('should handle unsupported category', () => {
       const reportData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -276,18 +243,19 @@ describe('XARFParser', () => {
           domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
-        category: 'vulnerability',
-        type: 'cve',
-        evidence_source: 'vulnerability_scan',
+        category: 'invalid_category',
+        type: 'test',
+        evidence_source: 'honeypot',
       };
 
       const parser = new XARFParser(false);
       const report = parser.parse(reportData);
 
-      expect(report.category).toBe('vulnerability');
+      expect(report.category).toBe('invalid_category');
       const errors = parser.getErrors();
-      expect(errors.length).toBe(1);
-      expect(errors[0]).toContain('Unsupported category');
+      expect(errors.length).toBeGreaterThan(0);
+      // Schema validation catches invalid category as enum violation
+      expect(errors.some((e) => e.includes('category'))).toBe(true);
     });
   });
 
@@ -295,7 +263,7 @@ describe('XARFParser', () => {
     it('should validate messaging reports', () => {
       const invalidMessaging = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -323,7 +291,7 @@ describe('XARFParser', () => {
     it('should validate connection reports require destination_ip', () => {
       const invalidConnection = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -352,7 +320,7 @@ describe('XARFParser', () => {
     it('should validate content reports require url', () => {
       const invalidContent = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -366,7 +334,7 @@ describe('XARFParser', () => {
         },
         source_identifier: '192.0.2.1',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'user_report',
       };
 

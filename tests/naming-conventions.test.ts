@@ -17,7 +17,7 @@ describe('Field Naming Convention Support', () => {
         category: 'connection',
         type: 'ddos', // XARF spec field name
         source_identifier: '192.0.2.100', // XARF spec field name
-        evidence_source: 'automated_scan', // XARF spec field name
+        evidence_source: 'honeypot', // Valid for connection/ddos schema
         reporter: {
           org: 'Security Team',
           contact: 'security@example.com',
@@ -31,44 +31,14 @@ describe('Field Naming Convention Support', () => {
         additionalFields: {
           destination_ip: '203.0.113.50',
           protocol: 'tcp',
+          first_seen: '2024-01-15T09:00:00Z',
+          source_port: 12345,
         },
       });
 
       expect(report.type).toBe('ddos');
       expect(report.source_identifier).toBe('192.0.2.100');
-      expect(report.evidence_source).toBe('automated_scan');
-    });
-
-    it('should accept on_behalf_of in snake_case', () => {
-      const report = generator.generateReport({
-        category: 'messaging',
-        type: 'spam',
-        source_identifier: '192.0.2.100',
-        on_behalf_of: {
-          // XARF spec field name
-          org: 'Client Company',
-          contact: 'abuse@client.com',
-          domain: 'client.com',
-        },
-        reporter: {
-          org: 'Security Team',
-          contact: 'security@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'SOC',
-          contact: 'soc@example.com',
-          domain: 'example.com',
-        },
-        additionalFields: {
-          protocol: 'smtp',
-          smtp_from: 'spammer@evil.com',
-          subject: 'Test spam',
-        },
-      });
-
-      expect(report.on_behalf_of).toBeDefined();
-      expect(report.on_behalf_of?.org).toBe('Client Company');
+      expect(report.evidence_source).toBe('honeypot');
     });
   });
 
@@ -78,7 +48,7 @@ describe('Field Naming Convention Support', () => {
         category: 'connection',
         reportType: 'ddos', // Backward compatibility
         sourceIdentifier: '192.0.2.100', // Backward compatibility
-        evidenceSource: 'automated_scan', // Backward compatibility
+        evidenceSource: 'honeypot', // Valid for connection/ddos
         reporter: {
           org: 'Security Team',
           contact: 'security@example.com',
@@ -92,46 +62,15 @@ describe('Field Naming Convention Support', () => {
         additionalFields: {
           destination_ip: '203.0.113.50',
           protocol: 'tcp',
+          first_seen: '2024-01-15T09:00:00Z',
+          source_port: 12345,
         },
       });
 
       // Output should ALWAYS use snake_case (XARF spec)
       expect(report.type).toBe('ddos');
       expect(report.source_identifier).toBe('192.0.2.100');
-      expect(report.evidence_source).toBe('automated_scan');
-    });
-
-    it('should accept onBehalfOf in camelCase', () => {
-      const report = generator.generateReport({
-        category: 'messaging',
-        reportType: 'spam',
-        sourceIdentifier: '192.0.2.100',
-        onBehalfOf: {
-          // Backward compatibility
-          org: 'Client Company',
-          contact: 'abuse@client.com',
-          domain: 'client.com',
-        },
-        reporter: {
-          org: 'Security Team',
-          contact: 'security@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'SOC',
-          contact: 'soc@example.com',
-          domain: 'example.com',
-        },
-        additionalFields: {
-          protocol: 'smtp',
-          smtp_from: 'spammer@evil.com',
-          subject: 'Test spam',
-        },
-      });
-
-      // Output should ALWAYS use snake_case (XARF spec)
-      expect(report.on_behalf_of).toBeDefined();
-      expect(report.on_behalf_of?.org).toBe('Client Company');
+      expect(report.evidence_source).toBe('honeypot');
     });
   });
 
@@ -144,7 +83,6 @@ describe('Field Naming Convention Support', () => {
         source_identifier: '192.0.2.50', // XARF spec - should be used
         sourceIdentifier: '192.0.2.100', // Backward compat - should be ignored
         evidence_source: 'honeypot', // XARF spec - should be used
-        evidenceSource: 'automated_scan', // Backward compat - should be ignored
         reporter: {
           org: 'Security Team',
           contact: 'security@example.com',
@@ -158,6 +96,8 @@ describe('Field Naming Convention Support', () => {
         additionalFields: {
           destination_ip: '203.0.113.50',
           protocol: 'tcp',
+          first_seen: '2024-01-15T09:00:00Z',
+          source_port: 12345,
         },
       });
 
@@ -165,41 +105,6 @@ describe('Field Naming Convention Support', () => {
       expect(report.type).toBe('port_scan');
       expect(report.source_identifier).toBe('192.0.2.50');
       expect(report.evidence_source).toBe('honeypot');
-    });
-
-    it('should prefer on_behalf_of over onBehalfOf', () => {
-      const report = generator.generateReport({
-        category: 'messaging',
-        type: 'spam',
-        source_identifier: '192.0.2.100',
-        on_behalf_of: {
-          org: 'Preferred Client',
-          contact: 'preferred@client.com',
-          domain: 'client.com',
-        },
-        onBehalfOf: {
-          org: 'Ignored Client',
-          contact: 'ignored@client.com',
-          domain: 'ignored.com',
-        },
-        reporter: {
-          org: 'Security Team',
-          contact: 'security@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'SOC',
-          contact: 'soc@example.com',
-          domain: 'example.com',
-        },
-        additionalFields: {
-          protocol: 'smtp',
-          smtp_from: 'spammer@evil.com',
-          subject: 'Test spam',
-        },
-      });
-
-      expect(report.on_behalf_of?.org).toBe('Preferred Client');
     });
   });
 
@@ -257,7 +162,7 @@ describe('Field Naming Convention Support', () => {
     it('should output snake_case even when input uses camelCase', () => {
       const report = generator.generateReport({
         category: 'content',
-        reportType: 'phishing_site', // camelCase input
+        reportType: 'phishing', // camelCase input
         sourceIdentifier: '192.0.2.100', // camelCase input
         evidenceSource: 'user_report', // camelCase input
         reporter: {

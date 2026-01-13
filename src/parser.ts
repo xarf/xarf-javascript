@@ -3,6 +3,12 @@
  */
 
 import { XARFParseError, XARFValidationError } from './errors';
+import { schemaRegistry } from './schema-registry';
+import { validator as schemaValidator } from './schema-validator';
+import {
+  validateContactInfo as validateContactInfoUtil,
+  validateTimestamp,
+} from './validation-utils';
 import type { XARFReport, MessagingReport, ConnectionReport, ContentReport } from './types';
 import { isXARFv3, convertV3toV4, getV3DeprecationWarning, type XARFv3Report } from './v3-legacy';
 
@@ -15,7 +21,6 @@ export class XARFParser {
   private strict: boolean;
   private errors: string[] = [];
   private warnings: string[] = [];
-  private readonly supportedCategories = new Set(['messaging', 'connection', 'content']);
 
   /**
    * Initialize parser
@@ -106,8 +111,9 @@ export class XARFParser {
 
     const reportCategory = data.category as string;
 
-    if (!this.supportedCategories.has(reportCategory)) {
-      const errorMsg = `Unsupported category '${reportCategory}' in alpha version. Supported: ${Array.from(this.supportedCategories).join(', ')}`;
+    if (!schemaRegistry.isValidCategory(reportCategory)) {
+      const validCategories = Array.from(schemaRegistry.getCategories()).join(', ');
+      const errorMsg = `Unsupported category '${reportCategory}'. Supported: ${validCategories}`;
       if (this.strict) {
         throw new XARFValidationError(errorMsg);
       }
@@ -165,17 +171,8 @@ export class XARFParser {
    * @returns True if structure is valid
    */
   private validateStructure(data: Record<string, unknown>): boolean {
-    const requiredFields = new Set([
-      'xarf_version',
-      'report_id',
-      'timestamp',
-      'reporter',
-      'sender',
-      'source_identifier',
-      'category',
-      'type',
-      'evidence_source',
-    ]);
+    // Get required fields from schema registry (single source of truth)
+    const requiredFields = schemaRegistry.getRequiredFields();
 
     // Check required fields
     const dataKeys = new Set(Object.keys(data));
@@ -192,21 +189,19 @@ export class XARFParser {
     }
 
     // Validate reporter structure
-    if (!this.validateContactInfo(data.reporter as Record<string, unknown>, 'reporter')) {
+    if (!this.validateContactInfoStructure(data.reporter as Record<string, unknown>, 'reporter')) {
       return false;
     }
 
     // Validate sender structure
-    if (!this.validateContactInfo(data.sender as Record<string, unknown>, 'sender')) {
+    if (!this.validateContactInfoStructure(data.sender as Record<string, unknown>, 'sender')) {
       return false;
     }
 
     // Validate timestamp format
-    try {
-      const timestamp = data.timestamp as string;
-      new Date(timestamp.replace('Z', '+00:00'));
-    } catch {
-      this.errors.push(`Invalid timestamp format: ${data.timestamp}`);
+    const timestampResult = validateTimestamp(data.timestamp as string);
+    if (!timestampResult.valid) {
+      this.errors.push(timestampResult.error!);
       return false;
     }
 
@@ -214,7 +209,18 @@ export class XARFParser {
     this.checkForUnknownProperties(data);
 
     // Category-specific validation
-    return this.validateCategorySpecific(data);
+    if (!this.validateCategorySpecific(data)) {
+      return false;
+    }
+
+    // Schema validation - validates against JSON schema for complete validation
+    const schemaResult = schemaValidator.validate(data as XARFReport);
+    if (!schemaResult.valid) {
+      this.errors.push(...schemaResult.errors);
+      return false;
+    }
+
+    return true;
   }
 
   /**
@@ -307,53 +313,20 @@ export class XARFParser {
 
   /**
    * Validate ContactInfo structure (reporter or sender)
+   * Uses shared validation utility for consistent validation across the codebase.
    * @param contactInfo - Contact information object to validate
    * @param fieldName - Name of the field being validated (for error messages)
    * @returns True if contact info is valid, false otherwise
    */
-  private validateContactInfo(contactInfo: Record<string, unknown>, fieldName: string): boolean {
-    if (typeof contactInfo !== 'object' || contactInfo === null) {
-      this.errors.push(`${fieldName} must be an object`);
+  private validateContactInfoStructure(
+    contactInfo: Record<string, unknown>,
+    fieldName: string
+  ): boolean {
+    const result = validateContactInfoUtil(contactInfo, fieldName);
+    if (!result.valid) {
+      this.errors.push(...result.errors);
       return false;
     }
-
-    const contactRequired = new Set(['org', 'contact', 'domain']);
-    const contactKeys = new Set(Object.keys(contactInfo));
-    const missingContact = Array.from(contactRequired).filter((field) => !contactKeys.has(field));
-    if (missingContact.length > 0) {
-      this.errors.push(`Missing ${fieldName} fields: ${missingContact.join(', ')}`);
-      return false;
-    }
-
-    // Validate email format for contact
-    const contact = contactInfo.contact as string;
-    if (
-      typeof contact !== 'string' ||
-      !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(contact)
-    ) {
-      this.errors.push(`${fieldName}.contact must be a valid email address`);
-      return false;
-    }
-
-    // Validate domain format
-    const domain = contactInfo.domain as string;
-    if (
-      typeof domain !== 'string' ||
-      !/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(
-        domain
-      )
-    ) {
-      this.errors.push(`${fieldName}.domain must be a valid hostname`);
-      return false;
-    }
-
-    // Validate org is non-empty string
-    const org = contactInfo.org as string;
-    if (typeof org !== 'string' || org.trim().length === 0) {
-      this.errors.push(`${fieldName}.org must be a non-empty string`);
-      return false;
-    }
-
     return true;
   }
 
@@ -380,13 +353,13 @@ export class XARFParser {
   /**
    * Validate messaging category reports
    * @param data - Parsed XARF report data
-   * @param reportType - Type of messaging report (spam, phishing, social_engineering)
+   * @param reportType - Type of messaging report (spam, phishing, etc.)
    * @returns True if validation passes, false otherwise
    */
   private validateMessaging(data: Record<string, unknown>, reportType: string): boolean {
-    const validTypes = new Set(['spam', 'phishing', 'social_engineering']);
-    if (!validTypes.has(reportType)) {
-      this.errors.push(`Invalid messaging type: ${reportType}`);
+    if (!schemaRegistry.isValidType('messaging', reportType)) {
+      const validTypes = Array.from(schemaRegistry.getTypesForCategory('messaging')).join(', ');
+      this.errors.push(`Invalid messaging type: ${reportType}. Valid types: ${validTypes}`);
       return false;
     }
 
@@ -408,13 +381,13 @@ export class XARFParser {
   /**
    * Validate connection category reports
    * @param data - Parsed XARF report data
-   * @param reportType - Type of connection report (ddos, port_scan, login_attack, ip_spoofing)
+   * @param reportType - Type of connection report (ddos, port_scan, etc.)
    * @returns True if validation passes, false otherwise
    */
   private validateConnection(data: Record<string, unknown>, reportType: string): boolean {
-    const validTypes = new Set(['ddos', 'port_scan', 'login_attack', 'ip_spoofing']);
-    if (!validTypes.has(reportType)) {
-      this.errors.push(`Invalid connection type: ${reportType}`);
+    if (!schemaRegistry.isValidType('connection', reportType)) {
+      const validTypes = Array.from(schemaRegistry.getTypesForCategory('connection')).join(', ');
+      this.errors.push(`Invalid connection type: ${reportType}. Valid types: ${validTypes}`);
       return false;
     }
 
@@ -435,19 +408,13 @@ export class XARFParser {
   /**
    * Validate content category reports
    * @param data - Parsed XARF report data
-   * @param reportType - Type of content report (phishing_site, malware_distribution, etc.)
+   * @param reportType - Type of content report (phishing, malware, etc.)
    * @returns True if validation passes, false otherwise
    */
   private validateContent(data: Record<string, unknown>, reportType: string): boolean {
-    const validTypes = new Set([
-      'phishing_site',
-      'malware_distribution',
-      'defacement',
-      'spamvertised',
-      'web_hack',
-    ]);
-    if (!validTypes.has(reportType)) {
-      this.errors.push(`Invalid content type: ${reportType}`);
+    if (!schemaRegistry.isValidType('content', reportType)) {
+      const validTypes = Array.from(schemaRegistry.getTypesForCategory('content')).join(', ');
+      this.errors.push(`Invalid content type: ${reportType}. Valid types: ${validTypes}`);
       return false;
     }
 

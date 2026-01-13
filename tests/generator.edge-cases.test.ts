@@ -76,7 +76,7 @@ describe('XARFGenerator Edge Cases', () => {
             domain: 'example.com',
           },
         });
-      }).toThrow('valid email address');
+      }).toThrow('Invalid email format');
     });
 
     it('should throw error for invalid evidence_source', () => {
@@ -118,45 +118,6 @@ describe('XARFGenerator Edge Cases', () => {
       }).toThrow('Invalid evidence_source');
     });
 
-    it('should throw error for invalid severity', () => {
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          reportType: 'ddos',
-          sourceIdentifier: '192.0.2.1',
-          reporter: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          severity: 'super-critical' as any,
-        });
-      }).toThrow(XARFError);
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          reportType: 'ddos',
-          sourceIdentifier: '192.0.2.1',
-          reporter: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          severity: 'super-critical' as any,
-        });
-      }).toThrow('Invalid severity');
-    });
-
     it('should throw error for confidence less than 0', () => {
       expect(() => {
         generator.generateReport({
@@ -194,108 +155,6 @@ describe('XARFGenerator Edge Cases', () => {
           confidence: -0.1,
         });
       }).toThrow('confidence must be between 0.0 and 1.0');
-    });
-
-    it('should throw error for occurrence without start', () => {
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          reportType: 'ddos',
-          sourceIdentifier: '192.0.2.1',
-          reporter: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          additionalFields: {
-            destination_ip: '203.0.113.10',
-            protocol: 'tcp',
-          },
-          occurrence: {
-            end: '2024-01-15T12:00:00Z',
-          } as any,
-        });
-      }).toThrow(XARFError);
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          reportType: 'ddos',
-          sourceIdentifier: '192.0.2.1',
-          reporter: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          additionalFields: {
-            destination_ip: '203.0.113.10',
-            protocol: 'tcp',
-          },
-          occurrence: {
-            end: '2024-01-15T12:00:00Z',
-          } as any,
-        });
-      }).toThrow("occurrence must contain 'start' and 'end' keys");
-    });
-
-    it('should throw error for occurrence without end', () => {
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          reportType: 'ddos',
-          sourceIdentifier: '192.0.2.1',
-          reporter: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          additionalFields: {
-            destination_ip: '203.0.113.10',
-            protocol: 'tcp',
-          },
-          occurrence: {
-            start: '2024-01-15T10:00:00Z',
-          } as any,
-        });
-      }).toThrow(XARFError);
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          reportType: 'ddos',
-          sourceIdentifier: '192.0.2.1',
-          reporter: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          additionalFields: {
-            destination_ip: '203.0.113.10',
-            protocol: 'tcp',
-          },
-          occurrence: {
-            start: '2024-01-15T10:00:00Z',
-          } as any,
-        });
-      }).toThrow("occurrence must contain 'start' and 'end' keys");
     });
   });
 
@@ -338,15 +197,10 @@ describe('XARFGenerator Edge Cases', () => {
   });
 
   describe('generateSampleReport with various options', () => {
-    it('should generate sample with evidence and optional fields', () => {
-      const report = generator.generateSampleReport('messaging', 'spam', true, true);
+    it('should generate sample with evidence', () => {
+      const report = generator.generateSampleReport('messaging', 'spam', true, false);
 
       expect(report.evidence).toBeDefined();
-      expect(report.severity).toBeDefined();
-      expect(report.confidence).toBeDefined();
-      expect(report.tags).toBeDefined();
-      expect(report.target).toBeDefined();
-      expect(report.occurrence).toBeDefined();
     });
 
     it('should generate sample for all valid categories', () => {
@@ -363,15 +217,15 @@ describe('XARFGenerator Edge Cases', () => {
       }> = [
         { category: 'messaging', type: 'spam' },
         { category: 'connection', type: 'ddos' },
-        { category: 'content', type: 'phishing_site' },
+        { category: 'content', type: 'phishing' },
         { category: 'infrastructure', type: 'botnet' },
-        { category: 'copyright', type: 'infringement' },
+        { category: 'copyright', type: 'copyright' },
         { category: 'vulnerability', type: 'cve' },
         { category: 'reputation', type: 'blocklist' },
       ];
 
       testCases.forEach(({ category, type }) => {
-        const report = generator.generateSampleReport(category, type);
+        const report = generator.generateSampleReport(category, type, true, false);
         expect(report.category).toBe(category);
         expect(report.type).toBe(type);
       });

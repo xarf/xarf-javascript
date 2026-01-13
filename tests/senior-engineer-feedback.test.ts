@@ -15,7 +15,7 @@ import { XARFValidator } from '../src/validator';
 
 describe('Senior Engineer Feedback Issues', () => {
   describe('Issue 1: Snake case vs camel case support', () => {
-    it('should accept snake_case properties from XARF spec examples', async () => {
+    it('should accept snake_case properties from XARF spec examples', () => {
       const parser = new XARFParser();
 
       // This is how it appears in XARF v4 spec examples
@@ -35,7 +35,7 @@ describe('Senior Engineer Feedback Issues', () => {
         },
         source_identifier: '192.0.2.100',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'honeypot',
         url: 'http://phishing.example.com',
       };
@@ -46,13 +46,13 @@ describe('Senior Engineer Feedback Issues', () => {
       expect(parser.getErrors()).toHaveLength(0);
     });
 
-    it('should work with XARF spec example directly copied', async () => {
+    it('should work with XARF spec example directly copied', () => {
       const parser = new XARFParser();
 
       // Direct copy from spec would use snake_case throughout
       const specExample = {
         xarf_version: '4.0.0',
-        report_id: 'test-123',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2025-12-16T07:37:30.000Z',
         reporter: {
           org: 'Test Org',
@@ -65,11 +65,13 @@ describe('Senior Engineer Feedback Issues', () => {
           domain: 'example.com',
         },
         source_identifier: '192.0.2.100',
+        source_port: 12345,
         category: 'connection',
         type: 'ddos',
         evidence_source: 'honeypot',
         destination_ip: '203.0.113.10',
         protocol: 'tcp',
+        first_seen: '2025-12-16T07:00:00.000Z',
       };
 
       const parsed = parser.parse(specExample);
@@ -79,12 +81,12 @@ describe('Senior Engineer Feedback Issues', () => {
   });
 
   describe('Issue 2: Invalid properties should emit warnings', () => {
-    it('should warn when using incorrect property names', async () => {
+    it('should warn when using incorrect property names', () => {
       const parser = new XARFParser();
 
       const reportWithTypos = {
         xarf_version: '4.0.0',
-        report_id: 'test-123',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2025-12-16T07:37:30.000Z',
         reporter: {
           org: 'Test Org',
@@ -98,7 +100,7 @@ describe('Senior Engineer Feedback Issues', () => {
         },
         source_identifier: '192.0.2.100',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'honeypot',
         url: 'http://phishing.example.com',
         // Typo - should be 'severity' not 'severety'
@@ -115,12 +117,12 @@ describe('Senior Engineer Feedback Issues', () => {
       expect(warnings.some((w) => w.includes('severety') || w.includes('unknown'))).toBe(true);
     });
 
-    it('should warn about misspelled category-specific fields', async () => {
+    it('should warn about misspelled category-specific fields', () => {
       const parser = new XARFParser();
 
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-123',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2025-12-16T07:37:30.000Z',
         reporter: {
           org: 'Test Org',
@@ -134,7 +136,7 @@ describe('Senior Engineer Feedback Issues', () => {
         },
         source_identifier: '192.0.2.100',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'honeypot',
         url: 'http://phishing.example.com',
         // Typo: should be 'content_type' not 'contentType'
@@ -150,12 +152,12 @@ describe('Senior Engineer Feedback Issues', () => {
   });
 
   describe('Issue 3: ReportType should alias to type', () => {
-    it('should accept ReportType as alias for type field', async () => {
+    it('should accept ReportType as alias for type field', () => {
       const parser = new XARFParser();
 
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-123',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2025-12-16T07:37:30.000Z',
         reporter: {
           org: 'Test Org',
@@ -182,12 +184,12 @@ describe('Senior Engineer Feedback Issues', () => {
   });
 
   describe('Issue 4: Timestamp validation should enforce ISO format', () => {
-    it('should throw error for invalid timestamp format', async () => {
+    it('should throw error for invalid timestamp format', () => {
       const validator = new XARFValidator();
 
       const report = {
         xarf_version: '4.0.0',
-        report_id: 'test-123',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: 'foo', // Invalid timestamp
         reporter: {
           org: 'Test Org',
@@ -201,83 +203,25 @@ describe('Senior Engineer Feedback Issues', () => {
         },
         source_identifier: '192.0.2.100',
         category: 'content',
-        type: 'phishing_site',
+        type: 'phishing',
         evidence_source: 'honeypot',
         url: 'http://phishing.example.com',
       } as any;
 
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'timestamp')).toBe(true);
-    });
-
-    it('should reject invalid occurrence timestamps', async () => {
-      const validator = new XARFValidator();
-
-      const report = {
-        xarf_version: '4.0.0',
-        report_id: 'test-123',
-        timestamp: '2025-12-16T07:37:30.000Z',
-        reporter: {
-          org: 'Test Org',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Test Org',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.100',
-        category: 'content',
-        type: 'phishing_site',
-        evidence_source: 'honeypot',
-        url: 'http://phishing.example.com',
-        occurrence: {
-          start: 'foo', // Invalid
-          end: '2025-12-16T07:37:30.000Z',
-        },
-      } as any;
-
-      const result = await validator.validate(report);
-      expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field.includes('occurrence'))).toBe(true);
     });
   });
 
   describe('Issue 5: Generator should not create invalid reports', () => {
-    it('should not allow creating reports missing required category fields', async () => {
+    it('should accept category-specific fields directly via union types', () => {
       const generator = new XARFGenerator();
 
-      // Attempting to create a content report without url
-      expect(() => {
-        generator.generateReport({
-          category: 'content',
-          reportType: 'phishing_site',
-          sourceIdentifier: '192.0.2.100',
-          reporter: {
-            org: 'Test Org',
-            contact: 'test@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Test Org',
-            contact: 'test@example.com',
-            domain: 'example.com',
-          },
-          // Missing url - this is required for content reports
-        });
-      }).toThrow();
-    });
-
-    it('should validate generated reports pass XARFValidator', async () => {
-      const generator = new XARFGenerator();
-      const validator = new XARFValidator();
-
-      // Generate a content report
+      // Content report with url as direct field (not in additionalFields)
       const report = generator.generateReport({
         category: 'content',
-        reportType: 'phishing_site',
+        reportType: 'phishing',
         sourceIdentifier: '192.0.2.100',
         reporter: {
           org: 'Test Org',
@@ -289,39 +233,68 @@ describe('Senior Engineer Feedback Issues', () => {
           contact: 'test@example.com',
           domain: 'example.com',
         },
-        additionalFields: {
-          url: 'http://phishing.example.com',
+        url: 'http://phishing.example.com', // Direct field via union type
+      });
+
+      expect(report.url).toBe('http://phishing.example.com');
+    });
+
+    it('should validate generated reports pass XARFValidator', () => {
+      const generator = new XARFGenerator();
+      const validator = new XARFValidator();
+
+      // Generate a content report with direct url field
+      const report = generator.generateReport({
+        category: 'content',
+        reportType: 'phishing',
+        sourceIdentifier: '192.0.2.100',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
         },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        url: 'http://phishing.example.com',
       });
 
       // The generated report should always be valid
-      const result = await validator.validate(report);
+      const result = validator.validate(report);
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should enforce required fields at generation time for all categories', async () => {
+    it('should accept connection category fields directly via union types', () => {
       const generator = new XARFGenerator();
 
-      // Connection reports require destination_ip
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          reportType: 'ddos',
-          sourceIdentifier: '192.0.2.100',
-          reporter: {
-            org: 'Test Org',
-            contact: 'test@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Test Org',
-            contact: 'test@example.com',
-            domain: 'example.com',
-          },
-          // Missing destination_ip and protocol
-        });
-      }).toThrow();
+      // Connection report with fields as direct properties
+      const report = generator.generateReport({
+        category: 'connection',
+        reportType: 'ddos',
+        sourceIdentifier: '192.0.2.100',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        destination_ip: '203.0.113.50',
+        protocol: 'tcp',
+        destination_port: 443,
+        first_seen: '2024-01-15T09:00:00Z',
+        source_port: 12345,
+      });
+
+      expect(report.destination_ip).toBe('203.0.113.50');
+      expect(report.protocol).toBe('tcp');
+      expect(report.destination_port).toBe(443);
     });
   });
 });

@@ -10,7 +10,7 @@ describe('XARFParser Edge Cases', () => {
     it('should handle parse error when category is unsupported in strict mode', () => {
       const reportData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -23,25 +23,24 @@ describe('XARFParser Edge Cases', () => {
           domain: 'example.com',
         },
         source_identifier: '192.0.2.1',
-        category: 'infrastructure',
+        category: 'invalid_category',
         type: 'botnet',
         evidence_source: 'honeypot',
       };
 
       const parser = new XARFParser(true);
 
+      // Should throw XARFValidationError when category is invalid
+      // Schema validation catches this as an enum violation
       expect(() => {
         parser.parse(reportData);
       }).toThrow(XARFValidationError);
-      expect(() => {
-        parser.parse(reportData);
-      }).toThrow('Unsupported category');
     });
 
     it('should return data when try-catch has error in non-strict mode', () => {
       const reportData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -79,7 +78,7 @@ describe('XARFParser Edge Cases', () => {
     it('should handle reporter not being an object', () => {
       const invalidData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: null,
         sender: {
@@ -97,13 +96,13 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('reporter must be an object'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('reporter is required'))).toBe(true);
     });
 
     it('should handle invalid timestamp format gracefully', () => {
       const invalidData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: 'invalid-timestamp-format',
         reporter: {
           org: 'Test',
@@ -131,7 +130,7 @@ describe('XARFParser Edge Cases', () => {
     it('should validate JSON string input', () => {
       const invalidData = {
         xarf_version: '3.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -169,7 +168,7 @@ describe('XARFParser Edge Cases', () => {
     it('should validate messaging with protocol smtp but no subject for social_engineering', () => {
       const reportData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -183,7 +182,7 @@ describe('XARFParser Edge Cases', () => {
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
-        type: 'social_engineering',
+        type: 'bulk_messaging',
         evidence_source: 'spamtrap',
         protocol: 'smtp',
         smtp_from: 'sender@example.com',
@@ -192,14 +191,14 @@ describe('XARFParser Edge Cases', () => {
       const parser = new XARFParser(false);
       const result = parser.validate(reportData);
 
-      // Should pass because subject is only required for spam/phishing
+      // Should pass because subject is only required for spam
       expect(result).toBe(true);
     });
 
     it('should require subject for spam with smtp protocol', () => {
       const invalidData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -226,10 +225,10 @@ describe('XARFParser Edge Cases', () => {
       expect(parser.getErrors().some((e) => e.includes('subject required'))).toBe(true);
     });
 
-    it('should require subject for phishing with smtp protocol', () => {
+    it('should reject invalid messaging type', () => {
       const invalidData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -243,23 +242,23 @@ describe('XARFParser Edge Cases', () => {
         },
         source_identifier: '192.0.2.1',
         category: 'messaging',
-        type: 'phishing',
+        type: 'invalid_type',
         evidence_source: 'spamtrap',
         protocol: 'smtp',
-        smtp_from: 'phisher@example.com',
+        smtp_from: 'test@example.com',
       };
 
       const parser = new XARFParser(false);
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('subject required'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('Invalid messaging type'))).toBe(true);
     });
 
     it('should validate connection report missing protocol', () => {
       const invalidData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -288,7 +287,7 @@ describe('XARFParser Edge Cases', () => {
     it('should validate invalid connection type', () => {
       const invalidData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -318,7 +317,7 @@ describe('XARFParser Edge Cases', () => {
     it('should validate invalid content type', () => {
       const invalidData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -349,7 +348,7 @@ describe('XARFParser Edge Cases', () => {
     it('should detect missing reporter fields', () => {
       const invalidData = {
         xarf_version: '4.0.0',
-        report_id: 'test-id',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
           org: 'Test',
@@ -369,7 +368,11 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Missing reporter fields'))).toBe(true);
+      expect(
+        parser
+          .getErrors()
+          .some((e) => e.includes('reporter.contact') || e.includes('reporter.domain'))
+      ).toBe(true);
     });
   });
 });

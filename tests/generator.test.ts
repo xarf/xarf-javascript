@@ -109,6 +109,8 @@ describe('XARFGenerator', () => {
         additionalFields: {
           destination_ip: '203.0.113.10',
           protocol: 'tcp',
+          first_seen: '2024-01-15T09:00:00Z',
+          source_port: 12345,
         },
       });
 
@@ -126,38 +128,11 @@ describe('XARFGenerator', () => {
       expect(report.timestamp).toBeDefined();
     });
 
-    it('should generate report with on_behalf_of', () => {
-      const report = generator.generateReport({
-        category: 'messaging',
-        reportType: 'spam',
-        sourceIdentifier: '192.0.2.100',
-        reporter: {
-          org: 'Reporter Org',
-          contact: 'reporter@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Reporter Org',
-          contact: 'reporter@example.com',
-          domain: 'example.com',
-        },
-        onBehalfOf: {
-          org: 'Client Org',
-          contact: 'client@example.com',
-          domain: 'client.example.com',
-        },
-      });
-
-      expect(report.on_behalf_of).toBeDefined();
-      expect(report.on_behalf_of?.org).toBe('Client Org');
-      expect(report.on_behalf_of?.contact).toBe('client@example.com');
-    });
-
     it('should include optional fields', () => {
       const evidence = generator.addEvidence('text/plain', 'Test', 'data');
       const report = generator.generateReport({
         category: 'content',
-        reportType: 'phishing_site',
+        reportType: 'phishing',
         sourceIdentifier: '192.0.2.100',
         reporter: {
           org: 'Example Org',
@@ -171,24 +146,15 @@ describe('XARFGenerator', () => {
         },
         description: 'Test phishing site',
         evidence: [evidence],
-        severity: 'high',
         confidence: 0.95,
-        tags: ['phishing', 'test'],
-        target: { url: 'http://evil.example.com' },
-        occurrence: {
-          start: '2024-01-15T10:00:00Z',
-          end: '2024-01-15T12:00:00Z',
-        },
+        tags: ['type:phishing', 'source:test'],
         additionalFields: { url: 'http://phishing.example.com' },
       });
 
       expect(report.description).toBe('Test phishing site');
       expect(report.evidence).toHaveLength(1);
-      expect(report.severity).toBe('high');
       expect(report.confidence).toBe(0.95);
-      expect(report.tags).toContain('phishing');
-      expect(report.target?.url).toBe('http://evil.example.com');
-      expect(report.occurrence).toBeDefined();
+      expect(report.tags).toContain('type:phishing');
       expect(report.url).toBe('http://phishing.example.com');
     });
 
@@ -314,28 +280,19 @@ describe('XARFGenerator', () => {
 
   describe('generateSampleReport', () => {
     it('should generate sample connection report', () => {
-      const report = generator.generateSampleReport('connection', 'ddos');
+      const report = generator.generateSampleReport('connection', 'ddos', true, false);
 
       expect(report.category).toBe('connection');
       expect(report.type).toBe('ddos');
       expect(report.source_identifier).toMatch(/^192\.0\.2\.\d+$/);
       expect(report.reporter.contact).toContain('@');
       expect(report.evidence).toBeDefined();
-      expect(report.severity).toBeDefined();
     });
 
     it('should generate sample without evidence', () => {
-      const report = generator.generateSampleReport('messaging', 'spam', false);
+      const report = generator.generateSampleReport('messaging', 'spam', false, false);
 
       expect(report.evidence).toBeUndefined();
-    });
-
-    it('should generate sample without optional fields', () => {
-      const report = generator.generateSampleReport('content', 'phishing_site', false, false);
-
-      expect(report.severity).toBeUndefined();
-      expect(report.target).toBeUndefined();
-      expect(report.occurrence).toBeUndefined();
     });
 
     it('should throw error for invalid category', () => {

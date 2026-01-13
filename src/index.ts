@@ -6,14 +6,27 @@
  */
 
 export { XARFParser } from './parser';
-export { XARFGenerator, type GeneratorOptions } from './generator';
+export {
+  XARFGenerator,
+  type GeneratorOptions,
+  type BaseGeneratorOptions,
+  type ContentGeneratorOptions,
+  type ConnectionGeneratorOptions,
+  type MessagingGeneratorOptions,
+  type InfrastructureGeneratorOptions,
+  type CopyrightGeneratorOptions,
+  type VulnerabilityGeneratorOptions,
+  type ReputationGeneratorOptions,
+} from './generator';
 export {
   XARFValidator,
   type ValidationResult,
   type ValidationError,
   type ValidationWarning,
+  type ValidationInfo,
 } from './validator';
 export { SchemaValidator, validator } from './schema-validator';
+export { SchemaRegistry, schemaRegistry, type FieldMetadata } from './schema-registry';
 export { XARFError, XARFValidationError, XARFParseError, XARFSchemaError } from './errors';
 export type {
   XARFReport,
@@ -23,8 +36,7 @@ export type {
   SeverityLevel,
   XARFReporter,
   XARFEvidence,
-  TimeOccurrence,
-  Target,
+  ContactInfo,
   MessagingReport,
   ConnectionReport,
   ContentReport,
