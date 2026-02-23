@@ -21,18 +21,10 @@ import type {
 
 /**
  * Base generator options shared by all categories
- *
- * Supports both camelCase (backward compatibility) and snake_case (XARF spec) field names.
- * Snake_case is preferred and matches the XARF specification.
  */
 export interface BaseGeneratorOptions {
-  // Type field (XARF spec uses "type")
-  type?: string; // XARF spec field name
-  reportType?: string; // Backward compatibility (deprecated)
-
-  // Source identifier
-  source_identifier?: string; // XARF spec field name
-  sourceIdentifier?: string; // Backward compatibility (deprecated)
+  type?: string;
+  source_identifier?: string;
 
   reporter: {
     org: string;
@@ -45,16 +37,13 @@ export interface BaseGeneratorOptions {
     domain: string;
   };
 
-  // Evidence source
-  evidence_source?: EvidenceSource; // XARF spec field name
-  evidenceSource?: EvidenceSource; // Backward compatibility (deprecated)
+  evidence_source?: EvidenceSource;
 
   description?: string;
   evidence?: XARFEvidence[];
   confidence?: number;
   tags?: string[];
 
-  // Additional fields for backward compatibility and extra fields
   additionalFields?: Record<string, unknown>;
 }
 
@@ -202,8 +191,7 @@ export interface ReputationGeneratorOptions extends BaseGeneratorOptions {
 /**
  * Discriminated union type for all generator options
  *
- * Provides type-safe, category-specific fields while maintaining
- * backward compatibility through additionalFields.
+ * Provides type-safe, category-specific fields for each report category.
  */
 export type GeneratorOptions =
   | ContentGeneratorOptions
@@ -358,10 +346,9 @@ export class XARFGenerator {
       additionalFields,
     } = options;
 
-    // Normalize field names: prefer snake_case (XARF spec), fall back to camelCase (backward compat)
-    const reportType = options.type ?? options.reportType;
-    const sourceIdentifier = options.source_identifier ?? options.sourceIdentifier;
-    const evidenceSource = options.evidence_source ?? options.evidenceSource;
+    const reportType = options.type;
+    const sourceIdentifier = options.source_identifier;
+    const evidenceSource = options.evidence_source;
 
     // Validate all required fields
     this.validateRequiredOptions(sourceIdentifier, reportType, reporter, sender);
@@ -432,11 +419,8 @@ export class XARFGenerator {
     'tags',
     'additionalFields',
     'type',
-    'reportType',
     'source_identifier',
-    'sourceIdentifier',
     'evidence_source',
-    'evidenceSource',
   ]);
 
   /**
@@ -486,10 +470,10 @@ export class XARFGenerator {
     sender: { org: string; contact: string; domain: string } | undefined
   ): void {
     if (!sourceIdentifier) {
-      throw new XARFError('source_identifier (or sourceIdentifier) is required');
+      throw new XARFError('source_identifier is required');
     }
     if (!reportType) {
-      throw new XARFError('type (or reportType) is required');
+      throw new XARFError('type is required');
     }
     if (!reporter) {
       throw new XARFError('reporter is required');

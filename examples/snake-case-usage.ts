@@ -86,33 +86,4 @@ const report2 = generator.generateReport({
 console.log(JSON.stringify(report2, null, 2));
 console.log('\n---\n');
 
-// Example 3: Backward compatibility with camelCase (deprecated but still works)
-console.log('Example 3: Backward compatibility with camelCase (deprecated)');
-const report3 = generator.generateReport({
-  category: 'content',
-  reportType: 'malware_distribution', // Deprecated: use "type" instead
-  sourceIdentifier: '203.0.113.75', // Deprecated: use "source_identifier" instead
-  evidenceSource: 'automated_scan', // Deprecated: use "evidence_source" instead
-  reporter: {
-    org: 'Threat Intelligence Team',
-    contact: 'threats@security.example.com',
-    domain: 'security.example.com',
-  },
-  sender: {
-    org: 'Automated Scanning System',
-    contact: 'scanner@security.example.com',
-    domain: 'security.example.com',
-  },
-  description: 'Malware distribution site detected',
-  additionalFields: {
-    url: 'http://malicious.example.com/download.exe',
-    content_type: 'application/octet-stream',
-  },
-});
-
-console.log(JSON.stringify(report3, null, 2));
-console.log('\n---\n');
-
-console.log('Note: All generated reports use snake_case in the output,');
-console.log('regardless of whether you use snake_case or camelCase in the input.');
-console.log('Using snake_case is preferred as it matches the XARF specification.');
+console.log('Note: All field names use snake_case, matching the XARF specification.');

@@ -94,8 +94,8 @@ describe('XARFGenerator', () => {
     it('should generate valid connection report', () => {
       const report = generator.generateReport({
         category: 'connection',
-        reportType: 'ddos',
-        sourceIdentifier: '192.0.2.100',
+        type: 'ddos',
+        source_identifier: '192.0.2.100',
         reporter: {
           org: 'Example Security',
           contact: 'abuse@example.com',
@@ -132,8 +132,8 @@ describe('XARFGenerator', () => {
       const evidence = generator.addEvidence('text/plain', 'Test', 'data');
       const report = generator.generateReport({
         category: 'content',
-        reportType: 'phishing',
-        sourceIdentifier: '192.0.2.100',
+        type: 'phishing',
+        source_identifier: '192.0.2.100',
         reporter: {
           org: 'Example Org',
           contact: 'abuse@example.com',
@@ -162,8 +162,8 @@ describe('XARFGenerator', () => {
       expect(() => {
         generator.generateReport({
           category: 'connection',
-          reportType: 'ddos',
-          sourceIdentifier: '',
+          type: 'ddos',
+          source_identifier: '',
           reporter: {
             org: 'Example Org',
             contact: 'abuse@example.com',
@@ -182,8 +182,8 @@ describe('XARFGenerator', () => {
       expect(() => {
         generator.generateReport({
           category: 'invalid' as any,
-          reportType: 'test',
-          sourceIdentifier: '192.0.2.1',
+          type: 'test',
+          source_identifier: '192.0.2.1',
           reporter: {
             org: 'Example Org',
             contact: 'abuse@example.com',
@@ -202,8 +202,8 @@ describe('XARFGenerator', () => {
       expect(() => {
         generator.generateReport({
           category: 'connection',
-          reportType: 'spam',
-          sourceIdentifier: '192.0.2.1',
+          type: 'spam',
+          source_identifier: '192.0.2.1',
           reporter: {
             org: 'Example Org',
             contact: 'abuse@example.com',
@@ -222,8 +222,8 @@ describe('XARFGenerator', () => {
       expect(() => {
         generator.generateReport({
           category: 'connection',
-          reportType: 'ddos',
-          sourceIdentifier: '192.0.2.1',
+          type: 'ddos',
+          source_identifier: '192.0.2.1',
           reporter: {
             org: 'Example Org',
             contact: 'abuse@example.com',
@@ -239,12 +239,12 @@ describe('XARFGenerator', () => {
       }).toThrow(XARFError);
     });
 
-    it('should throw error for invalid on_behalf_of', () => {
+    it('should throw error for unknown fields', () => {
       expect(() => {
         generator.generateReport({
           category: 'messaging',
-          reportType: 'spam',
-          sourceIdentifier: '192.0.2.1',
+          type: 'spam',
+          source_identifier: '192.0.2.1',
           reporter: {
             org: 'Example Org',
             contact: 'abuse@example.com',
@@ -255,7 +255,7 @@ describe('XARFGenerator', () => {
             contact: 'abuse@example.com',
             domain: 'example.com',
           },
-          onBehalfOf: { org: 'Test' } as any,
+          additionalFields: { unknown_field: 'test' },
         });
       }).toThrow(XARFError);
     });

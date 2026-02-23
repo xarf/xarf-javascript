@@ -2,7 +2,7 @@
  * Tests for senior engineer feedback issues
  *
  * Issues reported:
- * 1. Snake case vs camel case - XARF spec uses snake_case, library should support both
+ * 1. Snake case - XARF spec uses snake_case throughout
  * 2. Invalid properties should emit warnings (silent failure is bad)
  * 3. ReportType should alias to type
  * 4. Timestamps should validate ISO format and throw if invalid
@@ -221,8 +221,8 @@ describe('Senior Engineer Feedback Issues', () => {
       // Content report with url as direct field (not in additionalFields)
       const report = generator.generateReport({
         category: 'content',
-        reportType: 'phishing',
-        sourceIdentifier: '192.0.2.100',
+        type: 'phishing',
+        source_identifier: '192.0.2.100',
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
@@ -246,8 +246,8 @@ describe('Senior Engineer Feedback Issues', () => {
       // Generate a content report with direct url field
       const report = generator.generateReport({
         category: 'content',
-        reportType: 'phishing',
-        sourceIdentifier: '192.0.2.100',
+        type: 'phishing',
+        source_identifier: '192.0.2.100',
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',
@@ -273,8 +273,8 @@ describe('Senior Engineer Feedback Issues', () => {
       // Connection report with fields as direct properties
       const report = generator.generateReport({
         category: 'connection',
-        reportType: 'ddos',
-        sourceIdentifier: '192.0.2.100',
+        type: 'ddos',
+        source_identifier: '192.0.2.100',
         reporter: {
           org: 'Test Org',
           contact: 'test@example.com',

@@ -44,19 +44,19 @@ const report = parser.parse({
   reporter: {
     org: 'Security Team',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   sender: {
     org: 'Security Team',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   source_identifier: '192.0.2.100',
   category: 'connection',
   type: 'ddos',
   evidence_source: 'honeypot',
   destination_ip: '203.0.113.10',
-  protocol: 'tcp'
+  protocol: 'tcp',
 });
 
 console.log(report.category); // 'connection'
@@ -70,24 +70,24 @@ import { XARFGenerator } from 'xarf';
 const generator = new XARFGenerator();
 const report = generator.generateReport({
   category: 'messaging',
-  type: 'spam',  // Using XARF spec field name
-  source_identifier: '192.0.2.100',  // snake_case matches XARF spec
+  type: 'spam', // Using XARF spec field name
+  source_identifier: '192.0.2.100', // snake_case matches XARF spec
   reporter: {
     org: 'Example Security',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   sender: {
     org: 'Example Security',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
-  evidence_source: 'automated_scan',  // snake_case matches XARF spec
+  evidence_source: 'automated_scan', // snake_case matches XARF spec
   description: 'Spam email detected from source',
   tags: ['spam', 'email'],
   // Category-specific fields can be passed directly (union types)
   protocol: 'smtp',
-  smtp_from: 'spammer@evil.example.com'
+  smtp_from: 'spammer@evil.example.com',
 });
 
 console.log(JSON.stringify(report, null, 2));
@@ -147,7 +147,7 @@ const generator = new XARFGenerator();
 
 #### GeneratorOptions
 
-The `GeneratorOptions` interface for `generateReport()` supports both **snake_case** (XARF spec, preferred) and **camelCase** (backward compatibility).
+The `GeneratorOptions` interface uses **snake_case** field names, matching the XARF specification.
 
 **Union Types**: Category-specific fields can be passed directly without using `additionalFields`:
 
@@ -163,7 +163,7 @@ const messagingReport = generator.generateReport({
   // Messaging-specific fields directly on options
   protocol: 'smtp',
   smtp_from: 'spammer@evil.example.com',
-  subject: 'You won!'
+  subject: 'You won!',
 });
 
 // Connection report with direct fields
@@ -177,31 +177,27 @@ const connectionReport = generator.generateReport({
   // Connection-specific fields directly on options
   destination_ip: '203.0.113.10',
   protocol: 'tcp',
-  destination_port: 80
+  destination_port: 80,
 });
 ```
 
 **Base Options** (all categories):
+
 ```typescript
 {
   category: XARFCategory;                    // Required: Report category
   type?: string;                             // Report type (e.g., 'spam', 'ddos')
-  reportType?: string;                       // Backward compatibility alias
   source_identifier?: string;                // Required: Source IP or identifier
-  sourceIdentifier?: string;                 // Backward compatibility alias
   reporter: ContactInfo;                     // Required: Reporter information
   sender: ContactInfo;                       // Required: Sender information
   evidence_source?: EvidenceSource;          // Evidence source
-  evidenceSource?: EvidenceSource;           // Backward compatibility alias
   description?: string;                      // Human-readable description
   evidence?: XARFEvidence[];                 // Evidence items
   confidence?: number;                       // Confidence score (0.0 to 1.0)
   tags?: string[];                           // Tags for categorization
-  additionalFields?: Record<string, unknown>; // Additional fields (legacy approach)
+  additionalFields?: Record<string, unknown>; // Additional fields
 }
 ```
-
-**Note:** The library accepts both naming conventions but generates reports using snake_case as per the XARF specification.
 
 ### XARFValidator
 
@@ -216,11 +212,13 @@ const validator = new XARFValidator();
 - `validate(report: XARFReport, strict?: boolean, showMissingOptional?: boolean): ValidationResult` - Validate a report
 
 Parameters:
+
 - `report` - The XARF report to validate
 - `strict` - If `true`, throw `XARFValidationError` on validation failures (default: `false`)
 - `showMissingOptional` - If `true`, include info about missing optional fields (default: `false`)
 
 Returns:
+
 ```typescript
 {
   valid: boolean;
@@ -237,7 +235,7 @@ The validator automatically warns about unknown fields in reports:
 ```typescript
 const report = {
   // ... valid fields ...
-  unknownField: 'value'  // Will trigger a warning
+  unknownField: 'value', // Will trigger a warning
 };
 
 const result = validator.validate(report);
@@ -292,24 +290,31 @@ const metadata = schemaRegistry.getFieldMetadata('confidence');
 ## Categories and Types
 
 ### Messaging
+
 - `spam`, `phishing`, `social_engineering`, `bulk_messaging`
 
 ### Connection
+
 - `ddos`, `port_scan`, `login_attack`, `ip_spoofing`, `compromised`, `botnet`, `malicious_traffic`, and more
 
 ### Content
+
 - `phishing_site`, `malware_distribution`, `defacement`, `spamvertised`, `web_hack`, and more
 
 ### Infrastructure
+
 - `botnet`, `compromised_server`
 
 ### Copyright
+
 - `infringement`, `dmca`, `trademark`, `p2p`, and more
 
 ### Vulnerability
+
 - `cve`, `misconfiguration`, `open_service`
 
 ### Reputation
+
 - `blocklist`, `threat_intelligence`
 
 ## Examples
@@ -324,12 +329,12 @@ const report = generator.generateReport({
   reporter: {
     org: 'Security Operations',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   sender: {
     org: 'Security Operations',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   evidence_source: 'honeypot',
   // Category-specific fields directly (union types)
@@ -337,7 +342,7 @@ const report = generator.generateReport({
   protocol: 'tcp',
   destination_port: 80,
   attack_type: 'syn_flood',
-  confidence: 0.95
+  confidence: 0.95,
 });
 ```
 
@@ -351,19 +356,19 @@ const report = generator.generateReport({
   reporter: {
     org: 'Phishing Response Team',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   sender: {
     org: 'Phishing Response Team',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   evidence_source: 'user_report',
   // Category-specific fields directly (union types)
   url: 'http://phishing.example.com',
   content_type: 'text/html',
   description: 'Phishing site mimicking banking portal',
-  tags: ['phishing', 'banking', 'credential-theft']
+  tags: ['phishing', 'banking', 'credential-theft'],
 });
 ```
 
@@ -377,12 +382,12 @@ const report = generator.generateReport({
   reporter: {
     org: 'Example Security',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   sender: {
     org: 'Example Security',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   evidence_source: 'spamtrap',
   // Category-specific fields directly (union types)
@@ -390,7 +395,7 @@ const report = generator.generateReport({
   smtp_from: 'spammer@evil.example.com',
   smtp_to: 'victim@example.com',
   subject: 'You won the lottery!',
-  message_id: '<123456@evil.example.com>'
+  message_id: '<123456@evil.example.com>',
 });
 ```
 
@@ -404,7 +409,7 @@ import type {
   ConnectionReport,
   MessagingReport,
   XARFCategory,
-  ReporterType
+  ReporterType,
 } from 'xarf';
 
 const report: ConnectionReport = {
@@ -450,6 +455,7 @@ npm run check-schema-updates -- --all
 ```
 
 Example output:
+
 ```
 [xarf] Checking for schema updates...
 
@@ -465,6 +471,7 @@ Example output:
 To update to a newer version of the XARF specification:
 
 1. Edit `package.json` and update the version:
+
    ```json
    "xarfSpec": {
      "version": "v4.2.0"
@@ -535,15 +542,15 @@ const v3Report = {
   Version: '3',
   ReporterInfo: {
     ReporterOrg: 'Security Team',
-    ReporterOrgEmail: 'abuse@example.com'
+    ReporterOrgEmail: 'abuse@example.com',
   },
   Report: {
     ReportType: 'Spam',
     Date: '2024-01-15T10:00:00Z',
     SourceIp: '192.0.2.100',
     Protocol: 'smtp',
-    SmtpMailFromAddress: 'spammer@evil.example'
-  }
+    SmtpMailFromAddress: 'spammer@evil.example',
+  },
 };
 
 // Automatically converted to v4 format
@@ -588,16 +595,16 @@ console.log(getV3DeprecationWarning());
 
 The following v3 report types are automatically mapped to v4 categories:
 
-| v3 ReportType | v4 Category | v4 Type |
-|---------------|-------------|---------|
-| Spam | messaging | spam |
-| Login-Attack | connection | login_attack |
-| Port-Scan | connection | port_scan |
-| DDoS | connection | ddos |
-| Phishing | content | phishing |
-| Malware | content | malware |
-| Botnet | infrastructure | botnet |
-| Copyright | copyright | copyright |
+| v3 ReportType | v4 Category    | v4 Type      |
+| ------------- | -------------- | ------------ |
+| Spam          | messaging      | spam         |
+| Login-Attack  | connection     | login_attack |
+| Port-Scan     | connection     | port_scan    |
+| DDoS          | connection     | ddos         |
+| Phishing      | content        | phishing     |
+| Malware       | content        | malware      |
+| Botnet        | infrastructure | botnet       |
+| Copyright     | copyright      | copyright    |
 
 Unknown v3 report types are mapped to category `content` with type `unclassified`.
 
