@@ -3,9 +3,11 @@
 ## High Priority
 
 ### JSON Schema Validation - Production Ready
+
 **Status:** Core schema validation ✅ PRODUCTION READY | Type-specific validation ⚠️ KNOWN LIMITATION
 
 **What Works:**
+
 - ✅ Core schema validation (`SchemaValidator.validateCore()`)
 - ✅ All 207 tests passing (46 schema-specific tests)
 - ✅ Format validation (email, UUID, ISO dates, hostnames)
@@ -20,6 +22,7 @@
 - ✅ Schema infrastructure fully implemented
 
 **Known Limitation:**
+
 - ⚠️ Type-specific required fields not enforced by master schema validation
 - This is due to a design flaw in the XARF spec's master schema structure
 - The master schema uses `anyOf` with `if/then` which has a logical issue:
@@ -29,6 +32,7 @@
 
 **Recommended Fix (for XARF spec team):**
 Restructure master schema from:
+
 ```json
 { "anyOf": [
     { "if": { ... }, "then": { "$ref": "types/..." } }
@@ -36,6 +40,7 @@ Restructure master schema from:
 ```
 
 To:
+
 ```json
 { "oneOf": [
     { "allOf": [
@@ -46,21 +51,17 @@ To:
 ```
 
 **Current Recommendation:**
+
 - Use `SchemaValidator.validateCore()` for production validation
 - Core schema provides excellent coverage of XARF v4.0.0 spec
 - Type-specific validation requires hand-coded validator or spec master schema fix
 
 ## Completed
 
-### snake_case vs camelCase API (Fixed 2025-12-16)
-- ✅ Generator now accepts both `type` and `reportType`
-- ✅ Generator now accepts both `source_identifier` and `sourceIdentifier`
-- ✅ Generator now accepts both `evidence_source` and `evidenceSource`
-- ✅ Generator now accepts both `on_behalf_of` and `onBehalfOf`
-- ✅ Generated reports use snake_case as per XARF spec
-- ✅ README updated to show snake_case examples (preferred)
-- ✅ API documentation clearly marks camelCase as deprecated
-- ✅ Backward compatibility maintained
+### snake_case API (Fixed 2025-12-16, camelCase compat removed)
+
+- ✅ Generator uses snake_case field names matching the XARF spec
+- ✅ camelCase backward compatibility removed (was never in the spec)
 
 ## Low Priority
 

@@ -22,6 +22,7 @@ const report = parser.parse(v3JsonData);
 ### Structure Changes
 
 **v3 Format:**
+
 ```json
 {
   "Version": "3",
@@ -38,6 +39,7 @@ const report = parser.parse(v3JsonData);
 ```
 
 **v4 Format (after conversion):**
+
 ```json
 {
   "xarf_version": "4.0.0",
@@ -62,32 +64,32 @@ const report = parser.parse(v3JsonData);
 
 ### Field Mappings
 
-| v3 Field | v4 Field | Notes |
-|----------|----------|-------|
-| `Version` | `xarf_version` | Set to "4.0.0" |
-| N/A | `report_id` | Auto-generated UUID |
-| `ReporterInfo.ReporterOrg` | `reporter.org` | Direct mapping |
-| `ReporterInfo.ReporterOrgEmail` | `reporter.contact` | Direct mapping |
-| N/A | `reporter.type` | Set to "manual" for v3 |
-| `Report.Date` | `timestamp` | Direct mapping |
+| v3 Field                                | v4 Field            | Notes                       |
+| --------------------------------------- | ------------------- | --------------------------- |
+| `Version`                               | `xarf_version`      | Set to "4.0.0"              |
+| N/A                                     | `report_id`         | Auto-generated UUID         |
+| `ReporterInfo.ReporterOrg`              | `reporter.org`      | Direct mapping              |
+| `ReporterInfo.ReporterOrgEmail`         | `reporter.contact`  | Direct mapping              |
+| N/A                                     | `reporter.type`     | Set to "manual" for v3      |
+| `Report.Date`                           | `timestamp`         | Direct mapping              |
 | `Report.SourceIp` or `Report.Source.IP` | `source_identifier` | Uses Source.IP if available |
-| `Report.ReportType` | `category` + `type` | Mapped per table below |
-| `Report.Attachment` or `Report.Samples` | `evidence` | Structure converted |
-| N/A | `evidence_source` | Default: "manual_analysis" |
+| `Report.ReportType`                     | `category` + `type` | Mapped per table below      |
+| `Report.Attachment` or `Report.Samples` | `evidence`          | Structure converted         |
+| N/A                                     | `evidence_source`   | Default: "manual_analysis"  |
 
 ### Report Type Mappings
 
-| v3 ReportType | v4 Category | v4 Type |
-|---------------|-------------|---------|
-| `Spam` | `messaging` | `spam` |
-| `Login-Attack` | `connection` | `login_attack` |
-| `Port-Scan` | `connection` | `port_scan` |
-| `DDoS` | `connection` | `ddos` |
-| `Phishing` | `content` | `phishing` |
-| `Malware` | `content` | `malware` |
-| `Botnet` | `infrastructure` | `botnet` |
-| `Copyright` | `copyright` | `copyright` |
-| Unknown types | `content` | `unclassified` |
+| v3 ReportType  | v4 Category      | v4 Type        |
+| -------------- | ---------------- | -------------- |
+| `Spam`         | `messaging`      | `spam`         |
+| `Login-Attack` | `connection`     | `login_attack` |
+| `Port-Scan`    | `connection`     | `port_scan`    |
+| `DDoS`         | `connection`     | `ddos`         |
+| `Phishing`     | `content`        | `phishing`     |
+| `Malware`      | `content`        | `malware`      |
+| `Botnet`       | `infrastructure` | `botnet`       |
+| `Copyright`    | `copyright`      | `copyright`    |
+| Unknown types  | `content`        | `unclassified` |
 
 **Note**: XARF v4 has exactly 7 categories. Unknown v3 report types are mapped to the `content` category with type `unclassified`.
 
@@ -154,10 +156,18 @@ const generator = new XARFGenerator();
 
 const report = generator.generateReport({
   category: 'messaging',
-  reportType: 'spam',
-  sourceIdentifier: '192.0.2.100',
-  reporterContact: 'abuse@example.com',
-  reporterOrg: 'Security Team',
+  type: 'spam',
+  source_identifier: '192.0.2.100',
+  reporter: {
+    org: 'Security Team',
+    contact: 'abuse@example.com',
+    domain: 'example.com',
+  },
+  sender: {
+    org: 'Security Team',
+    contact: 'abuse@example.com',
+    domain: 'example.com',
+  },
   // ... additional fields
 });
 ```
@@ -183,7 +193,7 @@ describe('v3 Migration', () => {
     expect(v4Report.type).toBeDefined();
 
     // Review any conversion warnings
-    warnings.forEach(warning => console.log(warning));
+    warnings.forEach((warning) => console.log(warning));
   });
 });
 ```
@@ -212,7 +222,7 @@ const v4Report = convertV3toV4(v3Report);
 v4Report._internal = {
   ...v4Report._internal,
   v3_disclosure: v3Report.Disclosure,
-  v3_contact_name: v3Report.ReporterInfo.ReporterContactName
+  v3_contact_name: v3Report.ReporterInfo.ReporterContactName,
 };
 ```
 
