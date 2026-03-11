@@ -9,14 +9,14 @@ export { XARFParser } from './parser';
 export {
   XARFGenerator,
   type GeneratorOptions,
-  type BaseGeneratorOptions,
-  type ContentGeneratorOptions,
   type ConnectionGeneratorOptions,
   type MessagingGeneratorOptions,
+  type ContentGeneratorOptions,
   type InfrastructureGeneratorOptions,
   type CopyrightGeneratorOptions,
   type VulnerabilityGeneratorOptions,
   type ReputationGeneratorOptions,
+  type SampleReportOptions,
 } from './generator';
 export {
   XARFValidator,

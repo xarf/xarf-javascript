@@ -162,6 +162,7 @@ describe('XARFValidator', () => {
         type: 'spam',
         protocol: 'smtp',
         smtp_from: 'spammer@example.com',
+        subject: 'Buy now!',
       };
 
       const result = validator.validate(report);

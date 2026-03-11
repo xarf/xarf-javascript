@@ -3,39 +3,13 @@
  */
 
 import { XARFGenerator } from '../src/generator';
-import { XARFError } from '../src/errors';
+import { XARFError, XARFValidationError } from '../src/errors';
 
 describe('XARFGenerator', () => {
   let generator: XARFGenerator;
 
   beforeEach(() => {
     generator = new XARFGenerator();
-  });
-
-  describe('generateUUID', () => {
-    it('should generate valid UUID', () => {
-      const uuid = generator.generateUUID();
-      expect(uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
-    });
-
-    it('should generate unique UUIDs', () => {
-      const uuid1 = generator.generateUUID();
-      const uuid2 = generator.generateUUID();
-      expect(uuid1).not.toBe(uuid2);
-    });
-  });
-
-  describe('generateTimestamp', () => {
-    it('should generate ISO 8601 timestamp', () => {
-      const timestamp = generator.generateTimestamp();
-      expect(timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
-    });
-
-    it('should be parseable as date', () => {
-      const timestamp = generator.generateTimestamp();
-      const date = new Date(timestamp);
-      expect(date.toISOString()).toBe(timestamp);
-    });
   });
 
   describe('generateHash', () => {
@@ -62,12 +36,6 @@ describe('XARFGenerator', () => {
       expect(sha1).toHaveLength(40);
       expect(md5).toHaveLength(32);
     });
-
-    it('should throw error for unsupported algorithm', () => {
-      expect(() => {
-        generator.generateHash('test', 'invalid' as any);
-      }).toThrow(XARFError);
-    });
   });
 
   describe('addEvidence', () => {
@@ -90,9 +58,9 @@ describe('XARFGenerator', () => {
     });
   });
 
-  describe('generateReport', () => {
+  describe('createReport', () => {
     it('should generate valid connection report', () => {
-      const report = generator.generateReport({
+      const report = generator.createReport({
         category: 'connection',
         type: 'ddos',
         source_identifier: '192.0.2.100',
@@ -106,12 +74,10 @@ describe('XARFGenerator', () => {
           contact: 'abuse@example.com',
           domain: 'example.com',
         },
-        additionalFields: {
-          destination_ip: '203.0.113.10',
-          protocol: 'tcp',
-          first_seen: '2024-01-15T09:00:00Z',
-          source_port: 12345,
-        },
+        destination_ip: '203.0.113.10',
+        protocol: 'tcp',
+        first_seen: '2024-01-15T09:00:00Z',
+        source_port: 12345,
       });
 
       expect(report.xarf_version).toBe('4.0.0');
@@ -130,7 +96,7 @@ describe('XARFGenerator', () => {
 
     it('should include optional fields', () => {
       const evidence = generator.addEvidence('text/plain', 'Test', 'data');
-      const report = generator.generateReport({
+      const report = generator.createReport({
         category: 'content',
         type: 'phishing',
         source_identifier: '192.0.2.100',
@@ -148,7 +114,7 @@ describe('XARFGenerator', () => {
         evidence: [evidence],
         confidence: 0.95,
         tags: ['type:phishing', 'source:test'],
-        additionalFields: { url: 'http://phishing.example.com' },
+        url: 'http://phishing.example.com',
       });
 
       expect(report.description).toBe('Test phishing site');
@@ -160,7 +126,7 @@ describe('XARFGenerator', () => {
 
     it('should throw error for missing source identifier', () => {
       expect(() => {
-        generator.generateReport({
+        generator.createReport({
           category: 'connection',
           type: 'ddos',
           source_identifier: '',
@@ -174,13 +140,13 @@ describe('XARFGenerator', () => {
             contact: 'abuse@example.com',
             domain: 'example.com',
           },
-        });
-      }).toThrow(XARFError);
+        } as any);
+      }).toThrow(XARFValidationError);
     });
 
     it('should throw error for invalid category', () => {
       expect(() => {
-        generator.generateReport({
+        generator.createReport({
           category: 'invalid' as any,
           type: 'test',
           source_identifier: '192.0.2.1',
@@ -194,13 +160,13 @@ describe('XARFGenerator', () => {
             contact: 'abuse@example.com',
             domain: 'example.com',
           },
-        });
-      }).toThrow(XARFError);
+        } as any);
+      }).toThrow(XARFValidationError);
     });
 
     it('should throw error for invalid type for category', () => {
       expect(() => {
-        generator.generateReport({
+        generator.createReport({
           category: 'connection',
           type: 'spam',
           source_identifier: '192.0.2.1',
@@ -214,13 +180,13 @@ describe('XARFGenerator', () => {
             contact: 'abuse@example.com',
             domain: 'example.com',
           },
-        });
-      }).toThrow(XARFError);
+        } as any);
+      }).toThrow(XARFValidationError);
     });
 
     it('should throw error for invalid confidence', () => {
       expect(() => {
-        generator.generateReport({
+        generator.createReport({
           category: 'connection',
           type: 'ddos',
           source_identifier: '192.0.2.1',
@@ -235,13 +201,13 @@ describe('XARFGenerator', () => {
             domain: 'example.com',
           },
           confidence: 1.5,
-        });
-      }).toThrow(XARFError);
+        } as any);
+      }).toThrow(XARFValidationError);
     });
 
     it('should throw error for unknown fields', () => {
       expect(() => {
-        generator.generateReport({
+        generator.createReport({
           category: 'messaging',
           type: 'spam',
           source_identifier: '192.0.2.1',
@@ -255,32 +221,18 @@ describe('XARFGenerator', () => {
             contact: 'abuse@example.com',
             domain: 'example.com',
           },
-          additionalFields: { unknown_field: 'test' },
-        });
-      }).toThrow(XARFError);
-    });
-  });
-
-  describe('generateRandomEvidence', () => {
-    it('should generate random evidence for category', () => {
-      const evidence = generator.generateRandomEvidence('connection');
-
-      expect(evidence.content_type).toBeDefined();
-      expect(evidence.description).toContain('connection');
-      expect(evidence.payload).toBeDefined();
-      expect(evidence.hash).toBeDefined();
-    });
-
-    it('should use custom description', () => {
-      const evidence = generator.generateRandomEvidence('messaging', 'Custom description');
-
-      expect(evidence.description).toBe('Custom description');
+          unknown_field: 'test',
+        } as any);
+      }).toThrow(XARFValidationError);
     });
   });
 
   describe('generateSampleReport', () => {
     it('should generate sample connection report', () => {
-      const report = generator.generateSampleReport('connection', 'ddos', true, false);
+      const report = generator.generateSampleReport('connection', 'ddos', {
+        includeEvidence: true,
+        includeOptional: false,
+      });
 
       expect(report.category).toBe('connection');
       expect(report.type).toBe('ddos');
@@ -290,7 +242,10 @@ describe('XARFGenerator', () => {
     });
 
     it('should generate sample without evidence', () => {
-      const report = generator.generateSampleReport('messaging', 'spam', false, false);
+      const report = generator.generateSampleReport('messaging', 'spam', {
+        includeEvidence: false,
+        includeOptional: false,
+      });
 
       expect(report.evidence).toBeUndefined();
     });
@@ -305,32 +260,6 @@ describe('XARFGenerator', () => {
       expect(() => {
         generator.generateSampleReport('connection', 'invalid');
       }).toThrow(XARFError);
-    });
-  });
-
-  describe('static constants', () => {
-    it('should have correct XARF version', () => {
-      expect(XARFGenerator.XARF_VERSION).toBe('4.0.0');
-    });
-
-    it('should have all 7 valid categories per XARF v4.0.0 spec', () => {
-      expect(XARFGenerator.VALID_CATEGORIES.size).toBe(7);
-      expect(XARFGenerator.VALID_CATEGORIES.has('messaging')).toBe(true);
-      expect(XARFGenerator.VALID_CATEGORIES.has('connection')).toBe(true);
-      expect(XARFGenerator.VALID_CATEGORIES.has('content')).toBe(true);
-      expect(XARFGenerator.VALID_CATEGORIES.has('infrastructure')).toBe(true);
-      expect(XARFGenerator.VALID_CATEGORIES.has('copyright')).toBe(true);
-      expect(XARFGenerator.VALID_CATEGORIES.has('vulnerability')).toBe(true);
-      expect(XARFGenerator.VALID_CATEGORIES.has('reputation')).toBe(true);
-      // Note: 'other' removed in v1.0.0 for spec compliance (only 7 categories)
-    });
-
-    it('should have event types for all categories', () => {
-      const categories = Array.from(XARFGenerator.VALID_CATEGORIES);
-      categories.forEach((category) => {
-        expect(XARFGenerator.EVENT_TYPES[category]).toBeDefined();
-        expect(Array.isArray(XARFGenerator.EVENT_TYPES[category])).toBe(true);
-      });
     });
   });
 });

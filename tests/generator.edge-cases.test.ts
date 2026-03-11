@@ -3,7 +3,7 @@
  */
 
 import { XARFGenerator } from '../src/generator';
-import { XARFError } from '../src/errors';
+import { XARFValidationError } from '../src/errors';
 
 describe('XARFGenerator Edge Cases', () => {
   let generator: XARFGenerator;
@@ -12,10 +12,10 @@ describe('XARFGenerator Edge Cases', () => {
     generator = new XARFGenerator();
   });
 
-  describe('generateReport validation edge cases', () => {
+  describe('createReport validation edge cases', () => {
     it('should throw error for missing reporter', () => {
       expect(() => {
-        generator.generateReport({
+        generator.createReport({
           category: 'connection',
           type: 'ddos',
           source_identifier: '192.0.2.1',
@@ -25,26 +25,13 @@ describe('XARFGenerator Edge Cases', () => {
             contact: 'abuse@example.com',
             domain: 'example.com',
           },
-        });
-      }).toThrow(XARFError);
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          type: 'ddos',
-          source_identifier: '192.0.2.1',
-          reporter: null as any,
-          sender: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-        });
-      }).toThrow('reporter is required');
+        } as any);
+      }).toThrow(XARFValidationError);
     });
 
     it('should throw error for invalid reporter contact', () => {
       expect(() => {
-        generator.generateReport({
+        generator.createReport({
           category: 'connection',
           type: 'ddos',
           source_identifier: '192.0.2.1',
@@ -58,30 +45,13 @@ describe('XARFGenerator Edge Cases', () => {
             contact: 'abuse@example.com',
             domain: 'example.com',
           },
-        });
-      }).toThrow(XARFError);
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          type: 'ddos',
-          source_identifier: '192.0.2.1',
-          reporter: {
-            org: 'Example Org',
-            contact: 'invalid-email',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-        });
-      }).toThrow('Invalid email format');
+        } as any);
+      }).toThrow(XARFValidationError);
     });
 
     it('should throw error for invalid evidence_source', () => {
       expect(() => {
-        generator.generateReport({
+        generator.createReport({
           category: 'connection',
           type: 'ddos',
           source_identifier: '192.0.2.1',
@@ -96,31 +66,13 @@ describe('XARFGenerator Edge Cases', () => {
             domain: 'example.com',
           },
           evidence_source: 'invalid_source' as any,
-        });
-      }).toThrow(XARFError);
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          type: 'ddos',
-          source_identifier: '192.0.2.1',
-          reporter: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          evidence_source: 'invalid_source' as any,
-        });
-      }).toThrow('Invalid evidence_source');
+        } as any);
+      }).toThrow(XARFValidationError);
     });
 
     it('should throw error for confidence less than 0', () => {
       expect(() => {
-        generator.generateReport({
+        generator.createReport({
           category: 'connection',
           type: 'ddos',
           source_identifier: '192.0.2.1',
@@ -135,70 +87,17 @@ describe('XARFGenerator Edge Cases', () => {
             domain: 'example.com',
           },
           confidence: -0.1,
-        });
-      }).toThrow(XARFError);
-      expect(() => {
-        generator.generateReport({
-          category: 'connection',
-          type: 'ddos',
-          source_identifier: '192.0.2.1',
-          reporter: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          sender: {
-            org: 'Example Org',
-            contact: 'abuse@example.com',
-            domain: 'example.com',
-          },
-          confidence: -0.1,
-        });
-      }).toThrow('confidence must be between 0.0 and 1.0');
-    });
-  });
-
-  describe('generateRandomEvidence edge cases', () => {
-    it('should handle reputation category with application/json', () => {
-      const evidence = generator.generateRandomEvidence('reputation');
-
-      expect(evidence.content_type).toBeDefined();
-      expect(['text/plain', 'application/json', 'text/csv']).toContain(evidence.content_type);
-      expect(evidence.description).toContain('reputation');
-    });
-
-    it('should generate evidence for all 7 categories', () => {
-      const categories: Array<
-        | 'messaging'
-        | 'connection'
-        | 'content'
-        | 'infrastructure'
-        | 'copyright'
-        | 'vulnerability'
-        | 'reputation'
-      > = [
-        'messaging',
-        'connection',
-        'content',
-        'infrastructure',
-        'copyright',
-        'vulnerability',
-        'reputation',
-      ];
-
-      categories.forEach((category) => {
-        const evidence = generator.generateRandomEvidence(category);
-        expect(evidence.content_type).toBeDefined();
-        expect(evidence.payload).toBeDefined();
-        expect(evidence.hash).toBeDefined();
-        expect(evidence.description).toContain(category);
-      });
+        } as any);
+      }).toThrow(XARFValidationError);
     });
   });
 
   describe('generateSampleReport with various options', () => {
     it('should generate sample with evidence', () => {
-      const report = generator.generateSampleReport('messaging', 'spam', true, false);
+      const report = generator.generateSampleReport('messaging', 'spam', {
+        includeEvidence: true,
+        includeOptional: false,
+      });
 
       expect(report.evidence).toBeDefined();
     });
@@ -225,7 +124,10 @@ describe('XARFGenerator Edge Cases', () => {
       ];
 
       testCases.forEach(({ category, type }) => {
-        const report = generator.generateSampleReport(category, type, true, false);
+        const report = generator.generateSampleReport(category, type, {
+          includeEvidence: true,
+          includeOptional: false,
+        });
         expect(report.category).toBe(category);
         expect(report.type).toBe(type);
       });

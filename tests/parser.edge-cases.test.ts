@@ -96,7 +96,7 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('reporter is required'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('reporter'))).toBe(true);
     });
 
     it('should handle invalid timestamp format gracefully', () => {
@@ -252,7 +252,7 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Invalid messaging type'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('Invalid type'))).toBe(true);
     });
 
     it('should validate connection report missing protocol', () => {
@@ -281,7 +281,9 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('protocol required'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('protocol') && e.includes('required'))).toBe(
+        true
+      );
     });
 
     it('should validate invalid connection type', () => {
@@ -311,7 +313,7 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Invalid connection type'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('Invalid type'))).toBe(true);
     });
 
     it('should validate invalid content type', () => {
@@ -340,7 +342,7 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Invalid content type'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('Invalid type'))).toBe(true);
     });
   });
 

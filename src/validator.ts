@@ -6,7 +6,7 @@
 
 import { XARFValidationError } from './errors';
 import type { XARFReport } from './types';
-import { SchemaValidator } from './schema-validator';
+import { validator as schemaValidator } from './schema-validator';
 import { schemaRegistry } from './schema-registry';
 import { validateEmail, validateDomain } from './validation-utils';
 import { findSchemasDir, loadSchemaFile } from './schema-utils';
@@ -85,7 +85,6 @@ export class XARFValidator {
   private errors: ValidationError[] = [];
   private warnings: ValidationWarning[] = [];
   private info: ValidationInfo[] = [];
-  private schemaValidator: SchemaValidator;
   private useSchemaValidation: boolean;
   private schemasDir: string;
   private coreSchemaCache: SchemaDefinition | null = null;
@@ -97,7 +96,6 @@ export class XARFValidator {
    */
   constructor(useSchemaValidation = true) {
     this.useSchemaValidation = useSchemaValidation;
-    this.schemaValidator = new SchemaValidator();
     this.schemasDir = findSchemasDir();
   }
 
@@ -330,7 +328,7 @@ export class XARFValidator {
    */
   validateWithSchema(report: XARFReport): ValidationResult {
     try {
-      const schemaResult = this.schemaValidator.validate(report);
+      const schemaResult = schemaValidator.validate(report);
 
       // Convert schema validation errors to our format
       const errors: ValidationError[] = schemaResult.errors.map((err) => ({
@@ -656,6 +654,12 @@ export class XARFValidator {
         this.errors.push({
           field: 'smtp_from',
           message: 'smtp_from is required for SMTP messaging reports',
+        });
+      }
+      if ((report.type === 'spam' || report.type === 'phishing') && !report.subject) {
+        this.errors.push({
+          field: 'subject',
+          message: 'subject required for spam/phishing SMTP reports',
         });
       }
     }

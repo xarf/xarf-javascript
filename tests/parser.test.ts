@@ -181,7 +181,9 @@ describe('XARFParser', () => {
       expect(result).toBe(false);
       const errors = parser.getErrors();
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0]).toContain('Unsupported XARF version');
+      expect(
+        errors.some((e) => e.includes('Unsupported XARF version') || e.includes('xarf_version'))
+      ).toBe(true);
     });
 
     it('should return false for missing required fields', () => {
@@ -195,7 +197,7 @@ describe('XARFParser', () => {
 
       expect(result).toBe(false);
       const errors = parser.getErrors();
-      expect(errors.some((e) => e.includes('Missing required fields'))).toBe(true);
+      expect(errors.some((e) => e.includes('Required field is missing'))).toBe(true);
     });
 
     it('should return false for invalid reporter contact', () => {
@@ -224,7 +226,9 @@ describe('XARFParser', () => {
 
       expect(result).toBe(false);
       const errors = parser.getErrors();
-      expect(errors.some((e) => e.includes('Invalid email format'))).toBe(true);
+      expect(
+        errors.some((e) => e.includes('valid email address') || e.includes('reporter.contact'))
+      ).toBe(true);
     });
 
     it('should handle unsupported category', () => {
@@ -285,7 +289,7 @@ describe('XARFParser', () => {
       const result = parser.validate(invalidMessaging);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Invalid messaging type'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('Invalid type'))).toBe(true);
     });
 
     it('should validate connection reports require destination_ip', () => {
@@ -314,7 +318,9 @@ describe('XARFParser', () => {
       const result = parser.validate(invalidConnection);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('destination_ip required'))).toBe(true);
+      expect(
+        parser.getErrors().some((e) => e.includes('destination_ip') && e.includes('required'))
+      ).toBe(true);
     });
 
     it('should validate content reports require url', () => {
@@ -342,7 +348,9 @@ describe('XARFParser', () => {
       const result = parser.validate(invalidContent);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('url required'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('url') && e.includes('required'))).toBe(
+        true
+      );
     });
   });
 

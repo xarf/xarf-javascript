@@ -219,7 +219,7 @@ describe('Senior Engineer Feedback Issues', () => {
       const generator = new XARFGenerator();
 
       // Content report with url as direct field (not in additionalFields)
-      const report = generator.generateReport({
+      const report = generator.createReport({
         category: 'content',
         type: 'phishing',
         source_identifier: '192.0.2.100',
@@ -244,7 +244,7 @@ describe('Senior Engineer Feedback Issues', () => {
       const validator = new XARFValidator();
 
       // Generate a content report with direct url field
-      const report = generator.generateReport({
+      const report = generator.createReport({
         category: 'content',
         type: 'phishing',
         source_identifier: '192.0.2.100',
@@ -271,7 +271,7 @@ describe('Senior Engineer Feedback Issues', () => {
       const generator = new XARFGenerator();
 
       // Connection report with fields as direct properties
-      const report = generator.generateReport({
+      const report = generator.createReport({
         category: 'connection',
         type: 'ddos',
         source_identifier: '192.0.2.100',
