@@ -46,11 +46,6 @@ export type EvidenceSource =
   | (string & {}); // Accepts any string while preserving autocomplete for known values
 
 /**
- * Valid severity levels
- */
-export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
-
-/**
  * Contact information for reporter and sender
  */
 export interface ContactInfo {

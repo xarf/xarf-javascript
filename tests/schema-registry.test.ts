@@ -137,30 +137,6 @@ describe('SchemaRegistry', () => {
     });
   });
 
-  describe('getSeverities', () => {
-    it('should return valid severity levels', () => {
-      const severities = registry.getSeverities();
-
-      expect(severities.size).toBe(4);
-      expect(severities.has('low')).toBe(true);
-      expect(severities.has('medium')).toBe(true);
-      expect(severities.has('high')).toBe(true);
-      expect(severities.has('critical')).toBe(true);
-    });
-  });
-
-  describe('isValidSeverity', () => {
-    it('should return true for valid severities', () => {
-      expect(registry.isValidSeverity('low')).toBe(true);
-      expect(registry.isValidSeverity('critical')).toBe(true);
-    });
-
-    it('should return false for invalid severities', () => {
-      expect(registry.isValidSeverity('extreme')).toBe(false);
-      expect(registry.isValidSeverity('')).toBe(false);
-    });
-  });
-
   describe('getRequiredFields', () => {
     it('should return required fields from core schema', () => {
       const required = registry.getRequiredFields();

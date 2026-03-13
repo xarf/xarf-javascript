@@ -33,7 +33,6 @@ export type {
   XARFCategory,
   ReporterType,
   EvidenceSource,
-  SeverityLevel,
   XARFReporter,
   XARFEvidence,
   ContactInfo,

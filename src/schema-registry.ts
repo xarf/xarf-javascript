@@ -7,7 +7,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import type { XARFCategory, SeverityLevel } from './types';
+import type { XARFCategory } from './types';
 import { findSchemasDir, loadSchemaFile } from './schema-utils';
 
 /**
@@ -72,7 +72,6 @@ export class SchemaRegistry {
   private categoriesCache: Set<XARFCategory> | null = null;
   private typesPerCategoryCache: Map<string, Set<string>> | null = null;
   private evidenceSourcesCache: Set<string> | null = null;
-  private severitiesCache: Set<SeverityLevel> | null = null;
   private requiredFieldsCache: Set<string> | null = null;
   private contactRequiredFieldsCache: Set<string> | null = null;
 
@@ -288,30 +287,6 @@ export class SchemaRegistry {
    */
   isValidEvidenceSource(source: string): boolean {
     return this.getEvidenceSources().has(source);
-  }
-
-  /**
-   * Get valid severity levels
-   * @returns Set of valid severity values
-   */
-  getSeverities(): Set<SeverityLevel> {
-    if (this.severitiesCache) {
-      return this.severitiesCache;
-    }
-
-    // Severity is typically defined with an enum in schemas
-    // For now, use the standard XARF severities
-    this.severitiesCache = new Set<SeverityLevel>(['low', 'medium', 'high', 'critical']);
-    return this.severitiesCache;
-  }
-
-  /**
-   * Check if a severity is valid
-   * @param severity - Severity to check
-   * @returns true if valid
-   */
-  isValidSeverity(severity: string): boolean {
-    return this.getSeverities().has(severity as SeverityLevel);
   }
 
   /**
