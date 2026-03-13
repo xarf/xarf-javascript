@@ -185,21 +185,19 @@ function extractContactInfo(reporterInfo: XARFv3ReporterInfo): {
  * @param category - Report category
  * @param v3Report - Original v3 report
  * @param sourceIdentifier - Source identifier
- * @param evidence - Converted evidence array
  */
 function addCategorySpecificFields(
   v4Report: XARFReport,
   category: XARFCategory,
   v3Report: XARFv3Report['Report'],
-  sourceIdentifier: string,
-  evidence?: XARFEvidence[]
+  sourceIdentifier: string
 ): void {
   if (category === 'messaging') {
     addMessagingFields(v4Report, v3Report);
   } else if (category === 'connection') {
     addConnectionFields(v4Report, v3Report);
   } else if (category === 'content') {
-    addContentFields(v4Report, v3Report, sourceIdentifier, evidence);
+    addContentFields(v4Report, v3Report, sourceIdentifier);
   }
 }
 
@@ -243,17 +241,14 @@ function addConnectionFields(v4Report: XARFReport, v3Report: XARFv3Report['Repor
  * @param v4Report - V4 report to modify
  * @param v3Report - Original v3 report
  * @param sourceIdentifier - Source identifier for URL fallback
- * @param evidence - Converted evidence array for content type
  */
 function addContentFields(
   v4Report: XARFReport,
   v3Report: XARFv3Report['Report'],
-  sourceIdentifier: string,
-  evidence?: XARFEvidence[]
+  sourceIdentifier: string
 ): void {
   Object.assign(v4Report, {
     url: v3Report.Url || `http://${sourceIdentifier}`,
-    content_type: evidence?.[0]?.content_type || 'text/html',
   });
 }
 
@@ -303,7 +298,7 @@ function convertWithMapping(
     v4Report.evidence_source = evidenceSource as EvidenceSource;
   }
 
-  addCategorySpecificFields(v4Report, mapping.category, report, sourceIdentifier, evidence);
+  addCategorySpecificFields(v4Report, mapping.category, report, sourceIdentifier);
 
   return v4Report;
 }
