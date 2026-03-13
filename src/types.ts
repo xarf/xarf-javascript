@@ -76,9 +76,11 @@ export interface XARFReport {
 
   // Recommended fields (optional per XARF schema)
   evidence_source?: EvidenceSource;
+  source_port?: number;
 
   // Optional base fields
   description?: string;
+  legacy_version?: '3';
   evidence?: XARFEvidence[];
   tags?: string[];
   confidence?: number;
