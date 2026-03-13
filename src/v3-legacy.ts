@@ -6,6 +6,7 @@
  */
 
 import type { XARFReport, XARFCategory, XARFEvidence, EvidenceSource } from './types';
+import { XARFParseError } from './errors';
 
 /**
  * XARF v3 ReporterInfo structure
@@ -147,12 +148,10 @@ export function convertV3toV4(v3Report: XARFv3Report, warnings?: string[]): XARF
   // Map v3 ReportType to v4 category and type
   const typeMapping = V3_TYPE_MAPPING[report.ReportType];
   if (!typeMapping) {
-    // Unknown v3 types map to 'content' category with 'unclassified' type
-    const defaultMapping = { category: 'content' as XARFCategory, type: 'unclassified' };
-    warnings?.push(
-      `Unknown v3 ReportType '${report.ReportType}', mapping to category='content', type='unclassified'`
+    throw new XARFParseError(
+      `Cannot convert v3 report: unknown ReportType '${report.ReportType}'. ` +
+        `Supported types: ${Object.keys(V3_TYPE_MAPPING).join(', ')}`
     );
-    return convertWithMapping(v3Report, defaultMapping, warnings);
   }
 
   return convertWithMapping(v3Report, typeMapping, warnings);

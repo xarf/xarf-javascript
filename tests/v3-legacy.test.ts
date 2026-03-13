@@ -332,7 +332,7 @@ describe('XARFv3 Conversion', () => {
   });
 
   describe('Unknown Type Handling', () => {
-    it('should handle unknown v3 report type with warning', () => {
+    it('should throw on unknown v3 report type', () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -345,13 +345,7 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const warnings: string[] = [];
-      const v4Report = convertV3toV4(v3Report, warnings);
-
-      expect(v4Report.category).toBe('content');
-      expect(v4Report.type).toBe('unclassified');
-      expect(warnings.length).toBeGreaterThan(0);
-      expect(warnings[0]).toContain('Unknown v3 ReportType');
+      expect(() => convertV3toV4(v3Report)).toThrow("unknown ReportType 'UnknownType'");
     });
   });
 
