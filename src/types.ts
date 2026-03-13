@@ -74,9 +74,10 @@ export interface XARFReporter {
  */
 export interface XARFEvidence {
   content_type: string;
-  description: string;
   payload: string;
+  description?: string;
   hash?: string;
+  size?: number;
 }
 
 /**

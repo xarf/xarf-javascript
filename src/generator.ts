@@ -108,27 +108,30 @@ export class XARFGenerator {
   /**
    * Create an evidence item with automatic hashing.
    * @param contentType - MIME type of the evidence
-   * @param description - Human-readable description
    * @param payload - The evidence data
+   * @param description - Human-readable description (optional, recommended)
    * @param hashAlgorithm - Hash algorithm (default: sha256)
    * @returns Evidence object with computed hash
    */
   addEvidence(
     contentType: string,
-    description: string,
     payload: string | Buffer,
+    description?: string,
     hashAlgorithm: 'sha256' | 'sha512' | 'sha1' | 'md5' = 'sha256'
   ): XARFEvidence {
     const payloadStr = typeof payload === 'string' ? payload : payload.toString('utf8');
     const payloadBuffer = typeof payload === 'string' ? Buffer.from(payload, 'utf8') : payload;
     const hashValue = this.generateHash(payloadBuffer, hashAlgorithm);
 
-    return {
+    const evidence: XARFEvidence = {
       content_type: contentType,
-      description,
       payload: payloadStr,
       hash: `${hashAlgorithm}:${hashValue}`,
     };
+    if (description !== undefined) {
+      evidence.description = description;
+    }
+    return evidence;
   }
 
   /**
@@ -205,7 +208,7 @@ export class XARFGenerator {
 
   private sampleEvidence(category: XARFCategory): XARFEvidence {
     const payload = randomBytes(32).toString('hex');
-    return this.addEvidence('text/plain', `Sample ${category} evidence`, payload);
+    return this.addEvidence('text/plain', payload, `Sample ${category} evidence`);
   }
 
   private categorySpecificFields(

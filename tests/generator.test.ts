@@ -40,7 +40,7 @@ describe('XARFGenerator', () => {
 
   describe('addEvidence', () => {
     it('should create evidence with hash', () => {
-      const evidence = generator.addEvidence('text/plain', 'Test evidence', 'Sample data');
+      const evidence = generator.addEvidence('text/plain', 'Sample data', 'Test evidence');
 
       expect(evidence.content_type).toBe('text/plain');
       expect(evidence.description).toBe('Test evidence');
@@ -51,7 +51,7 @@ describe('XARFGenerator', () => {
 
     it('should handle buffer payloads', () => {
       const buffer = Buffer.from('test data', 'utf8');
-      const evidence = generator.addEvidence('application/octet-stream', 'Binary data', buffer);
+      const evidence = generator.addEvidence('application/octet-stream', buffer, 'Binary data');
 
       expect(evidence.payload).toBe('test data');
       expect(evidence.hash).toBeDefined();
@@ -95,7 +95,7 @@ describe('XARFGenerator', () => {
     });
 
     it('should include optional fields', () => {
-      const evidence = generator.addEvidence('text/plain', 'Test', 'data');
+      const evidence = generator.addEvidence('text/plain', 'data', 'Test');
       const report = generator.createReport({
         category: 'content',
         type: 'phishing',
