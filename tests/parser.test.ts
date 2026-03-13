@@ -197,7 +197,7 @@ describe('XARFParser', () => {
 
       expect(result).toBe(false);
       const errors = parser.getErrors();
-      expect(errors.some((e) => e.includes('Required field is missing'))).toBe(true);
+      expect(errors.some((e) => e.includes('required'))).toBe(true);
     });
 
     it('should return false for invalid reporter contact', () => {
@@ -264,8 +264,8 @@ describe('XARFParser', () => {
   });
 
   describe('category-specific validation', () => {
-    it('should validate messaging reports', () => {
-      const invalidMessaging = {
+    it('should reject unknown type', () => {
+      const unknownType = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
@@ -286,13 +286,12 @@ describe('XARFParser', () => {
       };
 
       const parser = new XARFParser(false);
-      const result = parser.validate(invalidMessaging);
+      const result = parser.validate(unknownType);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Invalid type'))).toBe(true);
     });
 
-    it('should validate connection reports require destination_ip', () => {
+    it('should validate connection reports require protocol', () => {
       const invalidConnection = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -311,16 +310,16 @@ describe('XARFParser', () => {
         category: 'connection',
         type: 'ddos',
         evidence_source: 'honeypot',
-        protocol: 'tcp',
+        destination_ip: '203.0.113.10',
       };
 
       const parser = new XARFParser(false);
       const result = parser.validate(invalidConnection);
 
       expect(result).toBe(false);
-      expect(
-        parser.getErrors().some((e) => e.includes('destination_ip') && e.includes('required'))
-      ).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('protocol') && e.includes('required'))).toBe(
+        true
+      );
     });
 
     it('should validate content reports require url', () => {
@@ -364,6 +363,68 @@ describe('XARFParser', () => {
 
       expect(errors1).toEqual(errors2);
       expect(errors1).not.toBe(errors2); // Different array instances
+    });
+  });
+
+  describe('strict mode enforces x-recommended fields', () => {
+    it('should throw when recommended fields are missing in strict parser', () => {
+      const reportData = {
+        xarf_version: '4.0.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        sender: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        source_identifier: '192.0.2.1',
+        category: 'messaging',
+        type: 'spam',
+        protocol: 'smtp',
+        smtp_from: 'spammer@evil.com',
+        // Missing recommended: confidence, evidence, source_port, evidence_source
+      };
+
+      const parser = new XARFParser(true);
+      expect(() => parser.parse(reportData)).toThrow(XARFValidationError);
+    });
+
+    it('should not throw for missing recommended fields in non-strict parser', () => {
+      const reportData = {
+        xarf_version: '4.0.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        sender: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        source_identifier: '192.0.2.1',
+        category: 'messaging',
+        type: 'spam',
+        protocol: 'smtp',
+        smtp_from: 'spammer@evil.com',
+        // Missing recommended fields — should be fine in non-strict mode
+      };
+
+      const parser = new XARFParser(false);
+      const report = parser.parse(reportData);
+      expect(report.category).toBe('messaging');
+    });
+
+    it('should report recommended fields as missing via validate() in strict mode', () => {
+      const reportData = {
+        xarf_version: '4.0.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        sender: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        source_identifier: '192.0.2.1',
+        category: 'connection',
+        type: 'ddos',
+        protocol: 'tcp',
+        destination_ip: '203.0.113.10',
+        // Missing recommended: confidence, evidence, source_port
+      };
+
+      const parser = new XARFParser(true);
+      const valid = parser.validate(reportData);
+      expect(valid).toBe(false);
+      expect(parser.getErrors().some((e) => e.includes('confidence'))).toBe(true);
     });
   });
 });

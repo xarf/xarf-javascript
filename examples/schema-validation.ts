@@ -115,43 +115,9 @@ function exampleTypeSpecificValidation() {
   }
 }
 
-// Example 4: Core-only validation (without type-specific checks)
-function exampleCoreOnlyValidation() {
-  console.log('\n=== Example 4: Core-Only Validation ===\n');
-
-  const report: XARFReport = {
-    xarf_version: '4.0.0',
-    report_id: '550e8400-e29b-41d4-a716-446655440002',
-    timestamp: '2024-01-15T14:30:25Z',
-    reporter: {
-      org: 'Example Security',
-      contact: 'abuse@example.com',
-      domain: 'example.com',
-    },
-    sender: {
-      org: 'Example Security',
-      contact: 'abuse@example.com',
-      domain: 'example.com',
-    },
-    source_identifier: '192.0.2.1',
-    category: 'messaging',
-    type: 'spam',
-    evidence_source: 'spamtrap',
-  };
-
-  const result = validator.validateCore(report);
-
-  if (result.valid) {
-    console.log('✓ Core validation passed (type-specific validation not performed)');
-  } else {
-    console.log('✗ Core validation failed:');
-    result.errors.forEach((error) => console.log(`  - ${error}`));
-  }
-}
-
-// Example 5: Checking supported types
+// Example 4: Checking supported types
 function exampleSupportedTypes() {
-  console.log('\n=== Example 5: Supported Types ===\n');
+  console.log('\n=== Example 4: Supported Types ===\n');
 
   const types = validator.getSupportedTypes();
   console.log(`Found ${types.length} supported category+type combinations:`);
@@ -175,9 +141,9 @@ function exampleSupportedTypes() {
     });
 }
 
-// Example 6: Checking if a specific type is supported
+// Example 5: Checking if a specific type is supported
 function exampleTypeSupport() {
-  console.log('\n=== Example 6: Type Support Check ===\n');
+  console.log('\n=== Example 5: Type Support Check ===\n');
 
   const checks = [
     { category: 'messaging', type: 'spam' },
@@ -193,9 +159,9 @@ function exampleTypeSupport() {
   });
 }
 
-// Example 7: Handling validation errors gracefully
+// Example 6: Handling validation errors gracefully
 function exampleErrorHandling() {
-  console.log('\n=== Example 7: Error Handling ===\n');
+  console.log('\n=== Example 6: Error Handling ===\n');
 
   // Missing required fields
   const invalidReport = {
@@ -215,9 +181,9 @@ function exampleErrorHandling() {
   }
 }
 
-// Example 8: Full validation with evidence
+// Example 7: Full validation with evidence
 function exampleWithEvidence() {
-  console.log('\n=== Example 8: Validation with Evidence ===\n');
+  console.log('\n=== Example 7: Validation with Evidence ===\n');
 
   const report: XARFReport = {
     xarf_version: '4.0.0',
@@ -269,7 +235,6 @@ function runAllExamples() {
     exampleSingletonValidator();
     exampleCustomValidator();
     exampleTypeSpecificValidation();
-    exampleCoreOnlyValidation();
     exampleSupportedTypes();
     exampleTypeSupport();
     exampleErrorHandling();

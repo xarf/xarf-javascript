@@ -24,8 +24,8 @@ async function validateExample(name, report) {
     console.log(`    Errors:`, handCodedResult.errors.slice(0, 3).map(e => e.field + ': ' + e.message));
   }
 
-  // Test schema validator (core)
-  const schemaResult = schemaValidator.validateCore(report);
+  // Test schema validator
+  const schemaResult = schemaValidator.validate(report);
   console.log(`  Schema validator: ${schemaResult.valid ? '✅ PASS' : '❌ FAIL'}`);
   if (!schemaResult.valid && schemaResult.errors && schemaResult.errors.length > 0) {
     console.log(`    Errors:`, schemaResult.errors.slice(0, 3));

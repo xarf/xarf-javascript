@@ -114,13 +114,14 @@ describe('XARFValidator', () => {
   });
 
   describe('format validation', () => {
-    it('should warn about invalid UUID format', () => {
+    it('should error on invalid UUID format', () => {
       const report = createValidReport();
       report.report_id = 'not-a-valid-uuid';
 
       const result = validator.validate(report);
 
-      expect(result.warnings.some((w) => w.field === 'report_id')).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'report_id')).toBe(true);
     });
 
     it('should error on invalid email format', () => {
@@ -169,7 +170,7 @@ describe('XARFValidator', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('should detect invalid messaging type', () => {
+    it('should reject unknown type', () => {
       const report: XARFReport = {
         ...createValidReport(),
         category: 'messaging',
@@ -179,7 +180,6 @@ describe('XARFValidator', () => {
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'type')).toBe(true);
     });
 
     it('should require smtp_from for SMTP messaging', () => {
@@ -193,7 +193,7 @@ describe('XARFValidator', () => {
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'smtp_from')).toBe(true);
+      expect(result.errors.some((e) => e.message.includes('smtp_from'))).toBe(true);
     });
 
     it('should validate connection reports', () => {
@@ -203,24 +203,28 @@ describe('XARFValidator', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('should require destination_ip for connection reports', () => {
+    it('should accept missing destination_ip (recommended, not required)', () => {
       const report: any = createValidReport();
       delete report.destination_ip;
 
       const result = validator.validate(report);
 
-      expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'destination_ip')).toBe(true);
+      // destination_ip is x-recommended, not in schema required array
+      expect(result.valid).toBe(true);
     });
 
-    it('should validate port numbers', () => {
+    it('should validate port numbers via schema', () => {
       const report = createValidReport();
       (report as any).destination_port = 70000;
 
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
+      expect(
+        result.errors.some(
+          (e) => e.message.includes('destination_port') || e.message.includes('65535')
+        )
+      ).toBe(true);
     });
 
     it('should validate content reports', () => {
@@ -249,7 +253,9 @@ describe('XARFValidator', () => {
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'url')).toBe(true);
+      expect(
+        result.errors.some((e) => e.message.includes('url') && e.message.includes('required'))
+      ).toBe(true);
     });
 
     it('should validate URL format', () => {
@@ -265,7 +271,9 @@ describe('XARFValidator', () => {
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'url')).toBe(true);
+      expect(
+        result.errors.some((e) => e.message.includes('url') || e.message.includes('format'))
+      ).toBe(true);
     });
   });
 
@@ -444,6 +452,49 @@ describe('XARFValidator', () => {
       (report as any).unknownField = 'some value';
 
       expect(() => validator.validate(report, true)).toThrow();
+    });
+  });
+
+  describe('strict mode enforces x-recommended fields', () => {
+    it('should fail in strict mode when core recommended fields are missing', () => {
+      const report = createValidReport();
+      delete (report as any).source_port;
+      // Also missing confidence and evidence (not in createValidReport)
+
+      expect(() => validator.validate(report, true)).toThrow(XARFValidationError);
+    });
+
+    it('should pass in strict mode when all recommended fields are present', () => {
+      const report: XARFReport = {
+        ...createValidReport(),
+        confidence: 0.95,
+        evidence: [
+          {
+            content_type: 'text/plain',
+            payload: 'dGVzdA==',
+            description: 'Test evidence',
+            hash: 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+          },
+        ],
+        // connection/ddos type-specific recommended fields
+        attack_vector: 'syn_flood',
+        destination_port: 80,
+        peak_pps: 100000,
+        peak_bps: 500000000,
+      };
+
+      const result = validator.validate(report, true);
+      expect(result.valid).toBe(true);
+    });
+
+    it('should not fail in non-strict mode for missing recommended fields', () => {
+      const report = createValidReport();
+      // Remove recommended (not required) fields
+      delete (report as any).evidence_source;
+
+      const result = validator.validate(report, false);
+      // Should still be valid — recommended fields are optional in non-strict mode
+      expect(result.valid).toBe(true);
     });
   });
 });

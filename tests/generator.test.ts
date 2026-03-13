@@ -164,7 +164,7 @@ describe('XARFGenerator', () => {
       }).toThrow(XARFValidationError);
     });
 
-    it('should throw error for invalid type for category', () => {
+    it('should reject mismatched type for category', () => {
       expect(() => {
         generator.createReport({
           category: 'connection',

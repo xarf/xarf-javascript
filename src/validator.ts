@@ -8,7 +8,6 @@ import { XARFValidationError } from './errors';
 import type { XARFReport } from './types';
 import { validator as schemaValidator } from './schema-validator';
 import { schemaRegistry } from './schema-registry';
-import { validateEmail, validateDomain } from './validation-utils';
 import { findSchemasDir, loadSchemaFile } from './schema-utils';
 import * as path from 'path';
 
@@ -257,33 +256,17 @@ export class XARFValidator {
 
     // 1. Run schema validation first (if enabled)
     if (this.useSchemaValidation) {
-      const schemaResult = this.validateWithSchema(report);
+      const schemaResult = this.validateWithSchema(report, strict);
       if (!schemaResult.valid) {
         // Schema validation errors are primary - add them first
         this.errors.push(...schemaResult.errors);
       }
     }
 
-    // 2. Run hand-coded validation for better error messages and additional checks
-    // Validate required fields
-    this.validateRequiredFields(report);
-
-    // Validate field formats
-    this.validateFormats(report);
-
-    // Validate field values
-    this.validateValues(report);
-
-    // Validate category-specific requirements
-    this.validateCategorySpecific(report);
-
-    // Check for unknown fields
+    // 2. Check for unknown fields (schemas use additionalProperties: true)
     this.collectUnknownFields(report);
 
-    // 3. Merge and deduplicate errors (schema errors take priority)
-    this.deduplicateErrors();
-
-    // 4. In strict mode, convert warnings to errors
+    // 3. In strict mode, convert warnings to errors
     if (strict && this.warnings.length > 0) {
       this.warnings.forEach((warning) => {
         this.errors.push({
@@ -295,7 +278,7 @@ export class XARFValidator {
       this.warnings = [];
     }
 
-    // 5. Collect missing optional fields if requested
+    // 4. Collect missing optional fields if requested
     if (showMissingOptional) {
       this.collectMissingOptionalFields(report);
     }
@@ -324,15 +307,16 @@ export class XARFValidator {
   /**
    * Validate report using JSON schema
    * @param report - The XARF report to validate
+   * @param strict
    * @returns Validation result from schema validation
    */
-  validateWithSchema(report: XARFReport): ValidationResult {
+  validateWithSchema(report: XARFReport, strict = false): ValidationResult {
     try {
-      const schemaResult = schemaValidator.validate(report);
+      const schemaResult = schemaValidator.validate(report, strict);
 
       // Convert schema validation errors to our format
       const errors: ValidationError[] = schemaResult.errors.map((err) => ({
-        field: err.replace(/^\//, '').replace(/\//g, '.') || 'root',
+        field: (err.split(':')[0] || '').replace(/^\//, '').replace(/\//g, '.') || 'root',
         message: err.includes(':') ? err.split(':').slice(1).join(':').trim() : err,
         value: undefined,
       }));
@@ -354,372 +338,6 @@ export class XARFValidator {
         ],
         warnings: [],
       };
-    }
-  }
-
-  /**
-   * Deduplicate errors - keep schema errors, remove duplicate hand-coded errors
-   */
-  private deduplicateErrors(): void {
-    const seen = new Set<string>();
-    const uniqueErrors: ValidationError[] = [];
-
-    for (const error of this.errors) {
-      const key = `${error.field}:${error.message}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        uniqueErrors.push(error);
-      }
-    }
-
-    this.errors = uniqueErrors;
-  }
-
-  /**
-   * Validate required fields are present
-   * @param report - XARF report to validate for required fields
-   */
-  private validateRequiredFields(report: XARFReport): void {
-    // Get required fields from schema registry (single source of truth)
-    const required = schemaRegistry.getRequiredFields();
-
-    required.forEach((field) => {
-      if (!(field in report) || report[field as keyof XARFReport] === undefined) {
-        this.errors.push({
-          field,
-          message: 'Required field is missing',
-        });
-      }
-    });
-
-    // Validate reporter ContactInfo subfields
-    if (report.reporter) {
-      this.validateContactInfoFields(report.reporter, 'reporter');
-    }
-
-    // Validate sender ContactInfo subfields
-    if (report.sender) {
-      this.validateContactInfoFields(report.sender, 'sender');
-    }
-  }
-
-  /**
-   * Validate ContactInfo fields
-   * @param contactInfo - Contact information object to validate
-   * @param contactInfo.org - Organization name
-   * @param contactInfo.contact - Contact email address
-   * @param contactInfo.domain - Domain name
-   * @param fieldName - Name of the contact field being validated (reporter or sender)
-   */
-  private validateContactInfoFields(
-    contactInfo: { org: string; contact: string; domain: string },
-    fieldName: string
-  ): void {
-    if (!contactInfo.org) {
-      this.errors.push({
-        field: `${fieldName}.org`,
-        message: `${fieldName} org is required`,
-      });
-    }
-    if (!contactInfo.contact) {
-      this.errors.push({
-        field: `${fieldName}.contact`,
-        message: `${fieldName} contact is required`,
-      });
-    }
-    if (!contactInfo.domain) {
-      this.errors.push({
-        field: `${fieldName}.domain`,
-        message: `${fieldName} domain is required`,
-      });
-    }
-  }
-
-  /**
-   * Validate contact info formats (email and domain)
-   * @param contactInfo - Contact info to validate
-   * @param fieldPrefix - Field name prefix (reporter or sender)
-   */
-  private validateContactFormats(
-    contactInfo: { contact: string; domain: string } | undefined,
-    fieldPrefix: string
-  ): void {
-    if (!contactInfo) return;
-
-    const capitalizedPrefix = fieldPrefix.charAt(0).toUpperCase() + fieldPrefix.slice(1);
-
-    if (contactInfo.contact) {
-      const emailResult = validateEmail(contactInfo.contact);
-      if (!emailResult.valid) {
-        this.errors.push({
-          field: `${fieldPrefix}.contact`,
-          message: `${capitalizedPrefix} contact must be a valid email address`,
-          value: contactInfo.contact,
-        });
-      }
-    }
-
-    if (contactInfo.domain) {
-      const domainResult = validateDomain(contactInfo.domain);
-      if (!domainResult.valid) {
-        this.errors.push({
-          field: `${fieldPrefix}.domain`,
-          message: `${capitalizedPrefix} domain must be a valid hostname`,
-          value: contactInfo.domain,
-        });
-      }
-    }
-  }
-
-  /**
-   * Validate field formats
-   * @param report - XARF report to validate for correct field formats
-   */
-  private validateFormats(report: XARFReport): void {
-    this.validateXarfVersion(report.xarf_version);
-    this.validateReportId(report.report_id);
-    this.validateTimestamp(report.timestamp);
-    this.validateContactFormats(report.reporter, 'reporter');
-    this.validateContactFormats(report.sender, 'sender');
-    this.validateConfidenceRange(report.confidence);
-  }
-
-  /**
-   * Validate XARF version format
-   * @param version - XARF version string
-   */
-  private validateXarfVersion(version: string | undefined): void {
-    if (version && !/^\d+\.\d+\.\d+$/.test(version)) {
-      this.errors.push({
-        field: 'xarf_version',
-        message: 'Invalid version format (expected X.Y.Z)',
-        value: version,
-      });
-    }
-  }
-
-  /**
-   * Validate report ID UUID format
-   * @param reportId - Report ID string
-   */
-  private validateReportId(reportId: string | undefined): void {
-    if (
-      reportId &&
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reportId)
-    ) {
-      this.warnings.push({
-        field: 'report_id',
-        message: 'Report ID does not appear to be a valid UUID',
-        value: reportId,
-      });
-    }
-  }
-
-  /**
-   * Validate timestamp format
-   * @param timestamp - Timestamp string
-   */
-  private validateTimestamp(timestamp: string | undefined): void {
-    if (!timestamp) return;
-
-    try {
-      const date = new Date(timestamp);
-      if (isNaN(date.getTime())) {
-        this.errors.push({
-          field: 'timestamp',
-          message: 'Invalid timestamp format',
-          value: timestamp,
-        });
-      }
-    } catch {
-      this.errors.push({
-        field: 'timestamp',
-        message: 'Invalid timestamp format',
-        value: timestamp,
-      });
-    }
-  }
-
-  /**
-   * Validate confidence score range
-   * @param confidence - Confidence score
-   */
-  private validateConfidenceRange(confidence: number | undefined): void {
-    if (confidence !== undefined) {
-      if (typeof confidence !== 'number' || confidence < 0 || confidence > 1) {
-        this.errors.push({
-          field: 'confidence',
-          message: 'Confidence must be a number between 0.0 and 1.0',
-          value: confidence,
-        });
-      }
-    }
-  }
-
-  /**
-   * Validate an enum value against schema-derived options
-   * @param fieldName - Name of the field being validated
-   * @param value - The value to validate
-   * @param validOptions - Set of valid options from schema
-   * @param fieldLabel - Human-readable label for error messages
-   */
-  private validateEnumValue(
-    fieldName: string,
-    value: string | undefined,
-    validOptions: Set<string>,
-    fieldLabel: string
-  ): void {
-    if (value && !validOptions.has(value)) {
-      this.errors.push({
-        field: fieldName,
-        message: `Invalid ${fieldLabel} (must be one of: ${Array.from(validOptions).join(', ')})`,
-        value,
-      });
-    }
-  }
-
-  /**
-   * Validate type for category (dynamically from schema)
-   * @param report - XARF report to validate
-   */
-  private validateTypeForCategory(report: XARFReport): void {
-    if (!report.category || !report.type) {
-      return;
-    }
-    const validTypes = schemaRegistry.getTypesForCategory(report.category);
-    if (validTypes.size > 0 && !validTypes.has(report.type)) {
-      this.errors.push({
-        field: 'type',
-        message: `Invalid type for category '${report.category}' (must be one of: ${Array.from(validTypes).join(', ')})`,
-        value: report.type,
-      });
-    }
-  }
-
-  /**
-   * Validate field values
-   * @param report - XARF report to validate for correct field values
-   */
-  private validateValues(report: XARFReport): void {
-    // Validate XARF version
-    if (report.xarf_version !== '4.0.0') {
-      this.errors.push({
-        field: 'xarf_version',
-        message: 'Unsupported XARF version (expected 4.0.0)',
-        value: report.xarf_version,
-      });
-    }
-
-    // Validate category (dynamically from schema)
-    this.validateEnumValue('category', report.category, schemaRegistry.getCategories(), 'category');
-
-    // Validate evidence source (dynamically from schema)
-    this.validateEnumValue(
-      'evidence_source',
-      report.evidence_source,
-      schemaRegistry.getEvidenceSources(),
-      'evidence source'
-    );
-
-    // Validate type for category (dynamically from schema)
-    this.validateTypeForCategory(report);
-  }
-
-  /**
-   * Validate category-specific requirements
-   * @param report - XARF report to validate for category-specific rules
-   */
-  private validateCategorySpecific(report: XARFReport): void {
-    switch (report.category) {
-      case 'messaging':
-        this.validateMessagingReport(report);
-        break;
-      case 'connection':
-        this.validateConnectionReport(report);
-        break;
-      case 'content':
-        this.validateContentReport(report);
-        break;
-    }
-  }
-
-  /**
-   * Validate messaging category reports
-   * @param report - XARF report with messaging category to validate
-   */
-  private validateMessagingReport(report: XARFReport): void {
-    // Check for email-specific fields
-    if (report.protocol === 'smtp') {
-      if (!report.smtp_from) {
-        this.errors.push({
-          field: 'smtp_from',
-          message: 'smtp_from is required for SMTP messaging reports',
-        });
-      }
-      if ((report.type === 'spam' || report.type === 'phishing') && !report.subject) {
-        this.errors.push({
-          field: 'subject',
-          message: 'subject required for spam/phishing SMTP reports',
-        });
-      }
-    }
-  }
-
-  /**
-   * Validate connection category reports
-   * @param report - XARF report with connection category to validate
-   */
-  private validateConnectionReport(report: XARFReport): void {
-    // Check for required connection fields
-    if (!report.destination_ip) {
-      this.errors.push({
-        field: 'destination_ip',
-        message: 'destination_ip is required for connection reports',
-      });
-    }
-
-    if (!report.protocol) {
-      this.errors.push({
-        field: 'protocol',
-        message: 'protocol is required for connection reports',
-      });
-    }
-
-    // Validate port numbers if present
-    if (report.destination_port !== undefined) {
-      const port = Number(report.destination_port);
-      if (!Number.isInteger(port) || port < 0 || port > 65535) {
-        this.errors.push({
-          field: 'destination_port',
-          message: 'Invalid port number (must be 0-65535)',
-          value: report.destination_port,
-        });
-      }
-    }
-  }
-
-  /**
-   * Validate content category reports
-   * @param report - XARF report with content category to validate
-   */
-  private validateContentReport(report: XARFReport): void {
-    // URL is required for content reports
-    if (!report.url) {
-      this.errors.push({
-        field: 'url',
-        message: 'url is required for content reports',
-      });
-    } else {
-      // Validate URL format
-      try {
-        new URL(report.url as string);
-      } catch {
-        this.errors.push({
-          field: 'url',
-          message: 'Invalid URL format',
-          value: report.url,
-        });
-      }
     }
   }
 }

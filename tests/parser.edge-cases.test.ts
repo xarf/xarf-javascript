@@ -152,7 +152,7 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(JSON.stringify(invalidData));
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Unsupported XARF version'))).toBe(true);
+      expect(parser.getErrors().some((e) => e.includes('xarf_version'))).toBe(true);
     });
 
     it('should handle validate with invalid JSON string', () => {
@@ -165,7 +165,7 @@ describe('XARFParser Edge Cases', () => {
   });
 
   describe('category-specific edge cases', () => {
-    it('should validate messaging with protocol smtp but no subject for social_engineering', () => {
+    it('should validate bulk_messaging with protocol smtp but no subject', () => {
       const reportData = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -183,20 +183,22 @@ describe('XARFParser Edge Cases', () => {
         source_identifier: '192.0.2.1',
         category: 'messaging',
         type: 'bulk_messaging',
-        evidence_source: 'spamtrap',
+        evidence_source: 'user_complaint',
         protocol: 'smtp',
         smtp_from: 'sender@example.com',
+        source_port: 25,
+        recipient_count: 5000,
       };
 
       const parser = new XARFParser(false);
       const result = parser.validate(reportData);
 
-      // Should pass because subject is only required for spam
+      // Should pass because subject is only recommended for bulk_messaging
       expect(result).toBe(true);
     });
 
-    it('should require subject for spam with smtp protocol', () => {
-      const invalidData = {
+    it('should accept spam without subject (subject is recommended, not required)', () => {
+      const data = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
@@ -216,17 +218,18 @@ describe('XARFParser Edge Cases', () => {
         evidence_source: 'spamtrap',
         protocol: 'smtp',
         smtp_from: 'spammer@example.com',
+        source_port: 25,
       };
 
       const parser = new XARFParser(false);
-      const result = parser.validate(invalidData);
+      const result = parser.validate(data);
 
-      expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('subject required'))).toBe(true);
+      // subject is x-recommended, not required — passes in non-strict mode
+      expect(result).toBe(true);
     });
 
-    it('should reject invalid messaging type', () => {
-      const invalidData = {
+    it('should reject unknown messaging type', () => {
+      const data = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
@@ -249,10 +252,9 @@ describe('XARFParser Edge Cases', () => {
       };
 
       const parser = new XARFParser(false);
-      const result = parser.validate(invalidData);
+      const result = parser.validate(data);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Invalid type'))).toBe(true);
     });
 
     it('should validate connection report missing protocol', () => {
@@ -286,8 +288,8 @@ describe('XARFParser Edge Cases', () => {
       );
     });
 
-    it('should validate invalid connection type', () => {
-      const invalidData = {
+    it('should reject unknown connection type', () => {
+      const data = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
@@ -310,14 +312,13 @@ describe('XARFParser Edge Cases', () => {
       };
 
       const parser = new XARFParser(false);
-      const result = parser.validate(invalidData);
+      const result = parser.validate(data);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Invalid type'))).toBe(true);
     });
 
-    it('should validate invalid content type', () => {
-      const invalidData = {
+    it('should reject unknown content type', () => {
+      const data = {
         xarf_version: '4.0.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
@@ -339,10 +340,9 @@ describe('XARFParser Edge Cases', () => {
       };
 
       const parser = new XARFParser(false);
-      const result = parser.validate(invalidData);
+      const result = parser.validate(data);
 
       expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('Invalid type'))).toBe(true);
     });
   });
 
@@ -370,11 +370,10 @@ describe('XARFParser Edge Cases', () => {
       const result = parser.validate(invalidData);
 
       expect(result).toBe(false);
-      expect(
-        parser
-          .getErrors()
-          .some((e) => e.includes('reporter.contact') || e.includes('reporter.domain'))
-      ).toBe(true);
+      // AJV catches missing required contact_info subfields
+      expect(parser.getErrors().some((e) => e.includes('reporter') && e.includes('required'))).toBe(
+        true
+      );
     });
   });
 });
