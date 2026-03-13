@@ -20,20 +20,30 @@ export type XARFCategory =
 export type ReporterType = 'automated' | 'manual' | 'hybrid';
 
 /**
- * Valid evidence sources
+ * Valid evidence sources.
+ * Known values from xarf-core.json examples are listed for autocomplete.
+ * Any string is accepted at the base level; type-specific schemas may
+ * restrict to an enum which is enforced at runtime via AJV validation.
  */
 export type EvidenceSource =
   | 'spamtrap'
+  | 'user_complaint'
+  | 'automated_filter'
   | 'honeypot'
+  | 'crawler'
   | 'user_report'
   | 'automated_scan'
-  | 'manual_analysis'
+  | 'spam_analysis'
+  | 'firewall_logs'
+  | 'ids_detection'
+  | 'flow_analysis'
   | 'vulnerability_scan'
   | 'researcher_analysis'
+  | 'automated_discovery'
+  | 'traffic_analysis'
   | 'threat_intelligence'
-  | 'flow_analysis'
-  | 'ids_ips'
-  | 'siem';
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  | (string & {}); // Accepts any string while preserving autocomplete for known values
 
 /**
  * Valid severity levels
