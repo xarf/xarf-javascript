@@ -241,7 +241,7 @@ export class XARFGenerator {
         if (fields.protocol === 'smtp') {
           fields.smtp_from = `spammer${Math.floor(Math.random() * 100)}@evil.example.com`;
           fields.source_port = 25 + Math.floor(Math.random() * 100);
-          if (reportType === 'spam' || reportType === 'phishing') {
+          if (reportType === 'spam') {
             fields.subject = `Sample ${reportType} subject`;
           }
           if (includeOptional) fields.smtp_to = 'victim@example.com';
