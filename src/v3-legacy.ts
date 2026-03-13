@@ -123,18 +123,7 @@ function convertEvidence(v3Attachments?: XARFv3Attachment[]): XARFEvidence[] | u
   }));
 }
 
-/**
- * Generate a UUID v4 for the converted report
- * @returns UUID v4 string
- */
-function generateUUID(): string {
-  // Simple UUID v4 generator
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+import { randomUUID } from 'crypto';
 
 /**
  * Convert XARF v3 report to v4 format
@@ -291,7 +280,7 @@ function convertWithMapping(
 
   const v4Report: XARFReport & { _internal?: Record<string, unknown> } = {
     xarf_version: '4.0.0',
-    report_id: generateUUID(),
+    report_id: randomUUID(),
     timestamp: report.Date,
     reporter: contactInfo,
     sender: contactInfo,
