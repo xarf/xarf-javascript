@@ -97,96 +97,81 @@ export interface XARFReport {
   [key: string]: unknown;
 }
 
-/**
- * Messaging category report
- */
-export interface MessagingReport extends XARFReport {
-  category: 'messaging';
-  protocol?: string;
-  smtp_from?: string;
-  smtp_to?: string;
-  subject?: string;
-  message_id?: string;
-  sender_display_name?: string;
-  target_victim?: string;
-  message_content?: string;
-}
+// Re-export category types
+import { MessagingReport } from './types-messaging';
+import { ConnectionReport } from './types-connection';
+import { ContentReport } from './types-content';
+import { InfrastructureReport } from './types-infrastructure';
+import { CopyrightReport } from './types-copyright';
+import { VulnerabilityReport } from './types-vulnerability';
+import { ReputationReport } from './types-reputation';
 
-/**
- * Connection category report
- */
-export interface ConnectionReport extends XARFReport {
-  category: 'connection';
-  destination_ip: string;
-  protocol: string;
-  destination_port?: number;
-  source_port?: number;
-  attack_type?: string;
-  duration_minutes?: number;
-  packet_count?: number;
-  byte_count?: number;
-  attempt_count?: number;
-  successful_logins?: number;
-  usernames_attempted?: string[];
-  attack_pattern?: string;
-}
+export type {
+  MessagingBaseReport,
+  SpamReport,
+  BulkMessagingReport,
+  MessagingReport,
+} from './types-messaging';
 
-/**
- * Content category report
- */
-export interface ContentReport extends XARFReport {
-  category: 'content';
-  url: string;
-  content_type?: string;
-  attack_type?: string;
-  affected_pages?: string[];
-  cms_platform?: string;
-  vulnerability_exploited?: string;
-  affected_parameters?: string[];
-  payload_detected?: string;
-  data_exposed?: string[];
-  database_type?: string;
-  records_potentially_affected?: number;
-}
+export type {
+  ConnectionBaseReport,
+  LoginAttackReport,
+  PortScanReport,
+  DdosReport,
+  InfectedHostReport,
+  ReconnaissanceReport,
+  ScrapingReport,
+  SqlInjectionReport,
+  VulnerabilityScanReport,
+  ConnectionReport,
+} from './types-connection';
 
-/**
- * Infrastructure category report
- */
-export interface InfrastructureReport extends XARFReport {
-  category: 'infrastructure';
-  infrastructure_type?: string;
-  affected_services?: string[];
-}
+export type {
+  ContentBaseReport,
+  PhishingReport,
+  MalwareReport,
+  CsamReport,
+  CsemReport,
+  ExposedDataReport,
+  BrandInfringementReport,
+  FraudReport,
+  RemoteCompromiseReport,
+  SuspiciousRegistrationReport,
+  ContentReport,
+} from './types-content';
 
-/**
- * Copyright category report
- */
-export interface CopyrightReport extends XARFReport {
-  category: 'copyright';
-  copyright_holder?: string;
-  infringing_content?: string;
-  original_content?: string;
-}
+export type {
+  InfrastructureBaseReport,
+  BotnetReport,
+  CompromisedServerReport,
+  InfrastructureReport,
+} from './types-infrastructure';
 
-/**
- * Vulnerability category report
- */
-export interface VulnerabilityReport extends XARFReport {
-  category: 'vulnerability';
-  cve_id?: string;
-  vulnerability_type?: string;
-  affected_software?: string;
-  affected_version?: string;
-}
+export type {
+  CopyrightBaseReport,
+  CopyrightCopyrightReport,
+  CopyrightP2pReport,
+  CopyrightCyberlockerReport,
+  CopyrightUgcPlatformReport,
+  CopyrightLinkSiteReport,
+  CopyrightUsenetReport,
+  CopyrightReport,
+} from './types-copyright';
 
-/**
- * Reputation category report
- */
-export interface ReputationReport extends XARFReport {
-  category: 'reputation';
-  reputation_score?: number;
-  blocklists?: string[];
-}
+export type {
+  VulnerabilityBaseReport,
+  CveReport,
+  OpenServiceReport,
+  MisconfigurationReport,
+  VulnerabilityReport,
+} from './types-vulnerability';
+
+export type {
+  ReputationBaseReport,
+  BlocklistReport,
+  ThreatIntelligenceReport,
+  ReputationReport,
+} from './types-reputation';
 
 /**
  * Union type for all report types
