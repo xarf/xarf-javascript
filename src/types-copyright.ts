@@ -24,6 +24,17 @@ export interface CopyrightCopyrightReport extends CopyrightBaseReport {
 }
 
 /**
+ * P2P swarm information (info_hash or magnet_uri required at runtime via AJV)
+ */
+export interface SwarmInfo {
+  info_hash?: string;
+  magnet_uri?: string;
+  torrent_name?: string;
+  file_count?: number;
+  total_size?: number;
+}
+
+/**
  * Copyright - P2P
  */
 export interface CopyrightP2pReport extends CopyrightBaseReport {
@@ -32,7 +43,7 @@ export interface CopyrightP2pReport extends CopyrightBaseReport {
   detection_method?: string;
   peer_info?: Record<string, unknown>;
   release_date?: string;
-  swarm_info?: Record<string, unknown>;
+  swarm_info: SwarmInfo;
 }
 
 /**
