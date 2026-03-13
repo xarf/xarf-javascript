@@ -229,10 +229,12 @@ export class XARFGenerator {
         }
         break;
 
-      case 'content':
-        fields.url = `http://malicious${Math.floor(Math.random() * 1000)}.example.com`;
-        if (includeOptional) fields.content_type = 'text/html';
+      case 'content': {
+        const contentDomain = `malicious${Math.floor(Math.random() * 1000)}.example.com`;
+        fields.url = `http://${contentDomain}/abuse/page${Math.floor(Math.random() * 100)}`;
+        if (includeOptional) fields.domain = contentDomain;
         break;
+      }
 
       case 'messaging':
         fields.protocol = ['smtp', 'sms', 'chat'][Math.floor(Math.random() * 3)];
