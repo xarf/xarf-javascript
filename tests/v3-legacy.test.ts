@@ -155,7 +155,7 @@ describe('XARFv3 Conversion', () => {
       expect((v4Report as any).destination_ip).toBe('198.51.100.10');
       expect((v4Report as any).destination_port).toBe(80);
       expect((v4Report as any).protocol).toBe('tcp');
-      expect((v4Report as any).attempt_count).toBe(10000);
+      expect((v4Report as any).attack_count).toBe(10000);
     });
 
     it('should convert v3 Login-Attack report', () => {

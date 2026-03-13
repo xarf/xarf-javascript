@@ -230,9 +230,11 @@ function addConnectionFields(v4Report: XARFReport, v3Report: XARFv3Report['Repor
     // source_port is required when source_identifier is an IP (min value is 1)
     source_port: v3Report.Source?.Port || v3Report.SourcePort || 1,
     destination_port: v3Report.DestinationPort,
-    attempt_count: v3Report.AttackCount,
     // first_seen is required for connection types in v4
     first_seen: v3Report.Date,
+    // there is no equivalent to v3's AttackCount that's general across Connection types,
+    // so we let it pass thorugh as an additoinal property
+    attack_count: v3Report.AttackCount,
   });
 }
 
