@@ -4,7 +4,16 @@
 
 import { XARFParseError, XARFValidationError } from './errors';
 import { XARFValidator } from './validator';
-import type { XARFReport, MessagingReport, ConnectionReport, ContentReport } from './types';
+import type {
+  XARFReport,
+  MessagingReport,
+  ConnectionReport,
+  ContentReport,
+  InfrastructureReport,
+  CopyrightReport,
+  VulnerabilityReport,
+  ReputationReport,
+} from './types';
 import { isXARFv3, convertV3toV4, getV3DeprecationWarning, type XARFv3Report } from './v3-legacy';
 
 /**
@@ -73,14 +82,24 @@ export class XARFParser {
    * @returns Typed report object
    */
   private castToReportType(data: Record<string, unknown>, category: string): XARFReport {
-    if (category === 'messaging') {
-      return data as MessagingReport;
-    } else if (category === 'connection') {
-      return data as ConnectionReport;
-    } else if (category === 'content') {
-      return data as ContentReport;
+    switch (category) {
+      case 'messaging':
+        return data as MessagingReport;
+      case 'connection':
+        return data as ConnectionReport;
+      case 'content':
+        return data as ContentReport;
+      case 'infrastructure':
+        return data as InfrastructureReport;
+      case 'copyright':
+        return data as CopyrightReport;
+      case 'vulnerability':
+        return data as VulnerabilityReport;
+      case 'reputation':
+        return data as ReputationReport;
+      default:
+        return data as XARFReport;
     }
-    return data as XARFReport;
   }
 
   /**
