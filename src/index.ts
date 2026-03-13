@@ -31,9 +31,7 @@ export { XARFError, XARFValidationError, XARFParseError, XARFSchemaError } from 
 export type {
   XARFReport,
   XARFCategory,
-  ReporterType,
   EvidenceSource,
-  XARFReporter,
   XARFEvidence,
   ContactInfo,
   MessagingReport,

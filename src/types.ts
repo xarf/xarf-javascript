@@ -15,11 +15,6 @@ export type XARFCategory =
   | 'reputation';
 
 /**
- * Valid reporter types
- */
-export type ReporterType = 'automated' | 'manual' | 'hybrid';
-
-/**
  * Valid evidence sources.
  * Known values from xarf-core.json examples are listed for autocomplete.
  * Any string is accepted at the base level; type-specific schemas may
@@ -52,16 +47,6 @@ export interface ContactInfo {
   org: string;
   contact: string;
   domain: string;
-}
-
-/**
- * Reporter information (legacy type, deprecated)
- * @deprecated Use ContactInfo instead
- */
-export interface XARFReporter {
-  org?: string;
-  contact: string;
-  type: ReporterType;
 }
 
 /**

@@ -95,10 +95,8 @@ export class XARFGenerator {
     const validator = new XARFValidator();
     const result = validator.validate(report, false);
 
-    if (!result.valid || result.warnings.length > 0) {
-      const messages = [...result.errors, ...result.warnings].map(
-        (e) => `${e.field}: ${e.message}`
-      );
+    if (!result.valid) {
+      const messages = result.errors.map((e) => `${e.field}: ${e.message}`);
       throw new XARFValidationError(`Report validation failed: ${messages.join('; ')}`, messages);
     }
 

@@ -6,7 +6,6 @@
  */
 
 import { XARFGenerator } from '../src/generator';
-import { XARFValidationError } from '../src/errors';
 
 describe('GeneratorOptions Union Types', () => {
   let generator: XARFGenerator;
@@ -133,20 +132,21 @@ describe('GeneratorOptions Union Types', () => {
     });
   });
 
-  describe('Unknown field rejection', () => {
-    it('should reject unknown fields', () => {
-      expect(() =>
-        generator.createReport({
-          ...baseOptions,
-          category: 'connection',
-          type: 'ddos',
-          destination_ip: '203.0.113.10',
-          protocol: 'tcp',
-          first_seen: '2024-01-15T09:00:00Z',
-          source_port: 12345,
-          custom_field: 'custom_value',
-        } as any)
-      ).toThrow(XARFValidationError);
+  describe('Unknown fields', () => {
+    it('should allow additional fields per spec additionalProperties: true', () => {
+      const report = generator.createReport({
+        ...baseOptions,
+        category: 'connection',
+        type: 'ddos',
+        destination_ip: '203.0.113.10',
+        protocol: 'tcp',
+        first_seen: '2024-01-15T09:00:00Z',
+        source_port: 12345,
+        custom_field: 'custom_value',
+      } as any);
+
+      expect(report.category).toBe('connection');
+      expect((report as any).custom_field).toBe('custom_value');
     });
   });
 
