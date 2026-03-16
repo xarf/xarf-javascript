@@ -116,14 +116,20 @@ function convertEvidence(v3Attachments?: XARFv3Attachment[]): XARFEvidence[] | u
     return undefined;
   }
 
-  return v3Attachments.map((attachment) => ({
-    content_type: attachment.ContentType,
-    description: attachment.Description || 'Evidence from v3 report',
-    payload: attachment.Data,
-  }));
+  return v3Attachments.map((attachment) => {
+    const hashValue = createHash('sha256')
+      .update(Buffer.from(attachment.Data, 'base64'))
+      .digest('hex');
+    return {
+      content_type: attachment.ContentType,
+      description: attachment.Description || 'Evidence from v3 report',
+      payload: attachment.Data,
+      hash: `sha256:${hashValue}`,
+    };
+  });
 }
 
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 
 /**
  * Convert XARF v3 report to v4 format
