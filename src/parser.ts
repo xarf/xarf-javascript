@@ -119,12 +119,15 @@ export class XARFParser {
     let data = this.parseJSON(jsonData);
     data = this.handleV3Conversion(data);
 
-    const result = this.validator.validate(data as XARFReport, this.strict);
-    this.errors.push(...result.errors.map((e) => `${e.field}: ${e.message}`));
-    this.warnings.push(...result.warnings.map((w) => `${w.field}: ${w.message}`));
-
-    if (this.strict && this.errors.length > 0) {
-      throw new XARFValidationError('Validation failed', this.errors);
+    try {
+      const result = this.validator.validate(data as XARFReport, this.strict);
+      this.errors.push(...result.errors.map((e) => `${e.field}: ${e.message}`));
+      this.warnings.push(...result.warnings.map((w) => `${w.field}: ${w.message}`));
+    } catch (error) {
+      if (error instanceof XARFValidationError) {
+        this.errors.push(...error.errors);
+      }
+      if (this.strict) throw error;
     }
 
     const reportCategory = data.category as string;

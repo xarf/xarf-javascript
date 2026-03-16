@@ -151,6 +151,24 @@ describe('XARFParser', () => {
         parser.parse(invalidData);
       }).toThrow(XARFValidationError);
     });
+
+    it('should populate getErrors() after strict mode parse failure', () => {
+      const invalidData = {
+        xarf_version: '4.0.0',
+        // Missing required fields
+      };
+
+      const parser = new XARFParser(true);
+
+      try {
+        parser.parse(invalidData);
+        throw new Error('Expected XARFValidationError');
+      } catch (e) {
+        expect(e).toBeInstanceOf(XARFValidationError);
+      }
+
+      expect(parser.getErrors().length).toBeGreaterThan(0);
+    });
   });
 
   describe('validate', () => {
@@ -384,6 +402,34 @@ describe('XARFParser', () => {
 
       const parser = new XARFParser(true);
       expect(() => parser.parse(reportData)).toThrow(XARFValidationError);
+    });
+
+    it('should populate getErrors() with recommended field names after strict parse failure', () => {
+      const reportData = {
+        xarf_version: '4.0.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        sender: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        source_identifier: '192.0.2.1',
+        category: 'messaging',
+        type: 'spam',
+        protocol: 'smtp',
+        smtp_from: 'spammer@evil.com',
+        // Missing recommended: confidence, evidence, source_port, evidence_source
+      };
+
+      const parser = new XARFParser(true);
+
+      try {
+        parser.parse(reportData);
+        throw new Error('Expected XARFValidationError');
+      } catch (e) {
+        expect(e).toBeInstanceOf(XARFValidationError);
+      }
+
+      expect(parser.getErrors().length).toBeGreaterThan(0);
+      expect(parser.getErrors().some((e) => e.includes('confidence'))).toBe(true);
     });
 
     it('should not throw for missing recommended fields in non-strict parser', () => {
