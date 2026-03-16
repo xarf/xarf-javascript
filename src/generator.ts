@@ -113,6 +113,7 @@ export class XARFGenerator {
       content_type: contentType,
       payload: payloadBuffer.toString('base64'),
       hash: `${hashAlgorithm}:${hashValue}`,
+      size: payloadBuffer.length,
     };
     if (description !== undefined) {
       evidence.description = description;
