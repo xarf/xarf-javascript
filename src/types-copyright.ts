@@ -68,6 +68,24 @@ export interface FileInfo {
 }
 
 /**
+ * Cyberlocker takedown information
+ */
+export interface CyberlockerTakedownInfo {
+  previous_requests?: number;
+  service_response_time?: string;
+  automated_removal?: boolean;
+}
+
+/**
+ * Cyberlocker uploader information
+ */
+export interface CyberlockerUploaderInfo {
+  username?: string;
+  user_id?: string;
+  account_type?: 'free' | 'premium' | 'business' | 'unknown';
+}
+
+/**
  * Copyright - Cyberlocker
  */
 export interface CopyrightCyberlockerReport extends CopyrightBaseReport {
@@ -76,8 +94,51 @@ export interface CopyrightCyberlockerReport extends CopyrightBaseReport {
   infringing_url: string;
   access_method?: string;
   file_info?: FileInfo;
-  takedown_info?: Record<string, unknown>;
-  uploader_info?: Record<string, unknown>;
+  takedown_info?: CyberlockerTakedownInfo;
+  uploader_info?: CyberlockerUploaderInfo;
+}
+
+/**
+ * UGC platform content information
+ */
+export interface UgcContentInfo {
+  content_id?: string;
+  content_title?: string;
+  content_description?: string;
+  upload_date?: string;
+  content_duration?: number;
+  view_count?: number;
+  like_count?: number;
+}
+
+/**
+ * UGC platform uploader information
+ */
+export interface UgcUploaderInfo {
+  username?: string;
+  user_id?: string;
+  account_verified?: boolean;
+  subscriber_count?: number;
+  account_creation_date?: string;
+}
+
+/**
+ * UGC platform content match details
+ */
+export interface UgcMatchDetails {
+  match_confidence?: number;
+  match_duration?: number;
+  match_percentage?: number;
+  reference_id?: string;
+}
+
+/**
+ * UGC platform monetization information
+ */
+export interface UgcMonetizationInfo {
+  monetized?: boolean;
+  ad_revenue?: boolean;
+  premium_content?: boolean;
 }
 
 /**
@@ -87,11 +148,47 @@ export interface CopyrightUgcPlatformReport extends CopyrightBaseReport {
   type: 'ugc_platform';
   infringing_url: string;
   platform_name: string;
-  content_info?: Record<string, unknown>;
+  content_info?: UgcContentInfo;
   infringement_type?: string;
-  match_details?: Record<string, unknown>;
-  monetization_info?: Record<string, unknown>;
-  uploader_info?: Record<string, unknown>;
+  match_details?: UgcMatchDetails;
+  monetization_info?: UgcMonetizationInfo;
+  uploader_info?: UgcUploaderInfo;
+}
+
+/**
+ * Link site link information
+ */
+export interface LinkSiteLinkInfo {
+  page_title?: string;
+  posting_date?: string;
+  uploader?: string;
+  download_count?: number;
+  link_count?: number;
+  comments_count?: number;
+}
+
+/**
+ * Link site linked content item
+ */
+export interface LinkedContentItem {
+  target_url: string;
+  link_type:
+    | 'torrent_file'
+    | 'magnet_link'
+    | 'direct_download'
+    | 'streaming_link'
+    | 'usenet_nzb'
+    | 'other';
+  hosting_service?: string;
+  file_size?: number;
+}
+
+/**
+ * Link site ranking information
+ */
+export interface LinkSiteRanking {
+  alexa_rank?: number;
+  popularity_score?: number;
 }
 
 /**
@@ -101,11 +198,11 @@ export interface CopyrightLinkSiteReport extends CopyrightBaseReport {
   type: 'link_site';
   infringing_url: string;
   site_name: string;
-  link_info?: Record<string, unknown>;
-  linked_content?: Array<Record<string, unknown>>;
+  link_info?: LinkSiteLinkInfo;
+  linked_content?: LinkedContentItem[];
   search_terms?: string[];
   site_category?: string;
-  site_ranking?: Record<string, unknown>;
+  site_ranking?: LinkSiteRanking;
 }
 
 /**
@@ -122,16 +219,44 @@ export interface MessageInfo {
 }
 
 /**
+ * Usenet encoding information
+ */
+export interface UsenetEncodingInfo {
+  encoding_format?: 'yenc' | 'uuencode' | 'base64' | 'other';
+  par2_recovery?: boolean;
+  rar_compression?: boolean;
+}
+
+/**
+ * Usenet NZB information
+ */
+export interface UsenetNzbInfo {
+  nzb_name?: string;
+  nzb_url?: string;
+  indexer_site?: string;
+  completion_percentage?: number;
+}
+
+/**
+ * Usenet server information
+ */
+export interface UsenetServerInfo {
+  nntp_server?: string;
+  server_group?: string;
+  retention_days?: number;
+}
+
+/**
  * Copyright - Usenet
  */
 export interface CopyrightUsenetReport extends CopyrightBaseReport {
   type: 'usenet';
   newsgroup: string;
   detection_method?: string;
-  encoding_info?: Record<string, unknown>;
+  encoding_info?: UsenetEncodingInfo;
   message_info: MessageInfo;
-  nzb_info?: Record<string, unknown>;
-  server_info?: Record<string, unknown>;
+  nzb_info?: UsenetNzbInfo;
+  server_info?: UsenetServerInfo;
 }
 
 /**
