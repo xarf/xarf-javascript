@@ -223,10 +223,11 @@ function addMessagingFields(v4Report: XARFReport, v3Report: XARFv3Report['Report
  */
 function addConnectionFields(v4Report: XARFReport, v3Report: XARFv3Report['Report']): void {
   Object.assign(v4Report, {
-    destination_ip: v3Report.DestinationIp || 'unknown',
+    ...(v3Report.DestinationIp ? { destination_ip: v3Report.DestinationIp } : {}),
     protocol: v3Report.Protocol || 'tcp',
-    // source_port is required when source_identifier is an IP (min value is 1)
-    source_port: v3Report.Source?.Port || v3Report.SourcePort || 1,
+    ...(v3Report.Source?.Port || v3Report.SourcePort
+      ? { source_port: v3Report.Source?.Port || v3Report.SourcePort }
+      : {}),
     destination_port: v3Report.DestinationPort,
     // first_seen is required for connection types in v4
     first_seen: v3Report.Date,

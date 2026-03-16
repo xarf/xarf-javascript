@@ -426,6 +426,7 @@ describe('XARFParser v3 Integration', () => {
         ReportType: 'DDoS',
         Date: '2024-01-15T10:00:00Z',
         SourceIp: '192.0.2.50',
+        SourcePort: 54321,
         DestinationIp: '203.0.113.10',
         Protocol: 'tcp',
       },

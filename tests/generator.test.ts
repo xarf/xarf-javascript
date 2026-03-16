@@ -3,7 +3,7 @@
  */
 
 import { XARFGenerator } from '../src/generator';
-import { XARFError, XARFValidationError } from '../src/errors';
+import { XARFValidationError } from '../src/errors';
 
 describe('XARFGenerator', () => {
   let generator: XARFGenerator;
@@ -44,7 +44,7 @@ describe('XARFGenerator', () => {
 
       expect(evidence.content_type).toBe('text/plain');
       expect(evidence.description).toBe('Test evidence');
-      expect(evidence.payload).toBe('Sample data');
+      expect(evidence.payload).toBe(Buffer.from('Sample data').toString('base64'));
       expect(evidence.hash).toBeDefined();
       expect(evidence.hash).toMatch(/^sha256:[0-9a-f]{64}$/); // Format: algorithm:hexvalue
     });
@@ -53,7 +53,7 @@ describe('XARFGenerator', () => {
       const buffer = Buffer.from('test data', 'utf8');
       const evidence = generator.addEvidence('application/octet-stream', buffer, 'Binary data');
 
-      expect(evidence.payload).toBe('test data');
+      expect(evidence.payload).toBe(Buffer.from('test data').toString('base64'));
       expect(evidence.hash).toBeDefined();
     });
   });
@@ -224,42 +224,6 @@ describe('XARFGenerator', () => {
           unknown_field: 'test',
         } as any);
       }).toThrow(XARFValidationError);
-    });
-  });
-
-  describe('generateSampleReport', () => {
-    it('should generate sample connection report', () => {
-      const report = generator.generateSampleReport('connection', 'ddos', {
-        includeEvidence: true,
-        includeOptional: false,
-      });
-
-      expect(report.category).toBe('connection');
-      expect(report.type).toBe('ddos');
-      expect(report.source_identifier).toMatch(/^192\.0\.2\.\d+$/);
-      expect(report.reporter.contact).toContain('@');
-      expect(report.evidence).toBeDefined();
-    });
-
-    it('should generate sample without evidence', () => {
-      const report = generator.generateSampleReport('messaging', 'spam', {
-        includeEvidence: false,
-        includeOptional: false,
-      });
-
-      expect(report.evidence).toBeUndefined();
-    });
-
-    it('should throw error for invalid category', () => {
-      expect(() => {
-        generator.generateSampleReport('invalid' as any, 'test');
-      }).toThrow(XARFError);
-    });
-
-    it('should throw error for invalid type', () => {
-      expect(() => {
-        generator.generateSampleReport('connection', 'invalid');
-      }).toThrow(XARFError);
     });
   });
 });

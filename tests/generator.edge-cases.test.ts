@@ -92,48 +92,6 @@ describe('XARFGenerator Edge Cases', () => {
     });
   });
 
-  describe('generateSampleReport with various options', () => {
-    it('should generate sample with evidence', () => {
-      const report = generator.generateSampleReport('messaging', 'spam', {
-        includeEvidence: true,
-        includeOptional: false,
-      });
-
-      expect(report.evidence).toBeDefined();
-    });
-
-    it('should generate sample for all valid categories', () => {
-      const testCases: Array<{
-        category:
-          | 'messaging'
-          | 'connection'
-          | 'content'
-          | 'infrastructure'
-          | 'copyright'
-          | 'vulnerability'
-          | 'reputation';
-        type: string;
-      }> = [
-        { category: 'messaging', type: 'spam' },
-        { category: 'connection', type: 'ddos' },
-        { category: 'content', type: 'phishing' },
-        { category: 'infrastructure', type: 'botnet' },
-        { category: 'copyright', type: 'copyright' },
-        { category: 'vulnerability', type: 'cve' },
-        { category: 'reputation', type: 'blocklist' },
-      ];
-
-      testCases.forEach(({ category, type }) => {
-        const report = generator.generateSampleReport(category, type, {
-          includeEvidence: true,
-          includeOptional: false,
-        });
-        expect(report.category).toBe(category);
-        expect(report.type).toBe(type);
-      });
-    });
-  });
-
   describe('addEvidence with different algorithms', () => {
     it('should create evidence with sha512', () => {
       const evidence = generator.addEvidence('text/plain', 'data', 'Test', 'sha512');

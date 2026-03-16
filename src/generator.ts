@@ -5,13 +5,10 @@
  * validation, and type safety derived from parser types.
  */
 
-import { createHash, randomBytes, randomUUID } from 'crypto';
-import { XARFError, XARFValidationError } from './errors';
-import { schemaRegistry } from './schema-registry';
+import { createHash, randomUUID } from 'crypto';
+import { XARFValidationError } from './errors';
 import { XARFValidator } from './validator';
 import type {
-  ContactInfo,
-  XARFCategory,
   XARFEvidence,
   XARFReport,
   ConnectionReport,
@@ -67,14 +64,6 @@ export type GeneratorOptions =
   | ReputationGeneratorOptions;
 
 /**
- * Options for sample report generation
- */
-export interface SampleReportOptions {
-  includeEvidence?: boolean;
-  includeOptional?: boolean;
-}
-
-/**
  * XARF report generator with automatic metadata and validation.
  */
 export class XARFGenerator {
@@ -117,13 +106,12 @@ export class XARFGenerator {
     description?: string,
     hashAlgorithm: 'sha256' | 'sha512' | 'sha1' | 'md5' = 'sha256'
   ): XARFEvidence {
-    const payloadStr = typeof payload === 'string' ? payload : payload.toString('utf8');
     const payloadBuffer = typeof payload === 'string' ? Buffer.from(payload, 'utf8') : payload;
     const hashValue = this.generateHash(payloadBuffer, hashAlgorithm);
 
     const evidence: XARFEvidence = {
       content_type: contentType,
-      payload: payloadStr,
+      payload: payloadBuffer.toString('base64'),
       hash: `${hashAlgorithm}:${hashValue}`,
     };
     if (description !== undefined) {
@@ -144,132 +132,5 @@ export class XARFGenerator {
   ): string {
     const buffer = typeof data === 'string' ? Buffer.from(data, 'utf8') : data;
     return createHash(algorithm).update(buffer).digest('hex');
-  }
-
-  /**
-   * Generate a sample XARF report with randomized data for testing.
-   * @param category - Report category
-   * @param reportType - Specific type within category
-   * @param options - Whether to include evidence and optional fields
-   * @returns Complete sample XARFReport
-   * @throws {XARFError} If category or type is invalid
-   */
-  generateSampleReport(
-    category: XARFCategory,
-    reportType: string,
-    options?: SampleReportOptions
-  ): XARFReport {
-    const includeEvidence = options?.includeEvidence ?? true;
-    const includeOptional = options?.includeOptional ?? true;
-
-    if (!schemaRegistry.isValidCategory(category)) {
-      throw new XARFError(`Invalid category: ${category}`);
-    }
-    if (!schemaRegistry.isValidType(category, reportType)) {
-      throw new XARFError(`Invalid type '${reportType}' for category '${category}'`);
-    }
-
-    const sourceIp = `192.0.2.${Math.floor(Math.random() * 256)}`;
-
-    // category is XARFCategory (union), not a specific literal, so TypeScript
-    // can't narrow to the correct GeneratorOptions variant. The assertion is safe
-    // because we validated category/type against the schema registry above.
-    const input = {
-      category,
-      type: reportType,
-      source_identifier: sourceIp,
-      reporter: this.sampleContact('abuse'),
-      sender: this.sampleContact('report'),
-      description: `Sample ${reportType} report for testing`,
-      ...this.categorySpecificFields(category, reportType, includeOptional),
-    } as GeneratorOptions;
-
-    if (includeEvidence) {
-      input.evidence = [this.sampleEvidence(category)];
-    }
-
-    if (includeOptional) {
-      input.confidence = Math.round((0.7 + Math.random() * 0.3) * 100) / 100;
-      input.tags = [`category:${category}`, `type:${reportType}`, 'source:sample'];
-    }
-
-    return this.createReport(input);
-  }
-
-  private sampleContact(prefix: string): ContactInfo {
-    const orgs = ['Security Operations Center', 'Abuse Response Team', 'Network Security Team'];
-    const domains = ['example.com', 'security.net', 'abuse.org'];
-    const org = orgs[Math.floor(Math.random() * orgs.length)];
-    const domain = domains[Math.floor(Math.random() * domains.length)];
-    return { org, contact: `${prefix}@${domain}`, domain };
-  }
-
-  private sampleEvidence(category: XARFCategory): XARFEvidence {
-    const payload = randomBytes(32).toString('hex');
-    return this.addEvidence('text/plain', payload, `Sample ${category} evidence`);
-  }
-
-  private categorySpecificFields(
-    category: XARFCategory,
-    reportType: string,
-    includeOptional: boolean
-  ): Record<string, unknown> {
-    const fields: Record<string, unknown> = {};
-
-    switch (category) {
-      case 'connection':
-        fields.destination_ip = `203.0.113.${Math.floor(Math.random() * 256)}`;
-        fields.protocol = ['tcp', 'udp', 'icmp'][Math.floor(Math.random() * 3)];
-        fields.first_seen = new Date(
-          Date.now() - Math.floor(Math.random() * 3600000)
-        ).toISOString();
-        fields.source_port = 1024 + Math.floor(Math.random() * 64000);
-        if (includeOptional) {
-          fields.destination_port = [80, 443, 22, 25, 53][Math.floor(Math.random() * 5)];
-        }
-        break;
-
-      case 'content': {
-        const contentDomain = `malicious${Math.floor(Math.random() * 1000)}.example.com`;
-        fields.url = `http://${contentDomain}/abuse/page${Math.floor(Math.random() * 100)}`;
-        if (includeOptional) fields.domain = contentDomain;
-        break;
-      }
-
-      case 'messaging':
-        fields.protocol = ['smtp', 'sms', 'chat'][Math.floor(Math.random() * 3)];
-        if (fields.protocol === 'smtp') {
-          fields.smtp_from = `spammer${Math.floor(Math.random() * 100)}@evil.example.com`;
-          fields.source_port = 25 + Math.floor(Math.random() * 100);
-          if (reportType === 'spam') {
-            fields.subject = `Sample ${reportType} subject`;
-          }
-          if (includeOptional) fields.smtp_to = 'victim@example.com';
-        }
-        break;
-
-      case 'infrastructure':
-        if (reportType === 'botnet') fields.compromise_evidence = 'C2 communication observed';
-        if (reportType === 'compromised_server') fields.compromise_method = 'unauthorized_access';
-        break;
-
-      case 'copyright':
-        fields.infringing_url = `http://pirate${Math.floor(Math.random() * 1000)}.example.com/content`;
-        break;
-
-      case 'vulnerability':
-        fields.service = 'http';
-        if (reportType === 'cve') {
-          fields.service_port = 80;
-          fields.cve_id = 'CVE-2024-12345';
-        }
-        break;
-
-      case 'reputation':
-        fields.threat_type = 'spam_source';
-        break;
-    }
-
-    return fields;
   }
 }

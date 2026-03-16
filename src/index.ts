@@ -16,7 +16,6 @@ export {
   type CopyrightGeneratorOptions,
   type VulnerabilityGeneratorOptions,
   type ReputationGeneratorOptions,
-  type SampleReportOptions,
 } from './generator';
 export {
   XARFValidator,
