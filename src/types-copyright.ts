@@ -88,6 +88,19 @@ export interface CopyrightLinkSiteReport extends CopyrightBaseReport {
 }
 
 /**
+ * Usenet message information
+ */
+export interface MessageInfo {
+  message_id: string;
+  subject?: string;
+  from_header?: string;
+  posting_date?: string;
+  part_number?: number;
+  total_parts?: number;
+  file_size?: number;
+}
+
+/**
  * Copyright - Usenet
  */
 export interface CopyrightUsenetReport extends CopyrightBaseReport {
@@ -95,7 +108,7 @@ export interface CopyrightUsenetReport extends CopyrightBaseReport {
   newsgroup: string;
   detection_method?: string;
   encoding_info?: Record<string, unknown>;
-  message_info?: Record<string, unknown>;
+  message_info: MessageInfo;
   nzb_info?: Record<string, unknown>;
   server_info?: Record<string, unknown>;
 }
