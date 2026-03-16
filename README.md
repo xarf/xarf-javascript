@@ -558,7 +558,7 @@ const report = parser.parse(v3Report);
 console.log(report.xarf_version); // '4.0.0'
 console.log(report.category); // 'messaging'
 console.log(report.type); // 'spam'
-console.log(report._internal?.legacy_version); // '3'
+console.log(report.legacy_version); // '3'
 
 // Get deprecation warnings
 const warnings = parser.getWarnings();

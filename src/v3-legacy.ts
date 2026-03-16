@@ -286,8 +286,8 @@ function convertWithMapping(
     type: mapping.type,
     description: report.AttackDescription,
     evidence,
+    legacy_version: '3',
     _internal: {
-      legacy_version: '3',
       original_report_type: report.ReportType,
       converted_at: new Date().toISOString(),
     },

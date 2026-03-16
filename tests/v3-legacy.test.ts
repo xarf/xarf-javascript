@@ -97,7 +97,7 @@ describe('XARFv3 Conversion', () => {
       expect(v4Report.sender.domain).toBe('antispam.example');
       expect(v4Report.timestamp).toBe('2024-01-15T14:30:25Z');
       expect(v4Report.description).toBe('Spam email detected');
-      expect(v4Report._internal?.legacy_version).toBe('3');
+      expect(v4Report.legacy_version).toBe('3');
       expect(v4Report._internal?.original_report_type).toBe('Spam');
 
       // Category-specific fields
@@ -407,7 +407,7 @@ describe('XARFParser v3 Integration', () => {
     expect(result.xarf_version).toBe('4.0.0');
     expect(result.category).toBe('messaging');
     expect(result.type).toBe('spam');
-    expect(result._internal?.legacy_version).toBe('3');
+    expect(result.legacy_version).toBe('3');
 
     const warnings = parser.getWarnings();
     expect(warnings.length).toBeGreaterThan(0);

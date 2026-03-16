@@ -54,8 +54,8 @@ const report = parser.parse(v3JsonData);
   "category": "messaging",
   "type": "spam",
   "evidence_source": "manual_analysis",
+  "legacy_version": "3",
   "_internal": {
-    "legacy_version": "3",
     "original_report_type": "Spam",
     "converted_at": "2024-01-15T10:05:00Z"
   }
@@ -120,7 +120,7 @@ const parser = new XARFParser();
 function processReport(jsonData: unknown) {
   const report = parser.parse(jsonData);
 
-  if (report._internal?.legacy_version === '3') {
+  if (report.legacy_version === '3') {
     console.log('Received v3 report - consider upgrading sender');
   }
 
@@ -138,7 +138,7 @@ function trackLegacyUsage(jsonData: unknown) {
   const parser = new XARFParser();
   const report = parser.parse(jsonData);
 
-  if (report._internal?.legacy_version === '3') {
+  if (report.legacy_version === '3') {
     metrics.increment('xarf.v3.reports');
     logDeprecationNotice(report.reporter.contact);
   }
