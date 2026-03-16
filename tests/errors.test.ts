@@ -2,7 +2,7 @@
  * Tests for XARF Error Classes
  */
 
-import { XARFError, XARFValidationError, XARFParseError, XARFSchemaError } from '../src/errors';
+import { XARFError, XARFValidationError, XARFParseError } from '../src/errors';
 
 describe('XARFError Classes', () => {
   describe('XARFError', () => {
@@ -73,44 +73,23 @@ describe('XARFError Classes', () => {
     });
   });
 
-  describe('XARFSchemaError', () => {
-    it('should create error with message', () => {
-      const error = new XARFSchemaError('Schema validation failed');
-
-      expect(error.message).toBe('Schema validation failed');
-      expect(error.name).toBe('XARFSchemaError');
-      expect(error).toBeInstanceOf(XARFError);
-      expect(error).toBeInstanceOf(XARFSchemaError);
-    });
-
-    it('should have correct prototype chain', () => {
-      const error = new XARFSchemaError('Test');
-
-      expect(Object.getPrototypeOf(error)).toBe(XARFSchemaError.prototype);
-    });
-  });
-
   describe('Error inheritance', () => {
     it('should all inherit from Error', () => {
       const xarfError = new XARFError('Test');
       const validationError = new XARFValidationError('Test');
       const parseError = new XARFParseError('Test');
-      const schemaError = new XARFSchemaError('Test');
 
       expect(xarfError).toBeInstanceOf(Error);
       expect(validationError).toBeInstanceOf(Error);
       expect(parseError).toBeInstanceOf(Error);
-      expect(schemaError).toBeInstanceOf(Error);
     });
 
     it('should all inherit from XARFError', () => {
       const validationError = new XARFValidationError('Test');
       const parseError = new XARFParseError('Test');
-      const schemaError = new XARFSchemaError('Test');
 
       expect(validationError).toBeInstanceOf(XARFError);
       expect(parseError).toBeInstanceOf(XARFError);
-      expect(schemaError).toBeInstanceOf(XARFError);
     });
   });
 });

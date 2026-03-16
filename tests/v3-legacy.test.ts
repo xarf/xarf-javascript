@@ -115,6 +115,7 @@ describe('XARFv3 Conversion', () => {
         Report: {
           ReportType: 'spam',
           Date: '2024-01-15T10:00:00Z',
+          Protocol: 'smtp',
           Source: {
             IP: '10.0.0.1',
             Port: 25,
@@ -170,6 +171,7 @@ describe('XARFv3 Conversion', () => {
           SourceIp: '192.0.2.50',
           DestinationIp: '203.0.113.10',
           DestinationPort: 22,
+          Protocol: 'tcp',
         },
       };
 
@@ -188,6 +190,7 @@ describe('XARFv3 Conversion', () => {
           ReportType: 'Port-Scan',
           Date: '2024-01-15T12:00:00Z',
           SourceIp: '192.0.2.99',
+          Protocol: 'tcp',
         },
       };
 
@@ -287,6 +290,7 @@ describe('XARFv3 Conversion', () => {
           ReportType: 'Spam',
           Date: '2024-01-15T10:00:00Z',
           SourceIp: '192.0.2.1',
+          Protocol: 'smtp',
           Attachment: [
             {
               ContentType: 'message/rfc822',
@@ -316,6 +320,7 @@ describe('XARFv3 Conversion', () => {
           ReportType: 'Malware',
           Date: '2024-01-15T10:00:00Z',
           SourceIp: '192.0.2.1',
+          Url: 'http://malware.example/payload',
           Samples: [
             {
               ContentType: 'application/octet-stream',
@@ -328,7 +333,7 @@ describe('XARFv3 Conversion', () => {
       const v4Report = convertV3toV4(v3Report);
       expect(v4Report.evidence).toBeDefined();
       expect(v4Report.evidence?.[0].content_type).toBe('application/octet-stream');
-      expect(v4Report.evidence?.[0].description).toBe('Evidence from v3 report');
+      expect(v4Report.evidence?.[0].description).toBeUndefined();
     });
   });
 
@@ -350,8 +355,38 @@ describe('XARFv3 Conversion', () => {
     });
   });
 
-  describe('Missing Source IP Handling', () => {
-    it('should handle missing source IP with warning', () => {
+  describe('Missing Reporter Email Handling', () => {
+    it('should throw when both reporter email fields are absent', () => {
+      const v3Report = {
+        Version: '3',
+        ReporterInfo: {},
+        Report: {
+          ReportType: 'Spam',
+          Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.1',
+        },
+      } as XARFv3Report;
+
+      expect(() => convertV3toV4(v3Report)).toThrow('missing reporter email');
+    });
+
+    it('should throw when reporter email has no domain part', () => {
+      const v3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrgEmail: 'not-an-email',
+        },
+        Report: {
+          ReportType: 'Spam',
+          Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.1',
+        },
+      } as XARFv3Report;
+
+      expect(() => convertV3toV4(v3Report)).toThrow('not a valid email address');
+    });
+
+    it('should warn when ReporterOrg is missing', () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -360,14 +395,127 @@ describe('XARFv3 Conversion', () => {
         Report: {
           ReportType: 'Spam',
           Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.1',
+          Protocol: 'smtp',
         },
       };
 
       const warnings: string[] = [];
       const v4Report = convertV3toV4(v3Report, warnings);
 
-      expect(v4Report.source_identifier).toBe('unknown');
-      expect(warnings.some((w) => w.includes('No source IP found'))).toBe(true);
+      expect(warnings.some((w) => w.includes('No ReporterOrg found'))).toBe(true);
+      expect(v4Report.reporter.org).toBe('Unknown Organization');
+    });
+  });
+
+  describe('Missing Source Identifier Handling', () => {
+    it('should throw when no source identifier can be extracted', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Test Org',
+          ReporterOrgEmail: 'test@example.com',
+        },
+        Report: {
+          ReportType: 'Botnet',
+          Date: '2024-01-15T10:00:00Z',
+        },
+      };
+
+      expect(() => convertV3toV4(v3Report)).toThrow('no source identifier found');
+    });
+
+    it('should extract source identifier from Source.URL when no IP is present', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Security Vendor',
+          ReporterOrgEmail: 'abuse@security.example',
+        },
+        Report: {
+          ReportType: 'Phishing',
+          Date: '2024-01-15T10:00:00Z',
+          Source: { URL: 'https://malicious-example.net/banking-login/' },
+          Url: 'https://malicious-example.net/banking-login/',
+        },
+      };
+
+      const v4Report = convertV3toV4(v3Report);
+      expect(v4Report.source_identifier).toBe('https://malicious-example.net/banking-login/');
+      expect((v4Report as any).url).toBe('https://malicious-example.net/banking-login/');
+    });
+
+    it('should extract source identifier from Url when no Source is present', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Test Org',
+          ReporterOrgEmail: 'test@example.com',
+        },
+        Report: {
+          ReportType: 'Malware',
+          Date: '2024-01-15T10:00:00Z',
+          Url: 'http://malware.example/payload.exe',
+        },
+      };
+
+      const v4Report = convertV3toV4(v3Report);
+      expect(v4Report.source_identifier).toBe('http://malware.example/payload.exe');
+    });
+  });
+
+  describe('Missing Protocol Handling', () => {
+    it('should throw when messaging report has no protocol', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Test Org',
+          ReporterOrgEmail: 'test@example.com',
+        },
+        Report: {
+          ReportType: 'Spam',
+          Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.1',
+        },
+      };
+
+      expect(() => convertV3toV4(v3Report)).toThrow('missing protocol for messaging type');
+    });
+
+    it('should throw when connection report has no protocol', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Test Org',
+          ReporterOrgEmail: 'test@example.com',
+        },
+        Report: {
+          ReportType: 'DDoS',
+          Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.1',
+        },
+      };
+
+      expect(() => convertV3toV4(v3Report)).toThrow('missing protocol for connection type');
+    });
+  });
+
+  describe('Missing URL Handling', () => {
+    it('should throw when content report has no URL', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Test Org',
+          ReporterOrgEmail: 'test@example.com',
+        },
+        Report: {
+          ReportType: 'Phishing',
+          Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.100',
+        },
+      };
+
+      expect(() => convertV3toV4(v3Report)).toThrow('missing URL for content type');
     });
   });
 });
@@ -452,6 +600,7 @@ describe('XARFParser v3 Integration', () => {
         ReportType: 'Spam',
         Date: '2024-01-15T10:00:00Z',
         SourceIp: '192.0.2.1',
+        Protocol: 'smtp',
       },
     };
 

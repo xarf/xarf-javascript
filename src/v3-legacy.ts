@@ -27,6 +27,7 @@ export interface XARFv3Source {
   IP?: string;
   Port?: number;
   Type?: string;
+  URL?: string;
 }
 
 /**
@@ -109,20 +110,27 @@ export function isXARFv3(data: Record<string, unknown>): boolean {
 /**
  * Convert v3 evidence/attachment to v4 format
  * @param v3Attachments - Array of XARF v3 attachment objects
+ * @param warnings - Optional array to collect conversion warnings
  * @returns Array of XARF v4 evidence objects, or undefined if no attachments
  */
-function convertEvidence(v3Attachments?: XARFv3Attachment[]): XARFEvidence[] | undefined {
+function convertEvidence(
+  v3Attachments?: XARFv3Attachment[],
+  warnings?: string[]
+): XARFEvidence[] | undefined {
   if (!v3Attachments || v3Attachments.length === 0) {
     return undefined;
   }
 
   return v3Attachments.map((attachment) => {
+    if (!attachment.Description) {
+      warnings?.push('Evidence attachment has no description, omitting field');
+    }
     const hashValue = createHash('sha256')
       .update(Buffer.from(attachment.Data, 'base64'))
       .digest('hex');
     return {
       content_type: attachment.ContentType,
-      description: attachment.Description || 'Evidence from v3 report',
+      ...(attachment.Description ? { description: attachment.Description } : {}),
       payload: attachment.Data,
       hash: `sha256:${hashValue}`,
       size: Buffer.from(attachment.Data, 'base64').length,
@@ -156,34 +164,57 @@ export function convertV3toV4(v3Report: XARFv3Report, warnings?: string[]): XARF
 /**
  * Extract source identifier from v3 report
  * @param report - V3 report data
- * @param warnings - Optional warnings array
  * @returns Source identifier string
  */
-function extractSourceIdentifier(report: XARFv3Report['Report'], warnings?: string[]): string {
+function extractSourceIdentifier(report: XARFv3Report['Report']): string {
   if (report.Source?.IP) {
     return report.Source.IP;
   }
   if (report.SourceIp) {
     return report.SourceIp;
   }
-  warnings?.push('No source IP found in v3 report, using "unknown" as source_identifier');
-  return 'unknown';
+  if (report.Source?.URL) {
+    return report.Source.URL;
+  }
+  if (report.Url) {
+    return report.Url;
+  }
+  throw new XARFParseError(
+    'Cannot convert v3 report: no source identifier found (expected Source.IP, SourceIp, Source.URL, or Url)'
+  );
 }
 
 /**
  * Extract contact info from v3 reporter info
  * @param reporterInfo - V3 reporter info
+ * @param warnings - Optional array to collect conversion warnings
  * @returns Contact info object
  */
-function extractContactInfo(reporterInfo: XARFv3ReporterInfo): {
+function extractContactInfo(
+  reporterInfo: XARFv3ReporterInfo,
+  warnings?: string[]
+): {
   org: string;
   contact: string;
   domain: string;
 } {
   const contact = reporterInfo.ReporterContactEmail || reporterInfo.ReporterOrgEmail;
-  const domain = contact.split('@')[1] || 'unknown.com';
-  const org = reporterInfo.ReporterOrg || 'Unknown Organization';
-  return { org, contact, domain };
+  if (!contact) {
+    throw new XARFParseError(
+      'Cannot convert v3 report: missing reporter email (ReporterContactEmail and ReporterOrgEmail are both absent)'
+    );
+  }
+  const domain = contact.split('@')[1];
+  if (!domain) {
+    throw new XARFParseError(
+      `Cannot convert v3 report: reporter email '${contact}' is not a valid email address`
+    );
+  }
+  const org = reporterInfo.ReporterOrg;
+  if (!org) {
+    warnings?.push('No ReporterOrg found in v3 report, using "Unknown Organization"');
+  }
+  return { org: org || 'Unknown Organization', contact, domain };
 }
 
 /**
@@ -191,20 +222,18 @@ function extractContactInfo(reporterInfo: XARFv3ReporterInfo): {
  * @param v4Report - V4 report to modify
  * @param category - Report category
  * @param v3Report - Original v3 report
- * @param sourceIdentifier - Source identifier
  */
 function addCategorySpecificFields(
   v4Report: XARFReport,
   category: XARFCategory,
-  v3Report: XARFv3Report['Report'],
-  sourceIdentifier: string
+  v3Report: XARFv3Report['Report']
 ): void {
   if (category === 'messaging') {
     addMessagingFields(v4Report, v3Report);
   } else if (category === 'connection') {
     addConnectionFields(v4Report, v3Report);
   } else if (category === 'content') {
-    addContentFields(v4Report, v3Report, sourceIdentifier);
+    addContentFields(v4Report, v3Report);
   }
 }
 
@@ -214,8 +243,12 @@ function addCategorySpecificFields(
  * @param v3Report - Original v3 report
  */
 function addMessagingFields(v4Report: XARFReport, v3Report: XARFv3Report['Report']): void {
+  const protocol = v3Report.Protocol || (v3Report.AdditionalInfo?.Protocol as string | undefined);
+  if (!protocol) {
+    throw new XARFParseError('Cannot convert v3 report: missing protocol for messaging type');
+  }
   Object.assign(v4Report, {
-    protocol: v3Report.Protocol || v3Report.AdditionalInfo?.Protocol || 'smtp',
+    protocol,
     smtp_from: v3Report.SmtpMailFromAddress || v3Report.AdditionalInfo?.SMTPFrom,
     smtp_to: v3Report.SmtpRcptToAddress,
     subject: v3Report.SmtpMessageSubject || v3Report.AdditionalInfo?.Subject,
@@ -231,9 +264,12 @@ function addMessagingFields(v4Report: XARFReport, v3Report: XARFv3Report['Report
  * @param v3Report - Original v3 report
  */
 function addConnectionFields(v4Report: XARFReport, v3Report: XARFv3Report['Report']): void {
+  if (!v3Report.Protocol) {
+    throw new XARFParseError('Cannot convert v3 report: missing protocol for connection type');
+  }
   Object.assign(v4Report, {
     ...(v3Report.DestinationIp ? { destination_ip: v3Report.DestinationIp } : {}),
-    protocol: v3Report.Protocol || 'tcp',
+    protocol: v3Report.Protocol,
     ...(v3Report.Source?.Port || v3Report.SourcePort
       ? { source_port: v3Report.Source?.Port || v3Report.SourcePort }
       : {}),
@@ -250,16 +286,16 @@ function addConnectionFields(v4Report: XARFReport, v3Report: XARFv3Report['Repor
  * Add content-specific fields to v4 report
  * @param v4Report - V4 report to modify
  * @param v3Report - Original v3 report
- * @param sourceIdentifier - Source identifier for URL fallback
  */
-function addContentFields(
-  v4Report: XARFReport,
-  v3Report: XARFv3Report['Report'],
-  sourceIdentifier: string
-): void {
-  Object.assign(v4Report, {
-    url: v3Report.Url || `http://${sourceIdentifier}`,
-  });
+function addContentFields(v4Report: XARFReport, v3Report: XARFv3Report['Report']): void {
+  const url =
+    v3Report.Url || (v3Report.AdditionalInfo?.URL as string | undefined) || v3Report.Source?.URL;
+  if (!url) {
+    throw new XARFParseError(
+      `Cannot convert v3 report: missing URL for content type '${v4Report.type}'. Content reports require a URL field`
+    );
+  }
+  Object.assign(v4Report, { url });
 }
 
 /**
@@ -279,11 +315,11 @@ function convertWithMapping(
   const report = v3Report.Report;
   const reporterInfo = v3Report.ReporterInfo;
 
-  const sourceIdentifier = extractSourceIdentifier(report, warnings);
+  const sourceIdentifier = extractSourceIdentifier(report);
   // Only set evidence_source if explicitly provided in v3 report - it's optional in v4
   const evidenceSource = report.AdditionalInfo?.DetectionMethod as string | undefined;
-  const evidence = convertEvidence(report.Attachment || report.Samples);
-  const contactInfo = extractContactInfo(reporterInfo);
+  const evidence = convertEvidence(report.Attachment || report.Samples, warnings);
+  const contactInfo = extractContactInfo(reporterInfo, warnings);
 
   const v4Report: XARFReport & { _internal?: Record<string, unknown> } = {
     xarf_version: '4.0.0',
@@ -308,7 +344,7 @@ function convertWithMapping(
     v4Report.evidence_source = evidenceSource as EvidenceSource;
   }
 
-  addCategorySpecificFields(v4Report, mapping.category, report, sourceIdentifier);
+  addCategorySpecificFields(v4Report, mapping.category, report);
 
   return v4Report;
 }
