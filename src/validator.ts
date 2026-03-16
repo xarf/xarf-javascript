@@ -87,7 +87,6 @@ export class XARFValidator {
   private useSchemaValidation: boolean;
   private schemasDir: string;
   private coreSchemaCache: SchemaDefinition | null = null;
-  private typeSchemaCache: Map<string, SchemaDefinition> = new Map();
 
   /**
    * Create a new XARF validator
@@ -119,17 +118,7 @@ export class XARFValidator {
    * @returns Type schema or null
    */
   private getTypeSchema(category: string, type: string): SchemaDefinition | null {
-    const cacheKey = `${category}-${type}`;
-    if (this.typeSchemaCache.has(cacheKey)) {
-      return this.typeSchemaCache.get(cacheKey) || null;
-    }
-
-    const schemaPath = path.join(this.schemasDir, 'types', `${category}-${type}.json`);
-    const schema = loadSchemaFile<SchemaDefinition>(schemaPath);
-    if (schema) {
-      this.typeSchemaCache.set(cacheKey, schema);
-    }
-    return schema;
+    return schemaRegistry.getTypeSchema(category, type);
   }
 
   /**

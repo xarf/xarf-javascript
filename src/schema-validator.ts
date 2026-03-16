@@ -9,6 +9,7 @@ import type { XARFReport } from './types';
 import * as fs from 'fs';
 import * as path from 'path';
 import { findSchemasDir } from './schema-utils';
+import { schemaRegistry } from './schema-registry';
 
 /**
  * Validation result containing status and error details
@@ -572,9 +573,7 @@ export class SchemaValidator {
    * @returns true if the combination has a specific schema
    */
   hasTypeSchema(category: string, type: string): boolean {
-    const schemaFile = `${category}-${type}.json`;
-    const schemaPath = path.join(this.schemasDir, 'types', schemaFile);
-    return fs.existsSync(schemaPath);
+    return schemaRegistry.isValidType(category, type);
   }
 
   /**
@@ -582,27 +581,12 @@ export class SchemaValidator {
    * @returns Array of {category, type} objects
    */
   getSupportedTypes(): Array<{ category: string; type: string }> {
-    const typesDir = path.join(this.schemasDir, 'types');
-
-    if (!fs.existsSync(typesDir)) {
-      return [];
-    }
-
-    const files = fs.readdirSync(typesDir);
     const types: Array<{ category: string; type: string }> = [];
-
-    for (const file of files) {
-      if (file.endsWith('.json') && !file.endsWith('-base.json')) {
-        const match = file.match(/^([^-]+)-(.+)\.json$/);
-        if (match) {
-          types.push({
-            category: match[1],
-            type: match[2],
-          });
-        }
+    for (const category of schemaRegistry.getCategories()) {
+      for (const type of schemaRegistry.getTypesForCategory(category)) {
+        types.push({ category, type });
       }
     }
-
     return types;
   }
 }
