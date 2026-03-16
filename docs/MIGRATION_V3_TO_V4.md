@@ -48,12 +48,16 @@ const report = parser.parse(v3JsonData);
   "reporter": {
     "org": "Security Team",
     "contact": "abuse@example.com",
-    "type": "manual"
+    "domain": "example.com"
+  },
+  "sender": {
+    "org": "Security Team",
+    "contact": "abuse@example.com",
+    "domain": "example.com"
   },
   "source_identifier": "192.0.2.1",
   "category": "messaging",
   "type": "spam",
-  "evidence_source": "manual_analysis",
   "legacy_version": "3",
   "_internal": {
     "original_report_type": "Spam",
@@ -64,18 +68,19 @@ const report = parser.parse(v3JsonData);
 
 ### Field Mappings
 
-| v3 Field                                | v4 Field            | Notes                       |
-| --------------------------------------- | ------------------- | --------------------------- |
-| `Version`                               | `xarf_version`      | Set to "4.0.0"              |
-| N/A                                     | `report_id`         | Auto-generated UUID         |
-| `ReporterInfo.ReporterOrg`              | `reporter.org`      | Direct mapping              |
-| `ReporterInfo.ReporterOrgEmail`         | `reporter.contact`  | Direct mapping              |
-| N/A                                     | `reporter.type`     | Set to "manual" for v3      |
-| `Report.Date`                           | `timestamp`         | Direct mapping              |
-| `Report.SourceIp` or `Report.Source.IP` | `source_identifier` | Uses Source.IP if available |
-| `Report.ReportType`                     | `category` + `type` | Mapped per table below      |
-| `Report.Attachment` or `Report.Samples` | `evidence`          | Structure converted         |
-| N/A                                     | `evidence_source`   | Default: "manual_analysis"  |
+| v3 Field                                | v4 Field            | Notes                                             |
+| --------------------------------------- | ------------------- | ------------------------------------------------- |
+| `Version`                               | `xarf_version`      | Set to "4.0.0"                                    |
+| N/A                                     | `report_id`         | Auto-generated UUID                               |
+| `ReporterInfo.ReporterOrg`              | `reporter.org`      | Direct mapping                                    |
+| `ReporterInfo.ReporterOrgEmail`         | `reporter.contact`  | Direct mapping                                    |
+| `ReporterInfo.ReporterOrgEmail`         | `reporter.domain`   | Extracted from email domain part                  |
+| N/A                                     | `sender`            | Set to same values as `reporter`                  |
+| `Report.Date`                           | `timestamp`         | Direct mapping                                    |
+| `Report.SourceIp` or `Report.Source.IP` | `source_identifier` | Priority: Source.IP > SourceIp > Source.URL > Url |
+| `Report.ReportType`                     | `category` + `type` | Mapped per table below                            |
+| `Report.Attachment` or `Report.Samples` | `evidence`          | Structure converted, hash and size added          |
+| `Report.AdditionalInfo.DetectionMethod` | `evidence_source`   | Only set if explicitly provided in v3             |
 
 ### Report Type Mappings
 
@@ -89,9 +94,8 @@ const report = parser.parse(v3JsonData);
 | `Malware`      | `content`        | `malware`      |
 | `Botnet`       | `infrastructure` | `botnet`       |
 | `Copyright`    | `copyright`      | `copyright`    |
-| Unknown types  | `content`        | `unclassified` |
 
-**Note**: XARF v4 has exactly 7 categories. Unknown v3 report types are mapped to the `content` category with type `unclassified`.
+**Note**: Unknown v3 report types are not silently converted — they cause a parse error listing the supported types. Only the 8 types above are supported.
 
 ## Deprecation Warnings
 
@@ -150,11 +154,9 @@ function trackLegacyUsage(jsonData: unknown) {
 Update your report generators to produce v4 format:
 
 ```typescript
-import { XARFGenerator } from 'xarf';
-
 const generator = new XARFGenerator();
 
-const report = generator.generateReport({
+const report = generator.createReport({
   category: 'messaging',
   type: 'spam',
   source_identifier: '192.0.2.100',
@@ -177,7 +179,7 @@ const report = generator.generateReport({
 Test your v3 reports with the converter:
 
 ```typescript
-import { convertV3toV4, isXARFv3 } from 'xarf';
+import { convertV3toV4, isXARFv3, SPEC_VERSION } from 'xarf';
 
 describe('v3 Migration', () => {
   it('should convert our v3 reports', () => {
@@ -188,7 +190,7 @@ describe('v3 Migration', () => {
     const warnings: string[] = [];
     const v4Report = convertV3toV4(v3Report, warnings);
 
-    expect(v4Report.xarf_version).toBe('4.0.0');
+    expect(v4Report.xarf_version).toBe(SPEC_VERSION);
     expect(v4Report.category).toBeDefined();
     expect(v4Report.type).toBeDefined();
 
@@ -201,11 +203,12 @@ describe('v3 Migration', () => {
 ## Breaking Changes from v3
 
 1. **Required Fields**: v4 requires `report_id` (UUID) - auto-generated during conversion
-2. **Reporter Type**: v4 requires `reporter.type` - defaults to "manual" for v3 conversions
-3. **Evidence Source**: v4 requires `evidence_source` - defaults to "manual_analysis" for v3
+2. **Reporter Domain**: v4 requires `reporter.domain` - extracted from the reporter email address
+3. **Sender Field**: v4 requires a `sender` object - set to the same values as `reporter` during conversion
 4. **Category System**: v3's single `ReportType` becomes `category` + `type` in v4
 5. **Timestamp Format**: Both use ISO 8601, but v4 is more strict
-6. **Evidence Structure**: v3's `Attachment`/`Samples` becomes structured `evidence` array
+6. **Evidence Structure**: v3's `Attachment`/`Samples` becomes structured `evidence` array with computed `hash` (SHA256) and `size` fields
+7. **Evidence Source**: v4's `evidence_source` is only set if `AdditionalInfo.DetectionMethod` is present in the v3 report — it is not defaulted
 
 ## Unsupported v3 Features
 
@@ -231,10 +234,3 @@ v4Report._internal = {
 - Check the [XARF v4 Specification](https://xarf.org)
 - Review [API Documentation](https://github.com/xarf/xarf-javascript)
 - Open an [Issue](https://github.com/xarf/xarf-javascript/issues)
-
-## Timeline
-
-- **Phase 1 (Current)**: Full v3 support with automatic conversion
-- **Phase 2 (6 months)**: v3 support maintained, deprecation warnings
-- **Phase 3 (12 months)**: Advanced notice of v3 support removal
-- **Phase 4 (18 months)**: v3 support removed in next major version
