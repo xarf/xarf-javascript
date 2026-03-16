@@ -212,7 +212,9 @@ function addMessagingFields(v4Report: XARFReport, v3Report: XARFv3Report['Report
     smtp_from: v3Report.SmtpMailFromAddress || v3Report.AdditionalInfo?.SMTPFrom,
     smtp_to: v3Report.SmtpRcptToAddress,
     subject: v3Report.SmtpMessageSubject || v3Report.AdditionalInfo?.Subject,
-    source_port: v3Report.Source?.Port || v3Report.SourcePort,
+    ...(v3Report.Source?.Port || v3Report.SourcePort
+      ? { source_port: v3Report.Source?.Port || v3Report.SourcePort }
+      : {}),
   });
 }
 
