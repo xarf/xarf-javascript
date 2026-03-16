@@ -28,19 +28,67 @@ export { SchemaValidator, validator } from './schema-validator';
 export { SchemaRegistry, schemaRegistry, type FieldMetadata } from './schema-registry';
 export { XARFError, XARFValidationError, XARFParseError, XARFSchemaError } from './errors';
 export type {
+  // Core types
   XARFReport,
   XARFCategory,
   EvidenceSource,
   XARFEvidence,
   ContactInfo,
-  MessagingReport,
-  ConnectionReport,
-  ContentReport,
-  InfrastructureReport,
-  CopyrightReport,
-  VulnerabilityReport,
-  ReputationReport,
   AnyXARFReport,
+  // Messaging
+  MessagingBaseReport,
+  SpamReport,
+  BulkMessagingReport,
+  MessagingReport,
+  // Connection
+  ConnectionBaseReport,
+  LoginAttackReport,
+  PortScanReport,
+  DdosReport,
+  InfectedHostReport,
+  ReconnaissanceReport,
+  ScrapingReport,
+  SqlInjectionReport,
+  VulnerabilityScanReport,
+  ConnectionReport,
+  // Content
+  ContentBaseReport,
+  PhishingReport,
+  MalwareReport,
+  CsamReport,
+  CsemReport,
+  ExposedDataReport,
+  BrandInfringementReport,
+  FraudReport,
+  RemoteCompromiseReport,
+  SuspiciousRegistrationReport,
+  ContentReport,
+  // Infrastructure
+  InfrastructureBaseReport,
+  BotnetReport,
+  CompromisedServerReport,
+  InfrastructureReport,
+  // Copyright
+  CopyrightBaseReport,
+  CopyrightCopyrightReport,
+  SwarmInfo,
+  CopyrightP2pReport,
+  CopyrightCyberlockerReport,
+  CopyrightUgcPlatformReport,
+  CopyrightLinkSiteReport,
+  CopyrightUsenetReport,
+  CopyrightReport,
+  // Vulnerability
+  VulnerabilityBaseReport,
+  CveReport,
+  OpenServiceReport,
+  MisconfigurationReport,
+  VulnerabilityReport,
+  // Reputation
+  ReputationBaseReport,
+  BlocklistReport,
+  ThreatIntelligenceReport,
+  ReputationReport,
 } from './types';
 
 export {

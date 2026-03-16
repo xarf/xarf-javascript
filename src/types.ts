@@ -143,6 +143,7 @@ export type {
 export type {
   CopyrightBaseReport,
   CopyrightCopyrightReport,
+  SwarmInfo,
   CopyrightP2pReport,
   CopyrightCyberlockerReport,
   CopyrightUgcPlatformReport,
