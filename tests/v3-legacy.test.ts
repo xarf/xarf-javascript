@@ -303,6 +303,7 @@ describe('XARFv3 Conversion', () => {
       expect(v4Report.evidence?.[0].content_type).toBe('message/rfc822');
       expect(v4Report.evidence?.[0].payload).toBe('base64encodeddata');
       expect(v4Report.evidence?.[0].description).toBe('Original email');
+      expect(v4Report.evidence?.[0].size).toBe(Buffer.from('base64encodeddata', 'base64').length);
     });
 
     it('should convert v3 Samples to v4 evidence', () => {

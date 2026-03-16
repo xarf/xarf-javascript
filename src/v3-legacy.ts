@@ -125,6 +125,7 @@ function convertEvidence(v3Attachments?: XARFv3Attachment[]): XARFEvidence[] | u
       description: attachment.Description || 'Evidence from v3 report',
       payload: attachment.Data,
       hash: `sha256:${hashValue}`,
+      size: Buffer.from(attachment.Data, 'base64').length,
     };
   });
 }
