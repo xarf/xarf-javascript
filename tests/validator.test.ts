@@ -377,6 +377,35 @@ describe('XARFValidator', () => {
       expect(descriptionInfo!.message).toContain('OPTIONAL');
     });
 
+    it('should include optional fields from content-base.json via $ref', () => {
+      const report = {
+        xarf_version: '4.0.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        sender: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        source_identifier: '192.0.2.1',
+        category: 'content',
+        type: 'phishing',
+        url: 'https://phishing.example.com/login',
+        confidence: 0.95,
+        evidence: [{ content_type: 'text/plain', payload: 'dGVzdA==', description: 'test' }],
+        verified_at: '2024-01-15T10:30:00Z',
+        verification_method: 'manual',
+        target_brand: 'TestBrand',
+        domain: 'phishing.example.com',
+      } as XARFReport;
+
+      const result = validator.validate(report, false, true);
+
+      expect(result.info).toBeDefined();
+      const infoFields = result.info!.map((i) => i.field);
+      // These fields come from content-base.json, resolved via $ref
+      expect(infoFields).toContain('registrar');
+      expect(infoFields).toContain('hosting_provider');
+      expect(infoFields).toContain('country_code');
+    });
+
     it('should mark recommended fields appropriately', () => {
       const report = createValidReport();
 

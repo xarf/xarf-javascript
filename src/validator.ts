@@ -143,6 +143,19 @@ export class XARFValidator {
   }
 
   /**
+   * Resolve a $ref to a base schema file (e.g. "./content-base.json")
+   * @param ref - Schema $ref string
+   * @returns Resolved schema or null
+   */
+  private resolveBaseRef(ref: string): SchemaDefinition | null {
+    if (!ref.includes('-base.json')) {
+      return null;
+    }
+    const filename = ref.replace(/^\.\//, '').replace(/^\.\.\//, '');
+    return loadSchemaFile<SchemaDefinition>(path.join(this.schemasDir, 'types', filename));
+  }
+
+  /**
    * Extract optional fields from a schema
    * @param schema - Schema definition
    * @returns Map of field name to description
@@ -158,9 +171,13 @@ export class XARFValidator {
     // Handle allOf for type schemas
     if (schema.allOf) {
       for (const subSchema of schema.allOf) {
-        if (subSchema.properties) {
-          const subRequired = new Set([...required, ...(subSchema.required || [])]);
-          this.extractFromProperties(subSchema.properties, subRequired, optionalFields);
+        // Follow $ref to base schemas (e.g. content-base.json)
+        const resolved = subSchema.$ref ? this.resolveBaseRef(subSchema.$ref as string) : subSchema;
+        if (resolved) {
+          const subOptional = this.extractOptionalFields(resolved);
+          for (const [field, info] of subOptional) {
+            optionalFields.set(field, info);
+          }
         }
       }
     }
