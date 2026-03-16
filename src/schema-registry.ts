@@ -129,7 +129,8 @@ export class SchemaRegistry {
             const schemaPath = path.join(typesDir, file);
             const schema = loadSchemaFile<SchemaDefinition>(schemaPath);
             if (schema) {
-              this.typeSchemas.set(`${match[1]}/${match[2]}`, schema);
+              const normalizedType = match[2].replace(/-/g, '_');
+              this.typeSchemas.set(`${match[1]}/${normalizedType}`, schema);
             }
           }
         }
@@ -194,9 +195,7 @@ export class SchemaRegistry {
       if (!this.typesPerCategoryCache.has(category)) {
         this.typesPerCategoryCache.set(category, new Set());
       }
-      // Convert filename format (e.g., "bulk-messaging") to schema format (e.g., "bulk_messaging")
-      const normalizedType = type.replace(/-/g, '_');
-      this.typesPerCategoryCache.get(category)!.add(normalizedType);
+      this.typesPerCategoryCache.get(category)!.add(type);
     }
   }
 
@@ -253,20 +252,8 @@ export class SchemaRegistry {
    * @returns Schema definition or null
    */
   getTypeSchema(category: string, type: string): SchemaDefinition | null {
-    // Try exact match first
-    const exactKey = `${category}/${type}`;
-    if (this.typeSchemas.has(exactKey)) {
-      return this.typeSchemas.get(exactKey) || null;
-    }
-
-    // Try with underscores converted to hyphens (filename format)
-    const hyphenatedType = type.replace(/_/g, '-');
-    const hyphenKey = `${category}/${hyphenatedType}`;
-    if (this.typeSchemas.has(hyphenKey)) {
-      return this.typeSchemas.get(hyphenKey) || null;
-    }
-
-    return null;
+    const key = `${category}/${type}`;
+    return this.typeSchemas.get(key) || null;
   }
 
   /**
