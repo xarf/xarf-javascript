@@ -35,15 +35,36 @@ export interface SwarmInfo {
 }
 
 /**
+ * P2P peer information
+ */
+export interface PeerInfo {
+  peer_id?: string;
+  client_version?: string;
+  upload_amount?: number;
+  download_amount?: number;
+}
+
+/**
  * Copyright - P2P
  */
 export interface CopyrightP2pReport extends CopyrightBaseReport {
   type: 'p2p';
   p2p_protocol: string;
   detection_method?: string;
-  peer_info?: Record<string, unknown>;
+  peer_info?: PeerInfo;
   release_date?: string;
   swarm_info: SwarmInfo;
+}
+
+/**
+ * Cyberlocker file information
+ */
+export interface FileInfo {
+  filename?: string;
+  file_size?: number;
+  file_hash?: string;
+  upload_date?: string;
+  download_count?: number;
 }
 
 /**
@@ -54,7 +75,7 @@ export interface CopyrightCyberlockerReport extends CopyrightBaseReport {
   hosting_service: string;
   infringing_url: string;
   access_method?: string;
-  file_info?: Record<string, unknown>;
+  file_info?: FileInfo;
   takedown_info?: Record<string, unknown>;
   uploader_info?: Record<string, unknown>;
 }

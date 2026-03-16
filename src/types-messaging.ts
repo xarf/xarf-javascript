@@ -15,6 +15,15 @@ export interface MessagingBaseReport extends XARFReport {
 }
 
 /**
+ * Spam analysis indicators
+ */
+export interface SpamIndicators {
+  suspicious_links?: string[];
+  commercial_content?: boolean;
+  bulk_characteristics?: boolean;
+}
+
+/**
  * Messaging - Spam
  */
 export interface SpamReport extends MessagingBaseReport {
@@ -23,8 +32,17 @@ export interface SpamReport extends MessagingBaseReport {
   message_id?: string;
   recipient_count?: number;
   smtp_to?: string;
-  spam_indicators?: Record<string, unknown>;
+  spam_indicators?: SpamIndicators;
   user_agent?: string;
+}
+
+/**
+ * Bulk messaging indicators
+ */
+export interface BulkIndicators {
+  high_volume?: boolean;
+  template_based?: boolean;
+  commercial_sender?: boolean;
 }
 
 /**
@@ -33,7 +51,7 @@ export interface SpamReport extends MessagingBaseReport {
 export interface BulkMessagingReport extends MessagingBaseReport {
   type: 'bulk_messaging';
   recipient_count: number;
-  bulk_indicators?: Record<string, unknown>;
+  bulk_indicators?: BulkIndicators;
   opt_in_evidence?: boolean;
   unsubscribe_provided?: boolean;
 }

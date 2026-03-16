@@ -98,16 +98,59 @@ export interface FraudReport extends ContentBaseReport {
 }
 
 /**
+ * Compromise indicator entry
+ */
+export interface CompromiseIndicator {
+  type:
+    | 'file_path'
+    | 'process'
+    | 'network_connection'
+    | 'user_account'
+    | 'scheduled_task'
+    | 'registry_key'
+    | 'service';
+  value: string;
+  description?: string;
+}
+
+/**
+ * Webshell details
+ */
+export interface WebshellDetails {
+  family?: string;
+  capabilities?: Array<
+    | 'file_manager'
+    | 'command_execution'
+    | 'database_access'
+    | 'network_scanning'
+    | 'privilege_escalation'
+    | 'persistence'
+    | 'other'
+  >;
+  password_protected?: boolean;
+}
+
+/**
  * Content - Remote Compromise
  */
 export interface RemoteCompromiseReport extends ContentBaseReport {
   type: 'remote_compromise';
   compromise_type: string;
   affected_cms?: string;
-  compromise_indicators?: Array<Record<string, unknown>>;
+  compromise_indicators?: CompromiseIndicator[];
   malicious_activities?: string[];
   persistence_mechanisms?: string[];
-  webshell_details?: Record<string, unknown>;
+  webshell_details?: WebshellDetails;
+}
+
+/**
+ * Suspicious domain registrant details
+ */
+export interface RegistrantDetails {
+  email_domain?: string;
+  country?: string;
+  privacy_protected?: boolean;
+  bulk_registrations?: number;
 }
 
 /**
@@ -119,7 +162,7 @@ export interface SuspiciousRegistrationReport extends ContentBaseReport {
   suspicious_indicators: string[];
   days_since_registration?: number;
   predicted_usage?: string[];
-  registrant_details?: Record<string, unknown>;
+  registrant_details?: RegistrantDetails;
   risk_score?: number;
   targeted_brands?: string[];
 }

@@ -101,7 +101,9 @@ import { ReputationReport } from './types-reputation';
 
 export type {
   MessagingBaseReport,
+  SpamIndicators,
   SpamReport,
+  BulkIndicators,
   BulkMessagingReport,
   MessagingReport,
 } from './types-messaging';
@@ -128,7 +130,10 @@ export type {
   ExposedDataReport,
   BrandInfringementReport,
   FraudReport,
+  CompromiseIndicator,
+  WebshellDetails,
   RemoteCompromiseReport,
+  RegistrantDetails,
   SuspiciousRegistrationReport,
   ContentReport,
 } from './types-content';
@@ -144,7 +149,9 @@ export type {
   CopyrightBaseReport,
   CopyrightCopyrightReport,
   SwarmInfo,
+  PeerInfo,
   CopyrightP2pReport,
+  FileInfo,
   MessageInfo,
   CopyrightCyberlockerReport,
   CopyrightUgcPlatformReport,
@@ -155,6 +162,7 @@ export type {
 
 export type {
   VulnerabilityBaseReport,
+  ImpactAssessment,
   CveReport,
   OpenServiceReport,
   MisconfigurationReport,

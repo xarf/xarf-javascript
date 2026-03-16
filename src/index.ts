@@ -37,7 +37,9 @@ export type {
   AnyXARFReport,
   // Messaging
   MessagingBaseReport,
+  SpamIndicators,
   SpamReport,
+  BulkIndicators,
   BulkMessagingReport,
   MessagingReport,
   // Connection
@@ -60,7 +62,10 @@ export type {
   ExposedDataReport,
   BrandInfringementReport,
   FraudReport,
+  CompromiseIndicator,
+  WebshellDetails,
   RemoteCompromiseReport,
+  RegistrantDetails,
   SuspiciousRegistrationReport,
   ContentReport,
   // Infrastructure
@@ -72,7 +77,9 @@ export type {
   CopyrightBaseReport,
   CopyrightCopyrightReport,
   SwarmInfo,
+  PeerInfo,
   CopyrightP2pReport,
+  FileInfo,
   MessageInfo,
   CopyrightCyberlockerReport,
   CopyrightUgcPlatformReport,
@@ -81,6 +88,7 @@ export type {
   CopyrightReport,
   // Vulnerability
   VulnerabilityBaseReport,
+  ImpactAssessment,
   CveReport,
   OpenServiceReport,
   MisconfigurationReport,
