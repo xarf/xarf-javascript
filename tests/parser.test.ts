@@ -7,7 +7,7 @@ import { XARFParseError } from '../src/errors';
 import type { MessagingReport, ConnectionReport, ContentReport } from '../src/types';
 
 const validMessagingReport = {
-  xarf_version: '4.0.0',
+  xarf_version: '4.2.0',
   report_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   timestamp: '2024-01-15T10:30:00Z',
   reporter: {
@@ -31,7 +31,7 @@ const validMessagingReport = {
 };
 
 const validConnectionReport = {
-  xarf_version: '4.0.0',
+  xarf_version: '4.2.0',
   report_id: 'b2c3d4e5-f6a7-8901-bcde-f1234567890a',
   timestamp: '2024-01-15T11:00:00Z',
   reporter: {
@@ -55,7 +55,7 @@ const validConnectionReport = {
 };
 
 const validContentReport = {
-  xarf_version: '4.0.0',
+  xarf_version: '4.2.0',
   report_id: 'c3d4e5f6-a7b8-9012-cdef-234567890abc',
   timestamp: '2024-01-15T12:00:00Z',
   reporter: {
@@ -152,7 +152,7 @@ describe('parse', () => {
     });
 
     it('should return errors for missing required fields', () => {
-      const { errors } = parse({ xarf_version: '4.0.0' });
+      const { errors } = parse({ xarf_version: '4.2.0' });
 
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some((e) => e.includes('required'))).toBe(true);
@@ -199,7 +199,7 @@ describe('parse', () => {
     });
 
     it('should return errors in strict mode for missing fields', () => {
-      const { errors } = parse({ xarf_version: '4.0.0' }, { strict: true });
+      const { errors } = parse({ xarf_version: '4.2.0' }, { strict: true });
 
       expect(errors.length).toBeGreaterThan(0);
     });

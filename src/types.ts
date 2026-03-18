@@ -3,7 +3,7 @@
  */
 
 /**
- * Valid XARF categories (7 total as per XARF v4.0.0 specification)
+ * Valid XARF categories (7 total as per XARF v4.2.0 specification)
  */
 export type XARFCategory =
   | 'messaging'

@@ -50,17 +50,20 @@ We actively welcome pull requests! Here's how to contribute:
 ### Getting Started
 
 1. **Clone your fork:**
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/xarf-javascript.git
    cd xarf-javascript
    ```
 
 2. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 3. **Build the project:**
+
    ```bash
    npm run build
    ```
@@ -86,7 +89,7 @@ We actively welcome pull requests! Here's how to contribute:
 
 All contributions must maintain or improve test coverage:
 
-- **Minimum coverage**: 80% for all code
+- **Coverage thresholds** are enforced by Jest — see [jest.config.js](jest.config.js) for current values
 - **Unit tests**: Required for all new functions and classes
 - **Integration tests**: Required for parser and generator functionality
 - **Test file location**: Tests should be in the `tests/` directory
@@ -95,17 +98,9 @@ All contributions must maintain or improve test coverage:
 ### Running Tests
 
 ```bash
-# Run all tests
-npm test
-
-# Run tests in watch mode during development
-npm run test:watch
-
-# Generate coverage report
-npm run test:coverage
-
-# View coverage report
-open coverage/lcov-report/index.html
+npm test                  # Run all tests
+npm run test:watch        # Run tests in watch mode during development
+npm run test:coverage     # Generate coverage report
 ```
 
 ### Writing Tests
@@ -113,26 +108,25 @@ open coverage/lcov-report/index.html
 We use Jest for testing. Example test structure:
 
 ```typescript
-import { XarfParser } from '../src/parser';
+import { parse } from '../src/parser';
 
-describe('XarfParser', () => {
-  describe('parse', () => {
-    it('should parse a valid XARF report', () => {
-      const input = {
-        // ... valid XARF data
-      };
+describe('parse', () => {
+  it('should parse a valid XARF report', () => {
+    const input = {
+      // ... valid XARF data
+    };
 
-      const result = XarfParser.parse(input);
+    const { report, errors } = parse(input);
 
-      expect(result.version).toBe('4.0');
-      expect(result.reportType).toBeDefined();
-    });
+    expect(errors).toHaveLength(0);
+    expect(report.category).toBeDefined();
+    expect(report.type).toBeDefined();
+  });
 
-    it('should throw an error for invalid data', () => {
-      expect(() => {
-        XarfParser.parse({});
-      }).toThrow();
-    });
+  it('should return errors for invalid data', () => {
+    const { errors } = parse({});
+
+    expect(errors.length).toBeGreaterThan(0);
   });
 });
 ```
@@ -142,48 +136,38 @@ describe('XarfParser', () => {
 ### TypeScript Standards
 
 - **Language version**: TypeScript 5.3+
-- **Target**: ES2020 or higher
-- **Module system**: ES Modules
-- **Strict mode**: Enabled (`strict: true` in tsconfig.json)
+- **Target**: ES2020
+- **Module system**: CommonJS
+- **Strict mode**: Enabled
+
+See [tsconfig.json](tsconfig.json) for the full compiler configuration.
 
 ### Naming Conventions
 
-- **Classes**: PascalCase (e.g., `XarfParser`, `XarfValidator`)
-- **Functions/Methods**: camelCase (e.g., `parseReport`, `validateSchema`)
-- **Constants**: UPPER_SNAKE_CASE (e.g., `DEFAULT_VERSION`, `MAX_RETRIES`)
-- **Interfaces**: PascalCase with descriptive names (e.g., `XarfReport`, `ParserOptions`)
-- **Type aliases**: PascalCase (e.g., `ReportType`, `Severity`)
+- **Functions**: camelCase (e.g., `parse`, `createReport`, `createEvidence`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `SPEC_VERSION`)
+- **Interfaces/Types**: PascalCase with descriptive names (e.g., `ParseResult`, `XARFReport`, `ReportInput`)
+- **Type aliases**: PascalCase (e.g., `ReportInput`, `ConnectionReportInput`)
 
 ### Code Organization
 
-- **One class per file** for main components
+- **One module per file** for main components
 - **Related types** can be grouped in a single file
 - **Export from index.ts** for public API
 - **Use barrel exports** for cleaner imports
 
-### Formatting
+### Formatting and Linting
 
-We use Prettier for code formatting with the following configuration:
+We use Prettier for formatting and ESLint with TypeScript support for linting. Configuration lives in [.prettierrc](.prettierrc) and [.eslintrc.json](.eslintrc.json).
 
-- **Single quotes** for strings
-- **2 spaces** for indentation
-- **No semicolons** (unless required)
-- **Trailing commas** in multi-line structures
-- **100 character** line length limit
+```bash
+npm run format:check      # Check formatting
+npm run format            # Auto-format
+npm run lint              # Check linting
+npm run lint:fix          # Auto-fix linting issues
+```
 
-Run `npm run format` before committing to ensure consistent formatting.
-
-### Linting
-
-We use ESLint with TypeScript support. Key rules:
-
-- **No unused variables** or imports
-- **Explicit return types** for public functions
-- **Prefer const** over let when variables aren't reassigned
-- **No `any` types** without justification (use `unknown` or specific types)
-- **Consistent error handling** with proper error types
-
-Run `npm run lint` to check for issues and `npm run lint:fix` to auto-fix when possible.
+A pre-commit hook (via Husky + lint-staged) runs both automatically on staged files.
 
 ### Documentation
 
@@ -191,34 +175,6 @@ Run `npm run lint` to check for issues and `npm run lint:fix` to auto-fix when p
 - **Type annotations** on all parameters and return values
 - **Inline comments** for complex logic
 - **README updates** for new features
-
-Example JSDoc:
-
-```typescript
-/**
- * Parse a XARF report from a JSON object or string
- *
- * @param input - The XARF report data as object or JSON string
- * @param options - Optional parser configuration
- * @returns Parsed and validated XARF report
- * @throws {XarfParseError} If the input is invalid or malformed
- *
- * @example
- * ```typescript
- * const report = XarfParser.parse({
- *   version: '4.0',
- *   reportType: 'abuse',
- *   // ... other fields
- * });
- * ```
- */
-export function parse(
-  input: string | object,
-  options?: ParserOptions
-): XarfReport {
-  // Implementation
-}
-```
 
 ## Commit Message Conventions
 

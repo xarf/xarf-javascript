@@ -9,12 +9,14 @@ XARF v4 introduces a category-based architecture that improves upon the v3 forma
 The library automatically detects and converts v3 reports to v4 format:
 
 ```typescript
-import { XARFParser } from 'xarf';
+import { parse } from 'xarf';
 
-const parser = new XARFParser();
-
-// v3 report is automatically converted
-const report = parser.parse(v3JsonData);
+// v3 report is automatically detected and converted
+const { report, warnings } = parse(v3JsonData);
+// warnings includes:
+//   "DEPRECATION WARNING: XARF v3 format detected. The v3 format has been
+//    automatically converted to v4. Please update your systems to generate
+//    v4 reports directly. v3 support will be removed in a future major version."
 ```
 
 ## What Changes
@@ -42,7 +44,7 @@ const report = parser.parse(v3JsonData);
 
 ```json
 {
-  "xarf_version": "4.0.0",
+  "xarf_version": "4.2.0",
   "report_id": "auto-generated-uuid",
   "timestamp": "2024-01-15T10:00:00Z",
   "reporter": {
@@ -70,7 +72,7 @@ const report = parser.parse(v3JsonData);
 
 | v3 Field                                | v4 Field            | Notes                                             |
 | --------------------------------------- | ------------------- | ------------------------------------------------- |
-| `Version`                               | `xarf_version`      | Set to "4.0.0"                                    |
+| `Version`                               | `xarf_version`      | Set to "4.2.0"                                    |
 | N/A                                     | `report_id`         | Auto-generated UUID                               |
 | `ReporterInfo.ReporterOrg`              | `reporter.org`      | Direct mapping                                    |
 | `ReporterInfo.ReporterOrgEmail`         | `reporter.contact`  | Direct mapping                                    |
@@ -102,10 +104,10 @@ const report = parser.parse(v3JsonData);
 When parsing v3 reports, you'll receive deprecation warnings:
 
 ```typescript
-const parser = new XARFParser();
-const report = parser.parse(v3Report);
+import { parse } from 'xarf';
 
-const warnings = parser.getWarnings();
+const { report, warnings } = parse(v3Report);
+// warnings includes:
 // [
 //   "DEPRECATION WARNING: XARF v3 format detected. The v3 format has been automatically converted to v4. Please update your systems to generate v4 reports directly. v3 support will be removed in a future major version.",
 //   ...conversion warnings...
@@ -119,10 +121,10 @@ const warnings = parser.getWarnings();
 Use the library's automatic conversion:
 
 ```typescript
-const parser = new XARFParser();
+import { parse } from 'xarf';
 
-function processReport(jsonData: unknown) {
-  const report = parser.parse(jsonData);
+function processReport(jsonData: string | Record<string, unknown>) {
+  const { report } = parse(jsonData);
 
   if (report.legacy_version === '3') {
     console.log('Received v3 report - consider upgrading sender');
@@ -138,9 +140,10 @@ function processReport(jsonData: unknown) {
 Track v3 report usage to plan deprecation:
 
 ```typescript
-function trackLegacyUsage(jsonData: unknown) {
-  const parser = new XARFParser();
-  const report = parser.parse(jsonData);
+import { parse } from 'xarf';
+
+function trackLegacyUsage(jsonData: string | Record<string, unknown>) {
+  const { report } = parse(jsonData);
 
   if (report.legacy_version === '3') {
     metrics.increment('xarf.v3.reports');
@@ -154,9 +157,9 @@ function trackLegacyUsage(jsonData: unknown) {
 Update your report generators to produce v4 format:
 
 ```typescript
-const generator = new XARFGenerator();
+import { createReport } from 'xarf';
 
-const report = generator.createReport({
+const { report } = createReport({
   category: 'messaging',
   type: 'spam',
   source_identifier: '192.0.2.100',
@@ -171,32 +174,6 @@ const report = generator.createReport({
     domain: 'example.com',
   },
   // ... additional fields
-});
-```
-
-## Testing Migration
-
-Test your v3 reports with the converter:
-
-```typescript
-import { convertV3toV4, isXARFv3, SPEC_VERSION } from 'xarf';
-
-describe('v3 Migration', () => {
-  it('should convert our v3 reports', () => {
-    const v3Report = loadLegacyReport();
-
-    expect(isXARFv3(v3Report)).toBe(true);
-
-    const warnings: string[] = [];
-    const v4Report = convertV3toV4(v3Report, warnings);
-
-    expect(v4Report.xarf_version).toBe(SPEC_VERSION);
-    expect(v4Report.category).toBeDefined();
-    expect(v4Report.type).toBeDefined();
-
-    // Review any conversion warnings
-    warnings.forEach((warning) => console.log(warning));
-  });
 });
 ```
 

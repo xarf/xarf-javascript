@@ -2,7 +2,8 @@
  * Tests for XARF Generator
  */
 
-import { createReport, createEvidence, SPEC_VERSION } from '../src/generator';
+import { createReport, createEvidence } from '../src/generator';
+import { SPEC_VERSION } from '../src/version';
 
 const baseInput = {
   reporter: {

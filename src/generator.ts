@@ -1,7 +1,7 @@
 /**
  * XARF Report Generator
  *
- * Generates XARF v4.0.0 compliant reports with automatic metadata,
+ * Generates XARF v4.2.0 compliant reports with automatic metadata,
  * validation, and type safety derived from parser types.
  */
 
@@ -19,6 +19,7 @@ import type {
   ReputationReport,
 } from './types';
 import type { ValidationError, ValidationWarning, ValidationInfo } from './validator';
+import { SPEC_VERSION } from './version';
 
 /**
  * A bit of Typescprit magic to derive the generator options from a report
@@ -88,8 +89,6 @@ export interface EvidenceOptions {
   description?: string;
   hashAlgorithm?: 'sha256' | 'sha512' | 'sha1' | 'md5';
 }
-
-export const SPEC_VERSION = '4.0.0';
 
 const validator = new XARFValidator();
 

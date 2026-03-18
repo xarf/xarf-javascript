@@ -42,7 +42,7 @@ describe('XARFv3 Detection', () => {
 
   it('should not detect v4 report as v3', () => {
     const v4Report = {
-      xarf_version: '4.0.0',
+      xarf_version: '4.2.0',
       report_id: 'test-id',
       timestamp: '2024-01-15T10:00:00Z',
       reporter: { contact: 'test@example.com', type: 'manual' },
@@ -85,7 +85,7 @@ describe('XARFv3 Conversion', () => {
       const warnings: string[] = [];
       const v4Report = convertV3toV4(v3Report, warnings);
 
-      expect(v4Report.xarf_version).toBe('4.0.0');
+      expect(v4Report.xarf_version).toBe('4.2.0');
       expect(v4Report.category).toBe('messaging');
       expect(v4Report.type).toBe('spam');
       expect(v4Report.source_identifier).toBe('192.168.1.100');
@@ -572,7 +572,7 @@ describe('XARFParser v3 Integration', () => {
 
     const { report, warnings } = parse(v3Report);
 
-    expect(report.xarf_version).toBe('4.0.0');
+    expect(report.xarf_version).toBe('4.2.0');
     expect(report.category).toBe('messaging');
     expect(report.type).toBe('spam');
     expect(report.legacy_version).toBe('3');

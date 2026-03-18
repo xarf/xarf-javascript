@@ -77,7 +77,7 @@ interface OptionalFieldInfo {
 /**
  * XARF Report Validator
  *
- * Provides comprehensive validation for XARF v4.0.0 reports
+ * Provides comprehensive validation for XARF v4.2.0 reports
  */
 export class XARFValidator {
   private errors: ValidationError[] = [];

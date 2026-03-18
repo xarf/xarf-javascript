@@ -13,7 +13,7 @@ describe('XARFValidator', () => {
   });
 
   const createValidReport = (): XARFReport => ({
-    xarf_version: '4.0.0',
+    xarf_version: '4.2.0',
     report_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     timestamp: '2024-01-15T10:30:00Z',
     reporter: {
@@ -39,7 +39,7 @@ describe('XARFValidator', () => {
   describe('validate', () => {
     it('should detect missing required fields', () => {
       const report: any = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         // Missing other required fields
       };
 
@@ -117,7 +117,7 @@ describe('XARFValidator', () => {
 
     it('should reject invalid timestamp string', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: 'foo',
         reporter: {
@@ -144,7 +144,7 @@ describe('XARFValidator', () => {
 
     it('should pass with valid timestamp', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
@@ -173,7 +173,7 @@ describe('XARFValidator', () => {
   describe('required fields edge cases', () => {
     it('should detect missing reporter.contact', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
@@ -196,7 +196,7 @@ describe('XARFValidator', () => {
 
     it('should detect missing reporter.domain', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
@@ -226,7 +226,7 @@ describe('XARFValidator', () => {
   describe('value validation', () => {
     it('should validate invalid evidence_source', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
@@ -311,7 +311,7 @@ describe('XARFValidator', () => {
 
     it('should reject unknown connection type', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
@@ -339,7 +339,7 @@ describe('XARFValidator', () => {
 
     it('should reject unknown content type', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
@@ -366,7 +366,7 @@ describe('XARFValidator', () => {
 
     it('should handle infrastructure category', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
@@ -442,7 +442,7 @@ describe('XARFValidator', () => {
 
     it('should catch URL parsing error with field check', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
@@ -473,7 +473,7 @@ describe('XARFValidator', () => {
   describe('connection port validation', () => {
     it('should validate invalid port number (non-integer)', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
@@ -503,7 +503,7 @@ describe('XARFValidator', () => {
 
     it('should validate port number too high', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
@@ -533,7 +533,7 @@ describe('XARFValidator', () => {
 
     it('should validate negative port number', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: {
@@ -661,7 +661,7 @@ describe('XARFValidator', () => {
 
     it('should include optional fields from content-base.json via $ref', () => {
       const report = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         report_id: '550e8400-e29b-41d4-a716-446655440000',
         timestamp: '2024-01-15T10:30:00Z',
         reporter: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },

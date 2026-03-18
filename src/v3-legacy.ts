@@ -322,7 +322,7 @@ function convertWithMapping(
   const contactInfo = extractContactInfo(reporterInfo, warnings);
 
   const v4Report: XARFReport & { _internal?: Record<string, unknown> } = {
-    xarf_version: '4.0.0',
+    xarf_version: '4.2.0',
     report_id: randomUUID(),
     timestamp: report.Date,
     reporter: contactInfo,

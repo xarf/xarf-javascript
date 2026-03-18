@@ -5,6 +5,7 @@
  * (eXtended Abuse Reporting Format) reports.
  */
 
+export { SPEC_VERSION } from './version';
 export { parse, type ParseOptions, type ParseResult } from './parser';
 export {
   createReport,
@@ -20,7 +21,6 @@ export {
   type CopyrightReportInput,
   type VulnerabilityReportInput,
   type ReputationReportInput,
-  SPEC_VERSION,
 } from './generator';
 export {
   type ValidationResult,
