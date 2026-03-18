@@ -6,7 +6,6 @@
  */
 
 import { createHash, randomUUID } from 'crypto';
-import { XARFValidationError } from './errors';
 import { XARFValidator } from './validator';
 import type {
   XARFEvidence,
@@ -19,10 +18,11 @@ import type {
   VulnerabilityReport,
   ReputationReport,
 } from './types';
+import type { ValidationError, ValidationWarning, ValidationInfo } from './validator';
 
 /**
  * A bit of Typescprit magic to derive the generator options from a report
- * type (e.g. ConnectionReport → ConnectionGeneratorOptions).
+ * type (e.g. ConnectionReport → ConnectionReportInput).
  *
  * The report interfaces have an index signature ([key: string]: unknown) which causes
  * Omit<T, K> to collapse to just the index signature, losing all named properties.
@@ -34,104 +34,140 @@ import type {
 type RemoveIndex<T> = {
   [K in keyof T as string extends K ? never : K]: T[K];
 };
-type MakeGeneratorOptions<T extends XARFReport> = Omit<
+type MakeReportInput<T extends XARFReport> = Omit<
   RemoveIndex<T>,
   'xarf_version' | 'report_id' | 'timestamp'
 > & { report_id?: string; timestamp?: string; [key: string]: unknown };
 
 /**
- * Category-specific generator options, derived from the corresponding report types.
+ * Category-specific report input types, derived from the corresponding report types.
  */
-export type ConnectionGeneratorOptions = MakeGeneratorOptions<ConnectionReport>;
-export type MessagingGeneratorOptions = MakeGeneratorOptions<MessagingReport>;
-export type ContentGeneratorOptions = MakeGeneratorOptions<ContentReport>;
-export type InfrastructureGeneratorOptions = MakeGeneratorOptions<InfrastructureReport>;
-export type CopyrightGeneratorOptions = MakeGeneratorOptions<CopyrightReport>;
-export type VulnerabilityGeneratorOptions = MakeGeneratorOptions<VulnerabilityReport>;
-export type ReputationGeneratorOptions = MakeGeneratorOptions<ReputationReport>;
+export type ConnectionReportInput = MakeReportInput<ConnectionReport>;
+export type MessagingReportInput = MakeReportInput<MessagingReport>;
+export type ContentReportInput = MakeReportInput<ContentReport>;
+export type InfrastructureReportInput = MakeReportInput<InfrastructureReport>;
+export type CopyrightReportInput = MakeReportInput<CopyrightReport>;
+export type VulnerabilityReportInput = MakeReportInput<VulnerabilityReport>;
+export type ReputationReportInput = MakeReportInput<ReputationReport>;
 
 /**
- * Discriminated union of all category-specific generator options.
+ * Discriminated union of all category-specific report inputs.
  * Narrows on `category` to provide autocomplete for category-specific fields.
  */
-export type GeneratorOptions =
-  | ConnectionGeneratorOptions
-  | MessagingGeneratorOptions
-  | ContentGeneratorOptions
-  | InfrastructureGeneratorOptions
-  | CopyrightGeneratorOptions
-  | VulnerabilityGeneratorOptions
-  | ReputationGeneratorOptions;
+export type ReportInput =
+  | ConnectionReportInput
+  | MessagingReportInput
+  | ContentReportInput
+  | InfrastructureReportInput
+  | CopyrightReportInput
+  | VulnerabilityReportInput
+  | ReputationReportInput;
 
 /**
- * XARF report generator with automatic metadata and validation.
+ * Options for createReport()
  */
-export class XARFGenerator {
-  /**
-   * Create a validated XARF report with auto-generated metadata fields.
-   * @param input - Report data (report_id and timestamp auto-generated if omitted)
-   * @returns Complete, validated XARFReport
-   * @throws {XARFValidationError} If validation produces errors or warnings
-   */
-  createReport(input: GeneratorOptions): XARFReport {
-    const report = {
-      ...input,
-      xarf_version: '4.0.0',
-      report_id: input.report_id ?? randomUUID(),
-      timestamp: input.timestamp ?? new Date().toISOString(),
-    } as XARFReport;
+export interface CreateReportOptions {
+  strict?: boolean;
+  showMissingOptional?: boolean;
+}
 
-    const validator = new XARFValidator();
-    const result = validator.validate(report, false);
+/**
+ * Result of createReport()
+ */
+export interface CreateReportResult {
+  report: XARFReport;
+  errors: ValidationError[];
+  warnings: ValidationWarning[];
+  info?: ValidationInfo[];
+}
 
-    if (!result.valid) {
-      const messages = result.errors.map((e) => `${e.field}: ${e.message}`);
-      throw new XARFValidationError(`Report validation failed: ${messages.join('; ')}`, messages);
-    }
+/**
+ * Options for createEvidence()
+ */
+export interface EvidenceOptions {
+  description?: string;
+  hashAlgorithm?: 'sha256' | 'sha512' | 'sha1' | 'md5';
+}
 
-    return report;
+export const SPEC_VERSION = '4.0.0';
+
+const validator = new XARFValidator();
+
+/**
+ * Generate a hash of the given data.
+ * @param data
+ * @param algorithm
+ */
+function generateHash(
+  data: string | Buffer,
+  algorithm: 'sha256' | 'sha512' | 'sha1' | 'md5' = 'sha256'
+): string {
+  const buffer = typeof data === 'string' ? Buffer.from(data, 'utf8') : data;
+  return createHash(algorithm).update(buffer).digest('hex');
+}
+
+/**
+ * Create a validated XARF report with auto-generated metadata fields.
+ *
+ * Auto-generates `xarf_version`, `report_id`, and `timestamp` if not provided.
+ * Validation runs internally — errors and warnings are returned alongside the report.
+ * @param input - Report data (report_id and timestamp auto-generated if omitted)
+ * @param options - Options controlling validation behavior
+ * @returns Result with report, errors, and warnings
+ */
+export function createReport(
+  input: ReportInput,
+  options?: CreateReportOptions
+): CreateReportResult {
+  const strict = options?.strict ?? false;
+  const showMissingOptional = options?.showMissingOptional ?? false;
+
+  const report = {
+    ...input,
+    xarf_version: SPEC_VERSION,
+    report_id: input.report_id ?? randomUUID(),
+    timestamp: input.timestamp ?? new Date().toISOString(),
+  } as XARFReport;
+
+  const result = validator.validate(report, strict, showMissingOptional);
+
+  const createReportResult: CreateReportResult = {
+    report,
+    errors: result.errors,
+    warnings: result.warnings,
+  };
+
+  if (showMissingOptional && result.info) {
+    createReportResult.info = result.info;
   }
 
-  /**
-   * Create an evidence item with automatic hashing.
-   * @param contentType - MIME type of the evidence
-   * @param payload - The evidence data
-   * @param description - Human-readable description (optional, recommended)
-   * @param hashAlgorithm - Hash algorithm (default: sha256)
-   * @returns Evidence object with computed hash
-   */
-  addEvidence(
-    contentType: string,
-    payload: string | Buffer,
-    description?: string,
-    hashAlgorithm: 'sha256' | 'sha512' | 'sha1' | 'md5' = 'sha256'
-  ): XARFEvidence {
-    const payloadBuffer = typeof payload === 'string' ? Buffer.from(payload, 'utf8') : payload;
-    const hashValue = this.generateHash(payloadBuffer, hashAlgorithm);
+  return createReportResult;
+}
 
-    const evidence: XARFEvidence = {
-      content_type: contentType,
-      payload: payloadBuffer.toString('base64'),
-      hash: `${hashAlgorithm}:${hashValue}`,
-      size: payloadBuffer.length,
-    };
-    if (description !== undefined) {
-      evidence.description = description;
-    }
-    return evidence;
-  }
+/**
+ * Create an evidence object with automatic base64 encoding, hashing, and size calculation.
+ * @param contentType - MIME type of the evidence
+ * @param payload - The evidence data
+ * @param options - Optional description and hash algorithm
+ * @returns Evidence object with computed hash
+ */
+export function createEvidence(
+  contentType: string,
+  payload: string | Buffer,
+  options?: EvidenceOptions
+): XARFEvidence {
+  const hashAlgorithm = options?.hashAlgorithm ?? 'sha256';
+  const payloadBuffer = typeof payload === 'string' ? Buffer.from(payload, 'utf8') : payload;
+  const hashValue = generateHash(payloadBuffer, hashAlgorithm);
 
-  /**
-   * Generate a hash of the given data.
-   * @param data - Data to hash
-   * @param algorithm - Hash algorithm (default: sha256)
-   * @returns Hex-encoded hash string
-   */
-  generateHash(
-    data: string | Buffer,
-    algorithm: 'sha256' | 'sha512' | 'sha1' | 'md5' = 'sha256'
-  ): string {
-    const buffer = typeof data === 'string' ? Buffer.from(data, 'utf8') : data;
-    return createHash(algorithm).update(buffer).digest('hex');
+  const evidence: XARFEvidence = {
+    content_type: contentType,
+    payload: payloadBuffer.toString('base64'),
+    hash: `${hashAlgorithm}:${hashValue}`,
+    size: payloadBuffer.length,
+  };
+  if (options?.description !== undefined) {
+    evidence.description = options.description;
   }
+  return evidence;
 }

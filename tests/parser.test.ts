@@ -2,475 +2,276 @@
  * Tests for XARF Parser
  */
 
-import { XARFParser } from '../src/parser';
-import { XARFParseError, XARFValidationError } from '../src/errors';
+import { parse } from '../src/parser';
+import { XARFParseError } from '../src/errors';
 import type { MessagingReport, ConnectionReport, ContentReport } from '../src/types';
 
-describe('XARFParser', () => {
-  describe('parse', () => {
-    it('should parse valid messaging report', () => {
-      const reportData = {
-        xarf_version: '4.0.0',
-        report_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: {
-          org: 'Test Org',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Test Org',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.100',
-        category: 'messaging',
-        type: 'spam',
-        evidence_source: 'spamtrap',
-        protocol: 'smtp',
-        smtp_from: 'spammer@example.com',
-        subject: 'Test Spam',
-      };
+const validMessagingReport = {
+  xarf_version: '4.0.0',
+  report_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  timestamp: '2024-01-15T10:30:00Z',
+  reporter: {
+    org: 'Test Org',
+    contact: 'test@example.com',
+    domain: 'example.com',
+  },
+  sender: {
+    org: 'Test Org',
+    contact: 'test@example.com',
+    domain: 'example.com',
+  },
+  source_identifier: '192.0.2.100',
+  category: 'messaging',
+  type: 'spam',
+  evidence_source: 'spamtrap',
+  protocol: 'smtp',
+  smtp_from: 'spammer@example.com',
+  source_port: 25,
+  subject: 'Test Spam',
+};
 
-      const parser = new XARFParser();
-      const report = parser.parse(reportData) as MessagingReport;
+const validConnectionReport = {
+  xarf_version: '4.0.0',
+  report_id: 'b2c3d4e5-f6a7-8901-bcde-f1234567890a',
+  timestamp: '2024-01-15T11:00:00Z',
+  reporter: {
+    org: 'Security Monitor',
+    contact: 'security@example.com',
+    domain: 'example.com',
+  },
+  sender: {
+    org: 'Security Monitor',
+    contact: 'security@example.com',
+    domain: 'example.com',
+  },
+  source_identifier: '192.0.2.200',
+  source_port: 12345,
+  category: 'connection',
+  type: 'ddos',
+  evidence_source: 'honeypot',
+  destination_ip: '203.0.113.10',
+  protocol: 'tcp',
+  first_seen: '2025-12-16T07:00:00.000Z',
+};
 
-      expect(report.category).toBe('messaging');
-      expect(report.type).toBe('spam');
-      expect(report.smtp_from).toBe('spammer@example.com');
+const validContentReport = {
+  xarf_version: '4.0.0',
+  report_id: 'c3d4e5f6-a7b8-9012-cdef-234567890abc',
+  timestamp: '2024-01-15T12:00:00Z',
+  reporter: {
+    org: 'Web Security',
+    contact: 'web@example.com',
+    domain: 'example.com',
+  },
+  sender: {
+    org: 'Web Security',
+    contact: 'web@example.com',
+    domain: 'example.com',
+  },
+  source_identifier: '192.0.2.50',
+  category: 'content',
+  type: 'phishing',
+  evidence_source: 'user_report',
+  url: 'http://phishing.example.com',
+};
+
+describe('parse', () => {
+  describe('valid reports', () => {
+    it('should parse messaging report and cast to MessagingReport', () => {
+      const { report, errors } = parse(validMessagingReport);
+      const messaging = report as MessagingReport;
+
+      expect(errors).toHaveLength(0);
+      expect(messaging.category).toBe('messaging');
+      expect(messaging.type).toBe('spam');
+      expect(messaging.smtp_from).toBe('spammer@example.com');
     });
 
-    it('should parse valid connection report', () => {
-      const reportData = {
-        xarf_version: '4.0.0',
-        report_id: 'b2c3d4e5-f6g7-8901-bcde-f1234567890a',
-        timestamp: '2024-01-15T11:00:00Z',
-        reporter: {
-          org: 'Security Monitor',
-          contact: 'security@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Security Monitor',
-          contact: 'security@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.200',
-        category: 'connection',
-        type: 'ddos',
-        evidence_source: 'honeypot',
-        destination_ip: '203.0.113.10',
-        protocol: 'tcp',
-        destination_port: 80,
-        attack_type: 'syn_flood',
-      };
+    it('should parse connection report and cast to ConnectionReport', () => {
+      const { report, errors } = parse(validConnectionReport);
+      const connection = report as ConnectionReport;
 
-      const parser = new XARFParser();
-      const report = parser.parse(reportData) as ConnectionReport;
+      expect(errors).toHaveLength(0);
+      expect(connection.category).toBe('connection');
+      expect(connection.type).toBe('ddos');
+      expect(connection.destination_ip).toBe('203.0.113.10');
+    });
 
+    it('should parse content report and cast to ContentReport', () => {
+      const { report, errors } = parse(validContentReport);
+      const content = report as ContentReport;
+
+      expect(errors).toHaveLength(0);
+      expect(content.category).toBe('content');
+      expect(content.type).toBe('phishing');
+      expect(content.url).toBe('http://phishing.example.com');
+    });
+
+    it('should accept JSON string input', () => {
+      const { report, errors } = parse(JSON.stringify(validConnectionReport));
+
+      expect(errors).toHaveLength(0);
       expect(report.category).toBe('connection');
-      expect(report.type).toBe('ddos');
-      expect(report.destination_ip).toBe('203.0.113.10');
     });
 
-    it('should parse valid content report', () => {
-      const reportData = {
-        xarf_version: '4.0.0',
-        report_id: 'c3d4e5f6-g7h8-9012-cdef-234567890abc',
-        timestamp: '2024-01-15T12:00:00Z',
-        reporter: {
-          org: 'Web Security',
-          contact: 'web@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Web Security',
-          contact: 'web@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.300',
-        category: 'content',
-        type: 'phishing',
-        evidence_source: 'user_report',
-        url: 'http://phishing.example.com',
-      };
+    it('should accept spam without subject (recommended, not required)', () => {
+      const data = { ...validMessagingReport } as any;
+      delete data.subject;
 
-      const parser = new XARFParser();
-      const report = parser.parse(reportData) as ContentReport;
+      const { errors } = parse(data);
 
-      expect(report.category).toBe('content');
-      expect(report.type).toBe('phishing');
-      expect(report.url).toBe('http://phishing.example.com');
-    });
-
-    it('should parse from JSON string', () => {
-      const reportData = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.1',
-        category: 'messaging',
-        type: 'spam',
-        evidence_source: 'spamtrap',
-      };
-
-      const parser = new XARFParser();
-      const report = parser.parse(JSON.stringify(reportData));
-
-      expect(report.category).toBe('messaging');
-      expect(report.type).toBe('spam');
-    });
-
-    it('should throw error for invalid JSON string', () => {
-      const parser = new XARFParser();
-
-      expect(() => {
-        parser.parse('{invalid json}');
-      }).toThrow(XARFParseError);
-    });
-
-    it('should throw validation error in strict mode', () => {
-      const invalidData = {
-        xarf_version: '4.0.0',
-        // Missing required fields
-      };
-
-      const parser = new XARFParser(true);
-
-      expect(() => {
-        parser.parse(invalidData);
-      }).toThrow(XARFValidationError);
-    });
-
-    it('should populate getErrors() after strict mode parse failure', () => {
-      const invalidData = {
-        xarf_version: '4.0.0',
-        // Missing required fields
-      };
-
-      const parser = new XARFParser(true);
-
-      try {
-        parser.parse(invalidData);
-        throw new Error('Expected XARFValidationError');
-      } catch (e) {
-        expect(e).toBeInstanceOf(XARFValidationError);
-      }
-
-      expect(parser.getErrors().length).toBeGreaterThan(0);
+      expect(errors).toHaveLength(0);
     });
   });
 
-  describe('validate', () => {
-    it('should return false for invalid version', () => {
-      const invalidData = {
-        xarf_version: '3.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.1',
-        category: 'messaging',
-        type: 'spam',
-        evidence_source: 'spamtrap',
-      };
-
-      const parser = new XARFParser(false);
-      const result = parser.validate(invalidData);
-
-      expect(result).toBe(false);
-      const errors = parser.getErrors();
-      expect(errors.length).toBeGreaterThan(0);
-      expect(
-        errors.some((e) => e.includes('Unsupported XARF version') || e.includes('xarf_version'))
-      ).toBe(true);
+  describe('JSON parsing errors', () => {
+    it('should throw XARFParseError for malformed JSON string', () => {
+      expect(() => parse('{"invalid": json}')).toThrow(XARFParseError);
+      expect(() => parse('{"invalid": json}')).toThrow('Invalid JSON');
     });
 
-    it('should return false for missing required fields', () => {
-      const invalidData = {
-        xarf_version: '4.0.0',
-        // Missing most required fields
-      };
+    it('should throw XARFParseError for non-JSON string', () => {
+      expect(() => parse('invalid json string')).toThrow(XARFParseError);
+    });
+  });
 
-      const parser = new XARFParser(false);
-      const result = parser.validate(invalidData);
+  describe('validation errors', () => {
+    it('should return errors for invalid xarf_version', () => {
+      const { errors } = parse({ ...validMessagingReport, xarf_version: '3.0.0' });
 
-      expect(result).toBe(false);
-      const errors = parser.getErrors();
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.includes('xarf_version'))).toBe(true);
+    });
+
+    it('should return errors for invalid xarf_version in JSON string input', () => {
+      const data = JSON.stringify({ ...validMessagingReport, xarf_version: '3.0.0' });
+      const { errors } = parse(data);
+
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.includes('xarf_version'))).toBe(true);
+    });
+
+    it('should return errors for missing required fields', () => {
+      const { errors } = parse({ xarf_version: '4.0.0' });
+
+      expect(errors.length).toBeGreaterThan(0);
       expect(errors.some((e) => e.includes('required'))).toBe(true);
     });
 
-    it('should return false for invalid reporter contact', () => {
-      const invalidData = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: {
-          org: 'Test',
-          contact: 'invalid-email',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.1',
-        category: 'messaging',
-        type: 'spam',
-        evidence_source: 'spamtrap',
-      };
+    it('should return errors for invalid reporter contact email', () => {
+      const { errors } = parse({
+        ...validMessagingReport,
+        reporter: { org: 'Test', contact: 'invalid-email', domain: 'example.com' },
+      });
 
-      const parser = new XARFParser(false);
-      const result = parser.validate(invalidData);
-
-      expect(result).toBe(false);
-      const errors = parser.getErrors();
+      expect(errors.length).toBeGreaterThan(0);
       expect(
         errors.some((e) => e.includes('valid email address') || e.includes('reporter.contact'))
       ).toBe(true);
     });
 
-    it('should handle unsupported category', () => {
-      const reportData = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.1',
+    it('should return errors for null reporter', () => {
+      const { errors } = parse({ ...validMessagingReport, reporter: null });
+
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.includes('reporter'))).toBe(true);
+    });
+
+    it('should return errors for missing reporter.contact and reporter.domain', () => {
+      const { errors } = parse({
+        ...validMessagingReport,
+        reporter: { org: 'Test' },
+      });
+
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.includes('reporter') && e.includes('required'))).toBe(true);
+    });
+
+    it('should return errors for invalid timestamp format', () => {
+      const { report, errors } = parse({
+        ...validMessagingReport,
+        timestamp: 'invalid-timestamp-format',
+      });
+
+      // Non-strict: returns the data despite the invalid timestamp
+      expect(report.timestamp).toBe('invalid-timestamp-format');
+      expect(errors.some((e) => e.includes('timestamp'))).toBe(true);
+    });
+
+    it('should return errors in strict mode for missing fields', () => {
+      const { errors } = parse({ xarf_version: '4.0.0' }, { strict: true });
+
+      expect(errors.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('category and type validation', () => {
+    it('should return errors for invalid category', () => {
+      const { report, errors } = parse({
+        ...validMessagingReport,
         category: 'invalid_category',
         type: 'test',
-        evidence_source: 'honeypot',
-      };
+      });
 
-      const parser = new XARFParser(false);
-      const report = parser.parse(reportData);
-
-      expect(report.category).toBe('invalid_category');
-      const errors = parser.getErrors();
       expect(errors.length).toBeGreaterThan(0);
-      // Schema validation catches invalid category as enum violation
       expect(errors.some((e) => e.includes('category'))).toBe(true);
+      // Report is still returned with original data
+      expect(report.category).toBe('invalid_category');
     });
-  });
 
-  describe('category-specific validation', () => {
-    it('should reject unknown type', () => {
-      const unknownType = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.1',
-        category: 'messaging',
+    it('should return errors for unknown type within valid category', () => {
+      const { errors } = parse({
+        ...validMessagingReport,
         type: 'invalid_type',
-        evidence_source: 'spamtrap',
-      };
+      });
 
-      const parser = new XARFParser(false);
-      const result = parser.validate(unknownType);
-
-      expect(result).toBe(false);
+      expect(errors.length).toBeGreaterThan(0);
     });
 
-    it('should validate connection reports require protocol', () => {
-      const invalidConnection = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.1',
-        category: 'connection',
-        type: 'ddos',
-        evidence_source: 'honeypot',
-        destination_ip: '203.0.113.10',
-      };
+    it('should require protocol for connection reports', () => {
+      const data = { ...validConnectionReport } as any;
+      delete data.protocol;
 
-      const parser = new XARFParser(false);
-      const result = parser.validate(invalidConnection);
+      const { errors } = parse(data);
 
-      expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('protocol') && e.includes('required'))).toBe(
-        true
-      );
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.includes('protocol') && e.includes('required'))).toBe(true);
     });
 
-    it('should validate content reports require url', () => {
-      const invalidContent = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        sender: {
-          org: 'Test',
-          contact: 'test@example.com',
-          domain: 'example.com',
-        },
-        source_identifier: '192.0.2.1',
-        category: 'content',
-        type: 'phishing',
-        evidence_source: 'user_report',
-      };
+    it('should accept bulk_messaging without subject', () => {
+      const data = {
+        ...validMessagingReport,
+        type: 'bulk_messaging',
+        evidence_source: 'automated_filter',
+        recipient_count: 5000,
+      } as any;
+      delete data.subject;
 
-      const parser = new XARFParser(false);
-      const result = parser.validate(invalidContent);
+      const { errors } = parse(data);
 
-      expect(result).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('url') && e.includes('required'))).toBe(
-        true
-      );
+      expect(errors).toHaveLength(0);
     });
   });
 
-  describe('getErrors', () => {
-    it('should return copy of errors array', () => {
-      const parser = new XARFParser(false);
-      parser.validate({});
+  describe('warnings', () => {
+    it('should warn about unknown fields', () => {
+      const { warnings } = parse({
+        ...validContentReport,
+        severety: 'high',
+        sourcePort: 443,
+      });
 
-      const errors1 = parser.getErrors();
-      const errors2 = parser.getErrors();
-
-      expect(errors1).toEqual(errors2);
-      expect(errors1).not.toBe(errors2); // Different array instances
-    });
-  });
-
-  describe('strict mode enforces x-recommended fields', () => {
-    it('should throw when recommended fields are missing in strict parser', () => {
-      const reportData = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
-        sender: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
-        source_identifier: '192.0.2.1',
-        category: 'messaging',
-        type: 'spam',
-        protocol: 'smtp',
-        smtp_from: 'spammer@evil.com',
-        // Missing recommended: confidence, evidence, source_port, evidence_source
-      };
-
-      const parser = new XARFParser(true);
-      expect(() => parser.parse(reportData)).toThrow(XARFValidationError);
+      expect(warnings.length).toBeGreaterThan(0);
+      expect(warnings.some((w) => w.includes('severety') || w.includes('unknown'))).toBe(true);
     });
 
-    it('should populate getErrors() with recommended field names after strict parse failure', () => {
-      const reportData = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
-        sender: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
-        source_identifier: '192.0.2.1',
-        category: 'messaging',
-        type: 'spam',
-        protocol: 'smtp',
-        smtp_from: 'spammer@evil.com',
-        // Missing recommended: confidence, evidence, source_port, evidence_source
-      };
+    it('should warn about camelCase field names (not in XARF spec)', () => {
+      const { warnings } = parse({
+        ...validContentReport,
+        contentType: 'text/html',
+      });
 
-      const parser = new XARFParser(true);
-
-      try {
-        parser.parse(reportData);
-        throw new Error('Expected XARFValidationError');
-      } catch (e) {
-        expect(e).toBeInstanceOf(XARFValidationError);
-      }
-
-      expect(parser.getErrors().length).toBeGreaterThan(0);
-      expect(parser.getErrors().some((e) => e.includes('confidence'))).toBe(true);
-    });
-
-    it('should not throw for missing recommended fields in non-strict parser', () => {
-      const reportData = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
-        sender: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
-        source_identifier: '192.0.2.1',
-        category: 'messaging',
-        type: 'spam',
-        protocol: 'smtp',
-        smtp_from: 'spammer@evil.com',
-        // Missing recommended fields — should be fine in non-strict mode
-      };
-
-      const parser = new XARFParser(false);
-      const report = parser.parse(reportData);
-      expect(report.category).toBe('messaging');
-    });
-
-    it('should report recommended fields as missing via validate() in strict mode', () => {
-      const reportData = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T10:30:00Z',
-        reporter: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
-        sender: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
-        source_identifier: '192.0.2.1',
-        category: 'connection',
-        type: 'ddos',
-        protocol: 'tcp',
-        destination_ip: '203.0.113.10',
-        // Missing recommended: confidence, evidence, source_port
-      };
-
-      const parser = new XARFParser(true);
-      const valid = parser.validate(reportData);
-      expect(valid).toBe(false);
-      expect(parser.getErrors().some((e) => e.includes('confidence'))).toBe(true);
+      expect(warnings.some((w) => w.includes('contentType') || w.includes('unknown'))).toBe(true);
     });
   });
 });

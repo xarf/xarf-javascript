@@ -5,20 +5,24 @@
  * (eXtended Abuse Reporting Format) reports.
  */
 
-export { XARFParser } from './parser';
+export { parse, type ParseOptions, type ParseResult } from './parser';
 export {
-  XARFGenerator,
-  type GeneratorOptions,
-  type ConnectionGeneratorOptions,
-  type MessagingGeneratorOptions,
-  type ContentGeneratorOptions,
-  type InfrastructureGeneratorOptions,
-  type CopyrightGeneratorOptions,
-  type VulnerabilityGeneratorOptions,
-  type ReputationGeneratorOptions,
+  createReport,
+  createEvidence,
+  type ReportInput,
+  type CreateReportOptions,
+  type CreateReportResult,
+  type EvidenceOptions,
+  type ConnectionReportInput,
+  type MessagingReportInput,
+  type ContentReportInput,
+  type InfrastructureReportInput,
+  type CopyrightReportInput,
+  type VulnerabilityReportInput,
+  type ReputationReportInput,
+  SPEC_VERSION,
 } from './generator';
 export {
-  XARFValidator,
   type ValidationResult,
   type ValidationError,
   type ValidationWarning,
@@ -122,4 +126,3 @@ export {
 } from './v3-legacy';
 
 export const VERSION = '1.0.0';
-export const SPEC_VERSION = '4.0.0';

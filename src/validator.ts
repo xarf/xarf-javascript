@@ -4,7 +4,6 @@
  * Provides advanced validation capabilities for XARF reports
  */
 
-import { XARFValidationError } from './errors';
 import type { XARFReport } from './types';
 import { validator as schemaValidator } from './schema-validator';
 import { schemaRegistry } from './schema-registry';
@@ -298,13 +297,6 @@ export class XARFValidator {
     // Only include info array if showMissingOptional is enabled
     if (showMissingOptional) {
       result.info = [...this.info];
-    }
-
-    if (strict && !result.valid) {
-      throw new XARFValidationError(
-        'Validation failed',
-        result.errors.map((e) => `${e.field}: ${e.message}`)
-      );
     }
 
     return result;

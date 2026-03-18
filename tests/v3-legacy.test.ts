@@ -4,7 +4,7 @@
  * Tests for v3 to v4 conversion and backward compatibility
  */
 
-import { XARFParser } from '../src/parser';
+import { parse } from '../src/parser';
 import { isXARFv3, convertV3toV4, getV3DeprecationWarning } from '../src/v3-legacy';
 import type { XARFv3Report } from '../src/v3-legacy';
 
@@ -157,6 +157,29 @@ describe('XARFv3 Conversion', () => {
       expect((v4Report as any).destination_port).toBe(80);
       expect((v4Report as any).protocol).toBe('tcp');
       expect((v4Report as any).attack_count).toBe(10000);
+    });
+
+    it('should not inject undefined fields for absent optional v3 fields', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrgEmail: 'security@example.com',
+        },
+        Report: {
+          ReportType: 'DDoS',
+          Date: '2024-01-15T15:00:00Z',
+          SourceIp: '203.0.113.50',
+          Protocol: 'tcp',
+          // No DestinationIp, DestinationPort, or AttackCount
+        },
+      };
+
+      const v4Report = convertV3toV4(v3Report);
+      expect(v4Report.category).toBe('connection');
+      expect(v4Report.type).toBe('ddos');
+      expect('destination_ip' in v4Report).toBe(false);
+      expect('destination_port' in v4Report).toBe(false);
+      expect('attack_count' in v4Report).toBe(false);
     });
 
     it('should convert v3 Login-Attack report', () => {
@@ -521,8 +544,6 @@ describe('XARFv3 Conversion', () => {
 });
 
 describe('XARFParser v3 Integration', () => {
-  let parser: XARFParser;
-
   beforeEach(() => {
     // Mock console.warn to avoid noise in tests
     jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -533,8 +554,6 @@ describe('XARFParser v3 Integration', () => {
   });
 
   it('should parse v3 spam report automatically', () => {
-    parser = new XARFParser(false);
-
     const v3Report = {
       Version: '3',
       ReporterInfo: {
@@ -551,21 +570,18 @@ describe('XARFParser v3 Integration', () => {
       },
     };
 
-    const result = parser.parse(v3Report);
+    const { report, warnings } = parse(v3Report);
 
-    expect(result.xarf_version).toBe('4.0.0');
-    expect(result.category).toBe('messaging');
-    expect(result.type).toBe('spam');
-    expect(result.legacy_version).toBe('3');
+    expect(report.xarf_version).toBe('4.0.0');
+    expect(report.category).toBe('messaging');
+    expect(report.type).toBe('spam');
+    expect(report.legacy_version).toBe('3');
 
-    const warnings = parser.getWarnings();
     expect(warnings.length).toBeGreaterThan(0);
     expect(warnings[0]).toContain('DEPRECATION WARNING');
   });
 
   it('should validate v3 report as valid', () => {
-    parser = new XARFParser();
-
     const v3Report = {
       Version: '3',
       ReporterInfo: {
@@ -581,16 +597,13 @@ describe('XARFParser v3 Integration', () => {
       },
     };
 
-    const isValid = parser.validate(v3Report);
-    expect(isValid).toBe(true);
+    const { errors, warnings } = parse(v3Report);
+    expect(errors).toHaveLength(0);
 
-    const warnings = parser.getWarnings();
     expect(warnings.length).toBeGreaterThan(0);
   });
 
   it('should provide warnings when parsing v3 report', () => {
-    parser = new XARFParser();
-
     const v3Report = {
       Version: '3',
       ReporterInfo: {
@@ -604,11 +617,10 @@ describe('XARFParser v3 Integration', () => {
       },
     };
 
-    parser.parse(v3Report);
-    const warnings = parser.getWarnings();
+    const { warnings } = parse(v3Report);
 
     expect(warnings.length).toBeGreaterThan(0);
-    expect(warnings.some((w) => w.includes('v3 format'))).toBe(true);
+    expect(warnings.some((w: string) => w.includes('v3 format'))).toBe(true);
   });
 });
 
