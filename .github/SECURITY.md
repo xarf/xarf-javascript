@@ -1,120 +1,57 @@
 # Security Policy
 
-## Supported Versions
-
-| Version       | Supported              |
-| ------------- | ---------------------- |
-| 1.0.0         | :white_check_mark:     |
-| 1.0.0-alpha.2 | :x: (upgrade to 1.0.0) |
-| 1.0.0-alpha.1 | :x: (upgrade to 1.0.0) |
-
 ## Reporting a Vulnerability
 
-We take security vulnerabilities seriously. If you discover a security issue in this project, please report it responsibly.
+The XARF project takes security vulnerabilities seriously. We appreciate your efforts to responsibly disclose your findings.
 
 ### How to Report
 
-**DO NOT** open a public GitHub issue for security vulnerabilities.
+**Please DO NOT report security vulnerabilities through public GitHub issues.**
 
-Instead, please email security details to: **security@abusix.com**
+Instead, please report security vulnerabilities by emailing:
 
-Include the following information in your report:
+**security@abusix.com**
 
-- Description of the vulnerability
-- Steps to reproduce the issue
-- Potential impact
-- Suggested fix (if available)
+### What to Include
 
-### What to Expect
+Please include the following information in your report:
 
-- **Acknowledgment**: We will acknowledge receipt of your vulnerability report within 48 hours
-- **Assessment**: We will assess the severity and impact of the vulnerability
-- **Updates**: We will keep you informed of our progress toward a fix
-- **Disclosure**: Once a fix is available, we will coordinate disclosure timing with you
+- Type of vulnerability or security concern
+- Affected specification version(s)
+- Detailed description of the security issue
+- Potential impact on implementations
+- Suggested mitigation or fix (if applicable)
 
-## Security Best Practices
+### Response Timeline
 
-When using the XARF JavaScript parser, follow these security best practices:
+- **Initial Response**: Within 48 hours
+- **Status Update**: Within 7 days
+- **Resolution**: Depends on severity and complexity
 
-### Input Validation
+### Security Update Process
 
-1. **Always validate XARF reports** against the schema before processing
-2. **Sanitize all user-supplied data** before using it in XARF reports
-3. **Set size limits** on incoming reports to prevent memory exhaustion
-4. **Validate email addresses** and other contact information before use
+1. **Triage**: We'll confirm the vulnerability and assess severity
+2. **Specification Review**: We'll review affected specification sections
+3. **Fix Development**: We'll develop and review proposed changes
+4. **Community Review**: We'll engage with implementation maintainers
+5. **Disclosure**: We'll coordinate disclosure timing with you
+6. **Publication**: We'll publish updated specification with security notes
 
-### Safe Parsing
+## Vulnerability Disclosure Policy
 
-```javascript
-// Example: Safe parsing with error handling
-try {
-  const report = parser.parse(input);
+We follow a **coordinated disclosure** model:
 
-  // Validate against schema
-  if (!validator.validate(report)) {
-    throw new Error('Invalid XARF report structure');
-  }
+1. **Private Disclosure**: Report sent to security@abusix.com
+2. **Acknowledgment**: We confirm receipt within 48 hours
+3. **Investigation**: We investigate with specification experts
+4. **Community Review**: We consult with implementation maintainers
+5. **Specification Update**: We publish updated specification
+6. **Public Disclosure**: We publish advisory 7 days after publication
 
-  // Process validated report
-  processReport(report);
-} catch (error) {
-  // Handle parsing errors securely
-  logger.error('Parsing failed', { error: error.message });
-  // Do not expose internal details to users
-}
-```
+## Security Hall of Fame
 
-### Data Handling
+We recognize security researchers who responsibly disclose vulnerabilities:
 
-1. **Do not log sensitive information** from XARF reports
-2. **Redact PII** when logging or storing reports
-3. **Use secure transport** (HTTPS/TLS) when transmitting reports
-4. **Encrypt sensitive data** at rest
+<!-- Security researchers will be listed here -->
 
-### Dependency Management
-
-1. **Regularly update dependencies** to patch known vulnerabilities
-2. **Use `npm audit`** to check for security issues
-3. **Review security advisories** for dependencies
-4. **Consider using lock files** (`package-lock.json`) for reproducible builds
-
-### Code Practices
-
-1. **Avoid eval()** and similar dynamic code execution
-2. **Use strict mode** (`"use strict"`)
-3. **Validate all inputs** before processing
-4. **Follow principle of least privilege** in code design
-
-## Known Security Considerations
-
-### XARF Report Content
-
-XARF reports may contain:
-
-- Email addresses and contact information
-- IP addresses and network data
-- Potentially malicious content samples
-- Sensitive abuse details
-
-**Always treat XARF report content as untrusted user input.**
-
-### Schema Validation
-
-While the parser validates structure, additional application-level validation may be required for:
-
-- Email address format verification
-- IP address range validation
-- URL safety checks
-- Content length restrictions
-
-## Security Updates
-
-Security updates will be released as soon as possible after a vulnerability is confirmed and fixed. Updates will be announced through:
-
-- GitHub Security Advisories
-- Release notes
-- Project changelog
-
-## Acknowledgments
-
-We appreciate the security research community's efforts in responsibly disclosing vulnerabilities. Contributors who report valid security issues will be acknowledged (with their permission) in our security advisories.
+_No vulnerabilities reported yet._
