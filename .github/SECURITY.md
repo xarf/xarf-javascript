@@ -2,9 +2,9 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.0   | :white_check_mark: |
+| Version       | Supported              |
+| ------------- | ---------------------- |
+| 1.0.0         | :white_check_mark:     |
 | 1.0.0-alpha.2 | :x: (upgrade to 1.0.0) |
 | 1.0.0-alpha.1 | :x: (upgrade to 1.0.0) |
 
@@ -16,9 +16,10 @@ We take security vulnerabilities seriously. If you discover a security issue in 
 
 **DO NOT** open a public GitHub issue for security vulnerabilities.
 
-Instead, please email security details to: **security@xarf.org**
+Instead, please email security details to: **security@abusix.com**
 
 Include the following information in your report:
+
 - Description of the vulnerability
 - Steps to reproduce the issue
 - Potential impact
@@ -89,6 +90,7 @@ try {
 ### XARF Report Content
 
 XARF reports may contain:
+
 - Email addresses and contact information
 - IP addresses and network data
 - Potentially malicious content samples
@@ -99,6 +101,7 @@ XARF reports may contain:
 ### Schema Validation
 
 While the parser validates structure, additional application-level validation may be required for:
+
 - Email address format verification
 - IP address range validation
 - URL safety checks
@@ -107,6 +110,7 @@ While the parser validates structure, additional application-level validation ma
 ## Security Updates
 
 Security updates will be released as soon as possible after a vulnerability is confirmed and fixed. Updates will be announced through:
+
 - GitHub Security Advisories
 - Release notes
 - Project changelog
