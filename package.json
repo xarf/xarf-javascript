@@ -1,6 +1,6 @@
 {
   "name": "@xarf/xarf",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "XARF v4 (eXtended Abuse Reporting Format) parser and generator for JavaScript/TypeScript - supports XARF spec v4.2.0 with backward compatibility for v3",
   "xarfSpec": {
     "version": "v4.2.0",
