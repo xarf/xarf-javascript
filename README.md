@@ -19,7 +19,7 @@ A JavaScript/TypeScript library for parsing, validating, and generating [XARF v4
 ## Installation
 
 ```bash
-npm install xarf
+npm install @xarf/xarf
 ```
 
 ## Quick Start
@@ -27,7 +27,7 @@ npm install xarf
 ### Parsing a Report
 
 ```typescript
-import { parse } from 'xarf';
+import { parse } from '@xarf/xarf';
 
 // Missing first_seen and source_port produce validation errors.
 const { report, errors, warnings } = parse({
@@ -64,7 +64,7 @@ if (errors.length === 0) {
 ### Creating a Report
 
 ```typescript
-import { createReport, createEvidence } from 'xarf';
+import { createReport, createEvidence } from '@xarf/xarf';
 
 // Returns { content_type, payload (base64), hash, size, description }
 const evidence = createEvidence('message/rfc822', rawEmailContent, {
@@ -104,7 +104,7 @@ console.log(JSON.stringify(report, null, 2));
 Parse and validate a XARF report from JSON. Supports both v4 and v3 (legacy) formats — v3 reports are automatically converted to v4 with deprecation warnings.
 
 ```typescript
-import { parse } from 'xarf';
+import { parse } from '@xarf/xarf';
 
 const { report, errors, warnings, info } = parse(jsonData, options?);
 ```
@@ -127,7 +127,7 @@ const { report, errors, warnings, info } = parse(jsonData, options?);
 Create a validated XARF report with auto-generated metadata. Automatically fills `xarf_version`, `report_id` (UUID), and `timestamp` (ISO 8601) if not provided.
 
 ```typescript
-import { createReport } from 'xarf';
+import { createReport } from '@xarf/xarf';
 
 const { report, errors, warnings } = createReport(input, options?);
 ```
@@ -150,7 +150,7 @@ const { report, errors, warnings } = createReport(input, options?);
 Create an evidence object with automatic base64 encoding, hashing, and size calculation.
 
 ```typescript
-import { createEvidence } from 'xarf';
+import { createEvidence } from '@xarf/xarf';
 
 const evidence = createEvidence(contentType, payload, options?);
 ```
@@ -169,7 +169,7 @@ const evidence = createEvidence(contentType, payload, options?);
 Access schema-derived validation rules and metadata programmatically.
 
 ```typescript
-import { schemaRegistry } from 'xarf';
+import { schemaRegistry } from '@xarf/xarf';
 
 // Get all valid categories
 schemaRegistry.getCategories();
@@ -211,7 +211,7 @@ if (info) {
 The library automatically detects XARF v3 reports (by the `Version` field) and converts them to v4 during parsing. Converted reports include `legacy_version: '3'` and deprecation warnings.
 
 ```typescript
-import { parse } from 'xarf';
+import { parse } from '@xarf/xarf';
 
 const { report, warnings } = parse(v3Report);
 
@@ -224,7 +224,7 @@ console.log(report.legacy_version); // '3'
 You can also use the low-level utilities directly:
 
 ```typescript
-import { isXARFv3, convertV3toV4, getV3DeprecationWarning } from 'xarf';
+import { isXARFv3, convertV3toV4, getV3DeprecationWarning } from '@xarf/xarf';
 
 if (isXARFv3(jsonData)) {
   const warnings: string[] = [];
