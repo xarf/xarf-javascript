@@ -82,6 +82,7 @@
     "typescript": "^5.3.3"
   },
   "files": [
+    "scripts",
     "dist",
     "README.md",
     "LICENSE"

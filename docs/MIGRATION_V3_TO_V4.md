@@ -9,7 +9,7 @@ XARF v4 introduces a category-based architecture that improves upon the v3 forma
 The library automatically detects and converts v3 reports to v4 format:
 
 ```typescript
-import { parse } from 'xarf';
+import { parse } from '@xarf/xarf';
 
 // v3 report is automatically detected and converted
 const { report, warnings } = parse(v3JsonData);
@@ -104,7 +104,7 @@ const { report, warnings } = parse(v3JsonData);
 When parsing v3 reports, you'll receive deprecation warnings:
 
 ```typescript
-import { parse } from 'xarf';
+import { parse } from '@xarf/xarf';
 
 const { report, warnings } = parse(v3Report);
 // warnings includes:
@@ -121,7 +121,7 @@ const { report, warnings } = parse(v3Report);
 Use the library's automatic conversion:
 
 ```typescript
-import { parse } from 'xarf';
+import { parse } from '@xarf/xarf';
 
 function processReport(jsonData: string | Record<string, unknown>) {
   const { report } = parse(jsonData);
@@ -140,7 +140,7 @@ function processReport(jsonData: string | Record<string, unknown>) {
 Track v3 report usage to plan deprecation:
 
 ```typescript
-import { parse } from 'xarf';
+import { parse } from '@xarf/xarf';
 
 function trackLegacyUsage(jsonData: string | Record<string, unknown>) {
   const { report } = parse(jsonData);
@@ -157,7 +157,7 @@ function trackLegacyUsage(jsonData: string | Record<string, unknown>) {
 Update your report generators to produce v4 format:
 
 ```typescript
-import { createReport } from 'xarf';
+import { createReport } from '@xarf/xarf';
 
 const { report } = createReport({
   category: 'messaging',
