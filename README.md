@@ -1,27 +1,20 @@
 # XARF JavaScript/TypeScript Library
 
-![XARF Spec](https://img.shields.io/badge/XARF%20Spec-v4.1.0-blue)
+![XARF Spec](https://img.shields.io/badge/XARF%20Spec-v4.2.0-blue)
 [![npm version](https://badge.fury.io/js/xarf.svg)](https://www.npmjs.com/package/xarf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Test](https://github.com/xarf/xarf-javascript/actions/workflows/test.yml/badge.svg)](https://github.com/xarf/xarf-javascript/actions/workflows/test.yml)
 
-A comprehensive JavaScript/TypeScript library for parsing, validating, and generating XARF v4.0.0 (eXtended Abuse Reporting Format) reports.
+A JavaScript/TypeScript library for parsing, validating, and generating [XARF v4](https://xarf.org) (eXtended Abuse Reporting Format) reports.
 
 ## Features
 
-- **Parser**: Parse and validate XARF reports from JSON
-- **Generator**: Create XARF-compliant reports programmatically
-- **Validator**: Comprehensive validation with detailed error reporting
-- **TypeScript Support**: Full type definitions for all XARF structures
-- **Backward Compatibility**: Automatic v3 to v4 conversion with deprecation warnings
-- **All Categories**: Support for all 7 XARF categories
-  - Messaging
-  - Connection
-  - Content
-  - Infrastructure
-  - Copyright
-  - Vulnerability
-  - Reputation
+- **Parse** XARF reports from JSON with validation and typed results
+- **Generate** XARF-compliant reports with auto-generated metadata (UUIDs, timestamps)
+- **Validate** reports against the official JSON schemas with detailed errors and warnings
+- **Full TypeScript support** with discriminated union types for all 7 categories
+- **v3 backward compatibility** with automatic detection and conversion
+- **Schema-driven** — validation rules derived from the official [xarf-spec](https://github.com/xarf/xarf-spec) schemas, not hardcoded
 
 ## Installation
 
@@ -34,11 +27,10 @@ npm install xarf
 ### Parsing a Report
 
 ```typescript
-import { XARFParser } from 'xarf';
+import { parse } from 'xarf';
 
-const parser = new XARFParser();
-const report = parser.parse({
-  xarf_version: '4.0.0',
+const { report, errors, warnings } = parse({
+  xarf_version: '4.2.0',
   report_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   timestamp: '2024-01-15T10:30:00Z',
   reporter: {
@@ -59,19 +51,29 @@ const report = parser.parse({
   protocol: 'tcp',
 });
 
-console.log(report.category); // 'connection'
+if (errors.length === 0) {
+  console.log(report.category); // 'connection'
+} else {
+  console.log('Validation errors:', errors);
+}
 ```
 
-### Generating a Report
+### Creating a Report
 
 ```typescript
-import { XARFGenerator } from 'xarf';
+import { createReport, createEvidence } from 'xarf';
 
-const generator = new XARFGenerator();
-const report = generator.generateReport({
+// Returns { content_type, payload (base64), hash, size, description }
+const evidence = createEvidence('message/rfc822', rawEmailContent, {
+  description: 'Original spam email',
+  hashAlgorithm: 'sha256',
+});
+
+// xarf_version, report_id, and timestamp are auto-generated
+const { report, errors, warnings } = createReport({
   category: 'messaging',
-  type: 'spam', // Using XARF spec field name
-  source_identifier: '192.0.2.100', // snake_case matches XARF spec
+  type: 'spam',
+  source_identifier: '192.0.2.100',
   reporter: {
     org: 'Example Security',
     contact: 'abuse@example.com',
@@ -82,177 +84,122 @@ const report = generator.generateReport({
     contact: 'abuse@example.com',
     domain: 'example.com',
   },
-  evidence_source: 'automated_scan', // snake_case matches XARF spec
+  evidence_source: 'spamtrap',
   description: 'Spam email detected from source',
-  tags: ['spam', 'email'],
-  // Category-specific fields can be passed directly (union types)
   protocol: 'smtp',
   smtp_from: 'spammer@evil.example.com',
+  evidence: [evidence],
 });
 
 console.log(JSON.stringify(report, null, 2));
 ```
 
-### Validating a Report
+## API Reference
+
+### `parse(jsonData, options?)`
+
+Parse and validate a XARF report from JSON. Supports both v4 and v3 (legacy) formats — v3 reports are automatically converted to v4 with deprecation warnings.
 
 ```typescript
-import { XARFValidator } from 'xarf';
+import { parse } from 'xarf';
 
-const validator = new XARFValidator();
-const result = validator.validate(report);
-
-if (result.valid) {
-  console.log('Report is valid');
-} else {
-  console.log('Validation errors:', result.errors);
-  console.log('Warnings:', result.warnings);
-}
+const { report, errors, warnings, info } = parse(jsonData, options?);
 ```
 
-## API Documentation
+**Parameters:**
 
-### XARFParser
+- `jsonData: string | Record<string, unknown>` — JSON string or object containing a XARF report
+- `options.strict?: boolean` — Throw `XARFValidationError` on validation failures (default: `false`)
+- `options.showMissingOptional?: boolean` — Include info about missing optional fields (default: `false`)
 
-Parse and validate XARF reports from JSON.
+**Returns `ParseResult`:**
+
+- `report: XARFReport` — The parsed report, typed by category
+- `errors: string[]` — Validation errors (empty if valid)
+- `warnings: string[]` — Validation warnings
+- `info?: ValidationInfo[]` — Missing optional field info (only when `showMissingOptional` is `true`)
+
+### `createReport(input, options?)`
+
+Create a validated XARF report with auto-generated metadata. Automatically fills `xarf_version`, `report_id` (UUID), and `timestamp` (ISO 8601) if not provided.
 
 ```typescript
-const parser = new XARFParser(strict?: boolean);
+import { createReport } from 'xarf';
+
+const { report, errors, warnings } = createReport(input, options?);
 ```
 
-- `strict`: If `true`, throw exceptions on validation errors. If `false`, collect errors for retrieval.
+**Parameters:**
 
-#### Methods
+- `input: ReportInput` — Report data. A discriminated union on `category` that narrows type-safe fields per category (e.g., `MessagingReportInput`, `ConnectionReportInput`, etc.)
+- `options.strict?: boolean` — Throw on validation failures (default: `false`)
+- `options.showMissingOptional?: boolean` — Include info about missing optional fields (default: `false`)
 
-- `parse(jsonData: string | object): XARFReport` - Parse a XARF report
-- `validate(jsonData: string | object): boolean` - Validate without parsing
-- `getErrors(): string[]` - Get validation errors from last operation
+**Returns `CreateReportResult`:**
 
-### XARFGenerator
+- `report: XARFReport` — The generated report
+- `errors: ValidationError[]` — Structured validation errors (`{ field, message, value? }`)
+- `warnings: ValidationWarning[]` — Structured validation warnings (`{ field, message, value? }`)
+- `info?: ValidationInfo[]` — Missing optional field info (only when `showMissingOptional` is `true`)
 
-Generate XARF-compliant reports programmatically.
+### `createEvidence(contentType, payload, options?)`
+
+Create an evidence object with automatic base64 encoding, hashing, and size calculation.
 
 ```typescript
-const generator = new XARFGenerator();
+import { createEvidence } from 'xarf';
+
+const evidence = createEvidence(contentType, payload, options?);
 ```
 
-#### Methods
+**Parameters:**
 
-- `generateReport(options: GeneratorOptions): XARFReport` - Create a complete report
-- `generateUUID(): string` - Generate a UUID for report ID
-- `generateTimestamp(): string` - Generate an ISO 8601 timestamp
-- `generateHash(data: string | Buffer, algorithm?: string): string` - Hash data
-- `addEvidence(contentType: string, description: string, payload: string | Buffer): XARFEvidence` - Create evidence with hash
-- `generateRandomEvidence(category: XARFCategory, description?: string): XARFEvidence` - Generate sample evidence
-- `generateSampleReport(category: XARFCategory, reportType: string, includeEvidence?: boolean, includeOptional?: boolean): XARFReport` - Generate test report
+- `contentType: string` — MIME type of the evidence (e.g., `'message/rfc822'`)
+- `payload: string | Buffer` — The evidence data
+- `options.description?: string` — Human-readable description
+- `options.hashAlgorithm?: 'sha256' | 'sha512' | 'sha1' | 'md5'` — Hash algorithm (default: `'sha256'`)
 
-#### GeneratorOptions
+**Returns `XARFEvidence`** with computed `hash`, `size`, and base64-encoded `payload`.
 
-The `GeneratorOptions` interface uses **snake_case** field names, matching the XARF specification.
+### `schemaRegistry`
 
-**Union Types**: Category-specific fields can be passed directly without using `additionalFields`:
+Access schema-derived validation rules and metadata programmatically.
 
 ```typescript
-// Messaging report with direct fields
-const messagingReport = generator.generateReport({
-  category: 'messaging',
-  type: 'spam',
-  source_identifier: '192.0.2.100',
-  reporter: { org: '...', contact: '...', domain: '...' },
-  sender: { org: '...', contact: '...', domain: '...' },
-  evidence_source: 'spamtrap',
-  // Messaging-specific fields directly on options
-  protocol: 'smtp',
-  smtp_from: 'spammer@evil.example.com',
-  subject: 'You won!',
-});
+import { schemaRegistry } from 'xarf';
 
-// Connection report with direct fields
-const connectionReport = generator.generateReport({
-  category: 'connection',
-  type: 'ddos',
-  source_identifier: '192.0.2.100',
-  reporter: { org: '...', contact: '...', domain: '...' },
-  sender: { org: '...', contact: '...', domain: '...' },
-  evidence_source: 'honeypot',
-  // Connection-specific fields directly on options
-  destination_ip: '203.0.113.10',
-  protocol: 'tcp',
-  destination_port: 80,
-});
+// Get all valid categories
+schemaRegistry.getCategories();
+// Set { 'messaging', 'connection', 'content', 'infrastructure', 'copyright', 'vulnerability', 'reputation' }
+
+// Get valid types for a category
+schemaRegistry.getTypesForCategory('connection');
+// Set { 'ddos', 'port_scan', 'login_attack', ... }
+
+// Check if a category/type combination is valid
+schemaRegistry.isValidType('connection', 'ddos'); // true
+
+// Get valid evidence sources
+schemaRegistry.getEvidenceSources();
+// Set { 'honeypot', 'spamtrap', 'user_report', ... }
+
+// Get field metadata including descriptions
+schemaRegistry.getFieldMetadata('confidence');
+// { description: '...', required: false, recommended: true, ... }
 ```
 
-**Base Options** (all categories):
+### Validation Details
+
+Both `parse()` and `createReport()` run validation internally. Additional behaviors:
+
+- **Unknown fields** trigger warnings (or errors in strict mode)
+- **Missing optional fields** can be discovered with `showMissingOptional: true`:
 
 ```typescript
-{
-  category: XARFCategory;                    // Required: Report category
-  type?: string;                             // Report type (e.g., 'spam', 'ddos')
-  source_identifier?: string;                // Required: Source IP or identifier
-  reporter: ContactInfo;                     // Required: Reporter information
-  sender: ContactInfo;                       // Required: Sender information
-  evidence_source?: EvidenceSource;          // Evidence source
-  description?: string;                      // Human-readable description
-  evidence?: XARFEvidence[];                 // Evidence items
-  confidence?: number;                       // Confidence score (0.0 to 1.0)
-  tags?: string[];                           // Tags for categorization
-  additionalFields?: Record<string, unknown>; // Additional fields
-}
-```
+const { info } = parse(report, { showMissingOptional: true });
 
-### XARFValidator
-
-Comprehensive validation with detailed error and warning reporting.
-
-```typescript
-const validator = new XARFValidator();
-```
-
-#### Methods
-
-- `validate(report: XARFReport, strict?: boolean, showMissingOptional?: boolean): ValidationResult` - Validate a report
-
-Parameters:
-
-- `report` - The XARF report to validate
-- `strict` - If `true`, throw `XARFValidationError` on validation failures (default: `false`)
-- `showMissingOptional` - If `true`, include info about missing optional fields (default: `false`)
-
-Returns:
-
-```typescript
-{
-  valid: boolean;
-  errors: Array<{ field: string; message: string; value?: unknown }>;
-  warnings: Array<{ field: string; message: string; value?: unknown }>;
-  info?: Array<{ field: string; message: string }>;  // Only when showMissingOptional=true
-}
-```
-
-#### Unknown Field Detection
-
-The validator automatically warns about unknown fields in reports:
-
-```typescript
-const report = {
-  // ... valid fields ...
-  unknownField: 'value', // Will trigger a warning
-};
-
-const result = validator.validate(report);
-// result.warnings will include: "Unknown field 'unknownField' is not defined in the XARF schema"
-```
-
-In strict mode, unknown fields are treated as errors.
-
-#### Missing Optional Fields
-
-Use `showMissingOptional` to discover which optional fields you could add:
-
-```typescript
-const result = validator.validate(report, false, true);
-
-if (result.info) {
-  result.info.forEach(({ field, message }) => {
+if (info) {
+  info.forEach(({ field, message }) => {
     console.log(`${field}: ${message}`);
     // e.g., "description: OPTIONAL - Human-readable description of the abuse"
     // e.g., "confidence: RECOMMENDED - Confidence score between 0.0 and 1.0"
@@ -260,266 +207,67 @@ if (result.info) {
 }
 ```
 
-### SchemaRegistry
+## v3 Backward Compatibility
 
-Access schema-derived validation rules programmatically:
-
-```typescript
-import { schemaRegistry } from 'xarf';
-
-// Get all valid categories
-const categories = schemaRegistry.getCategories();
-// Set { 'messaging', 'connection', 'content', ... }
-
-// Get valid types for a category
-const types = schemaRegistry.getTypesForCategory('connection');
-// Set { 'ddos', 'port_scan', 'login_attack', ... }
-
-// Check if a category/type combination is valid
-schemaRegistry.isValidType('connection', 'ddos'); // true
-
-// Get valid evidence sources
-const sources = schemaRegistry.getEvidenceSources();
-// Set { 'honeypot', 'spamtrap', 'user_report', ... }
-
-// Get field metadata including descriptions
-const metadata = schemaRegistry.getFieldMetadata('confidence');
-// { description: '...', required: false, recommended: true, ... }
-```
-
-## Categories and Types
-
-### Messaging
-
-- `spam`, `phishing`, `social_engineering`, `bulk_messaging`
-
-### Connection
-
-- `ddos`, `port_scan`, `login_attack`, `ip_spoofing`, `compromised`, `botnet`, `malicious_traffic`, and more
-
-### Content
-
-- `phishing_site`, `malware_distribution`, `defacement`, `spamvertised`, `web_hack`, and more
-
-### Infrastructure
-
-- `botnet`, `compromised_server`
-
-### Copyright
-
-- `infringement`, `dmca`, `trademark`, `p2p`, and more
-
-### Vulnerability
-
-- `cve`, `misconfiguration`, `open_service`
-
-### Reputation
-
-- `blocklist`, `threat_intelligence`
-
-## Examples
-
-### Connection Report (DDoS)
+The library automatically detects XARF v3 reports (by the `Version` field) and converts them to v4 during parsing. Converted reports include `legacy_version: '3'` and deprecation warnings.
 
 ```typescript
-const report = generator.generateReport({
-  category: 'connection',
-  type: 'ddos',
-  source_identifier: '192.0.2.100',
-  reporter: {
-    org: 'Security Operations',
-    contact: 'abuse@example.com',
-    domain: 'example.com',
-  },
-  sender: {
-    org: 'Security Operations',
-    contact: 'abuse@example.com',
-    domain: 'example.com',
-  },
-  evidence_source: 'honeypot',
-  // Category-specific fields directly (union types)
-  destination_ip: '203.0.113.10',
-  protocol: 'tcp',
-  destination_port: 80,
-  attack_type: 'syn_flood',
-  confidence: 0.95,
-});
+import { parse } from 'xarf';
+
+const { report, warnings } = parse(v3Report);
+
+console.log(report.xarf_version); // '4.2.0'
+console.log(report.category); // mapped category (e.g., 'messaging')
+console.log(report.legacy_version); // '3'
+// warnings includes deprecation notice + conversion details
 ```
 
-### Content Report (Phishing Site)
+You can also use the low-level utilities directly:
 
 ```typescript
-const report = generator.generateReport({
-  category: 'content',
-  type: 'phishing',
-  source_identifier: '192.0.2.100',
-  reporter: {
-    org: 'Phishing Response Team',
-    contact: 'abuse@example.com',
-    domain: 'example.com',
-  },
-  sender: {
-    org: 'Phishing Response Team',
-    contact: 'abuse@example.com',
-    domain: 'example.com',
-  },
-  evidence_source: 'user_report',
-  // Category-specific fields directly (union types)
-  url: 'http://phishing.example.com',
-  content_type: 'text/html',
-  description: 'Phishing site mimicking banking portal',
-  tags: ['phishing', 'banking', 'credential-theft'],
-});
+import { isXARFv3, convertV3toV4, getV3DeprecationWarning } from 'xarf';
+
+if (isXARFv3(jsonData)) {
+  const warnings: string[] = [];
+  const v4Report = convertV3toV4(v3Report, warnings);
+  console.log(getV3DeprecationWarning());
+}
 ```
 
-### Messaging Report (Spam)
-
-```typescript
-const report = generator.generateReport({
-  category: 'messaging',
-  type: 'spam',
-  source_identifier: '192.0.2.100',
-  reporter: {
-    org: 'Example Security',
-    contact: 'abuse@example.com',
-    domain: 'example.com',
-  },
-  sender: {
-    org: 'Example Security',
-    contact: 'abuse@example.com',
-    domain: 'example.com',
-  },
-  evidence_source: 'spamtrap',
-  // Category-specific fields directly (union types)
-  protocol: 'smtp',
-  smtp_from: 'spammer@evil.example.com',
-  smtp_to: 'victim@example.com',
-  subject: 'You won the lottery!',
-  message_id: '<123456@evil.example.com>',
-});
-```
-
-## TypeScript Support
-
-Full TypeScript definitions are included:
-
-```typescript
-import type {
-  XARFReport,
-  ConnectionReport,
-  MessagingReport,
-  XARFCategory,
-  ReporterType,
-} from 'xarf';
-
-const report: ConnectionReport = {
-  // TypeScript will enforce correct structure
-};
-```
-
-## Testing
-
-```bash
-# Run tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run tests in watch mode
-npm run test:watch
-```
-
-## Building
-
-```bash
-# Build TypeScript to JavaScript
-npm run build
-
-# Type check without building
-npm run typecheck
-```
+Unknown v3 report types cause a parse error listing the supported types. See [MIGRATION_V3_TO_V4.md](docs/MIGRATION_V3_TO_V4.md) for the full type mapping and migration strategies.
 
 ## Schema Management
 
-This library validates against the official [xarf-spec](https://github.com/xarf/xarf-spec) JSON schemas. Schemas are automatically fetched from the xarf-spec repository on `npm install`.
+This library validates against the official [xarf-spec](https://github.com/xarf/xarf-spec) JSON schemas. Schemas are fetched automatically on `npm install` based on the version configured in `package.json`:
 
-### Checking for Schema Updates
+```json
+"xarfSpec": {
+  "version": "v4.2.0"
+}
+```
 
 ```bash
 # Check if a newer version of xarf-spec is available
 npm run check-schema-updates
 
-# Show all available releases
-npm run check-schema-updates -- --all
-```
-
-Example output:
-
-```
-[xarf] Checking for schema updates...
-
-  Configured version: v4.1.0
-  Installed version:  v4.1.0
-  Latest release:     v4.1.0 (Dec 18, 2025)
-
-  ✅ You are using the latest version.
-```
-
-### Updating Schemas
-
-To update to a newer version of the XARF specification:
-
-1. Edit `package.json` and update the version:
-
-   ```json
-   "xarfSpec": {
-     "version": "v4.2.0"
-   }
-   ```
-
-2. Run npm install to fetch the new schemas:
-   ```bash
-   npm install
-   ```
-
-### Manual Schema Fetch
-
-```bash
-# Re-fetch schemas from xarf-spec (useful if schemas are missing)
+# Re-fetch schemas (e.g., if missing or to force a refresh)
 npm run fetch-schemas
 ```
 
-## Linting and Formatting
+To update to a newer spec version, change the version in `package.json` and run `npm install`.
+
+## Development
 
 ```bash
-# Run ESLint
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
-
-# Check Prettier formatting
-npm run format:check
-
-# Format code
-npm run format
+npm test                  # Run tests
+npm run test:coverage     # Run tests with coverage
+npm run build             # Build TypeScript to JavaScript
+npm run typecheck         # Type-check without emitting
+npm run lint              # Run ESLint
+npm run format:check      # Check Prettier formatting
 ```
 
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Run linting and formatting
-6. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
 
 ## Links
 
@@ -527,94 +275,5 @@ MIT License - see LICENSE file for details
 - [GitHub Repository](https://github.com/xarf/xarf-javascript)
 - [npm Package](https://www.npmjs.com/package/xarf)
 - [Issue Tracker](https://github.com/xarf/xarf-javascript/issues)
-
-## Backward Compatibility (v3 Legacy Support)
-
-This library automatically detects and converts XARF v3 format reports to v4:
-
-```typescript
-import { XARFParser } from 'xarf';
-
-const parser = new XARFParser();
-
-// v3 format report
-const v3Report = {
-  Version: '3',
-  ReporterInfo: {
-    ReporterOrg: 'Security Team',
-    ReporterOrgEmail: 'abuse@example.com',
-  },
-  Report: {
-    ReportType: 'Spam',
-    Date: '2024-01-15T10:00:00Z',
-    SourceIp: '192.0.2.100',
-    Protocol: 'smtp',
-    SmtpMailFromAddress: 'spammer@evil.example',
-  },
-};
-
-// Automatically converted to v4 format
-const report = parser.parse(v3Report);
-console.log(report.xarf_version); // '4.0.0'
-console.log(report.category); // 'messaging'
-console.log(report.type); // 'spam'
-console.log(report._internal?.legacy_version); // '3'
-
-// Get deprecation warnings
-const warnings = parser.getWarnings();
-console.log(warnings); // Contains deprecation notice
-```
-
-### v3 Format Detection
-
-The parser automatically detects v3 reports by checking for the `Version` field:
-
-```typescript
-import { isXARFv3 } from 'xarf';
-
-if (isXARFv3(jsonData)) {
-  console.log('This is a legacy v3 report');
-}
-```
-
-### Manual v3 Conversion
-
-You can also manually convert v3 reports:
-
-```typescript
-import { convertV3toV4, getV3DeprecationWarning } from 'xarf';
-
-const warnings: string[] = [];
-const v4Report = convertV3toV4(v3Report, warnings);
-
-console.log(getV3DeprecationWarning());
-// "DEPRECATION WARNING: XARF v3 format detected..."
-```
-
-### v3 Type Mapping
-
-The following v3 report types are automatically mapped to v4 categories:
-
-| v3 ReportType | v4 Category    | v4 Type      |
-| ------------- | -------------- | ------------ |
-| Spam          | messaging      | spam         |
-| Login-Attack  | connection     | login_attack |
-| Port-Scan     | connection     | port_scan    |
-| DDoS          | connection     | ddos         |
-| Phishing      | content        | phishing     |
-| Malware       | content        | malware      |
-| Botnet        | infrastructure | botnet       |
-| Copyright     | copyright      | copyright    |
-
-Unknown v3 report types are mapped to category `content` with type `unclassified`.
-
-## Version
-
-Current version: 1.0.0
-XARF Specification: 4.1.0 (from [xarf-spec](https://github.com/xarf/xarf-spec))
-
-Production release with full support for all 7 XARF categories: messaging, connection, content, infrastructure, copyright, vulnerability, and reputation.
-
-**Schema Updates**: Schemas are fetched from the official xarf-spec repository. Run `npm run check-schema-updates` to check for new versions.
-
-**v3 Compatibility**: Full backward compatibility with XARF v3 format with automatic conversion and deprecation warnings.
+- [Migration Guide (v3 → v4)](docs/MIGRATION_V3_TO_V4.md)
+- [License (MIT)](LICENSE)

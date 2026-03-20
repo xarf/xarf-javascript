@@ -5,21 +5,24 @@
  * (eXtended Abuse Reporting Format) reports.
  */
 
-export { XARFParser } from './parser';
+export { SPEC_VERSION } from './version';
+export { parse, type ParseOptions, type ParseResult } from './parser';
 export {
-  XARFGenerator,
-  type GeneratorOptions,
-  type BaseGeneratorOptions,
-  type ContentGeneratorOptions,
-  type ConnectionGeneratorOptions,
-  type MessagingGeneratorOptions,
-  type InfrastructureGeneratorOptions,
-  type CopyrightGeneratorOptions,
-  type VulnerabilityGeneratorOptions,
-  type ReputationGeneratorOptions,
+  createReport,
+  createEvidence,
+  type ReportInput,
+  type CreateReportOptions,
+  type CreateReportResult,
+  type EvidenceOptions,
+  type ConnectionReportInput,
+  type MessagingReportInput,
+  type ContentReportInput,
+  type InfrastructureReportInput,
+  type CopyrightReportInput,
+  type VulnerabilityReportInput,
+  type ReputationReportInput,
 } from './generator';
 export {
-  XARFValidator,
   type ValidationResult,
   type ValidationError,
   type ValidationWarning,
@@ -27,24 +30,90 @@ export {
 } from './validator';
 export { SchemaValidator, validator } from './schema-validator';
 export { SchemaRegistry, schemaRegistry, type FieldMetadata } from './schema-registry';
-export { XARFError, XARFValidationError, XARFParseError, XARFSchemaError } from './errors';
+export { XARFError, XARFValidationError, XARFParseError } from './errors';
 export type {
+  // Core types
   XARFReport,
   XARFCategory,
-  ReporterType,
   EvidenceSource,
-  SeverityLevel,
-  XARFReporter,
   XARFEvidence,
   ContactInfo,
-  MessagingReport,
-  ConnectionReport,
-  ContentReport,
-  InfrastructureReport,
-  CopyrightReport,
-  VulnerabilityReport,
-  ReputationReport,
   AnyXARFReport,
+  // Messaging
+  MessagingBaseReport,
+  SpamIndicators,
+  SpamReport,
+  BulkIndicators,
+  BulkMessagingReport,
+  MessagingReport,
+  // Connection
+  ConnectionBaseReport,
+  LoginAttackReport,
+  PortScanReport,
+  DdosReport,
+  InfectedHostReport,
+  ReconnaissanceReport,
+  ScrapingReport,
+  SqlInjectionReport,
+  VulnerabilityScanReport,
+  ConnectionReport,
+  // Content
+  ContentBaseReport,
+  PhishingReport,
+  MalwareReport,
+  CsamReport,
+  CsemReport,
+  ExposedDataReport,
+  BrandInfringementReport,
+  FraudReport,
+  CompromiseIndicator,
+  WebshellDetails,
+  RemoteCompromiseReport,
+  RegistrantDetails,
+  SuspiciousRegistrationReport,
+  ContentReport,
+  // Infrastructure
+  InfrastructureBaseReport,
+  BotnetReport,
+  CompromisedServerReport,
+  InfrastructureReport,
+  // Copyright
+  CopyrightBaseReport,
+  CopyrightCopyrightReport,
+  SwarmInfo,
+  PeerInfo,
+  CopyrightP2pReport,
+  FileInfo,
+  CyberlockerTakedownInfo,
+  CyberlockerUploaderInfo,
+  CopyrightCyberlockerReport,
+  UgcContentInfo,
+  UgcUploaderInfo,
+  UgcMatchDetails,
+  UgcMonetizationInfo,
+  CopyrightUgcPlatformReport,
+  LinkSiteLinkInfo,
+  LinkedContentItem,
+  LinkSiteRanking,
+  CopyrightLinkSiteReport,
+  MessageInfo,
+  UsenetEncodingInfo,
+  UsenetNzbInfo,
+  UsenetServerInfo,
+  CopyrightUsenetReport,
+  CopyrightReport,
+  // Vulnerability
+  VulnerabilityBaseReport,
+  ImpactAssessment,
+  CveReport,
+  OpenServiceReport,
+  MisconfigurationReport,
+  VulnerabilityReport,
+  // Reputation
+  ReputationBaseReport,
+  BlocklistReport,
+  ThreatIntelligenceReport,
+  ReputationReport,
 } from './types';
 
 export {
@@ -57,4 +126,3 @@ export {
 } from './v3-legacy';
 
 export const VERSION = '1.0.0';
-export const SPEC_VERSION = '4.0.0';

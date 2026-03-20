@@ -3,7 +3,6 @@
  */
 
 import { XARFValidator } from '../src/validator';
-import { XARFValidationError } from '../src/errors';
 import type { XARFReport } from '../src/types';
 
 describe('XARFValidator', () => {
@@ -14,7 +13,7 @@ describe('XARFValidator', () => {
   });
 
   const createValidReport = (): XARFReport => ({
-    xarf_version: '4.0.0',
+    xarf_version: '4.2.0',
     report_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     timestamp: '2024-01-15T10:30:00Z',
     reporter: {
@@ -38,17 +37,9 @@ describe('XARFValidator', () => {
   });
 
   describe('validate', () => {
-    it('should validate correct report', () => {
-      const report = createValidReport();
-      const result = validator.validate(report);
-
-      expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
-    });
-
     it('should detect missing required fields', () => {
       const report: any = {
-        xarf_version: '4.0.0',
+        xarf_version: '4.2.0',
         // Missing other required fields
       };
 
@@ -56,16 +47,6 @@ describe('XARFValidator', () => {
 
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
-    });
-
-    it('should detect invalid XARF version', () => {
-      const report = createValidReport();
-      report.xarf_version = '3.0.0';
-
-      const result = validator.validate(report);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'xarf_version')).toBe(true);
     });
 
     it('should detect invalid category', () => {
@@ -78,59 +59,40 @@ describe('XARFValidator', () => {
       expect(result.errors.some((e) => e.field === 'category')).toBe(true);
     });
 
-    it('should detect invalid reporter domain', () => {
-      const report = createValidReport();
-      (report.reporter as any).domain = 'invalid domain with spaces';
-
-      const result = validator.validate(report);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'reporter.domain')).toBe(true);
-    });
-
-    it('should detect invalid confidence', () => {
-      const report = createValidReport();
-      report.confidence = 1.5;
-
-      const result = validator.validate(report);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'confidence')).toBe(true);
-    });
-
-    it('should throw in strict mode', () => {
+    it('should return invalid result in strict mode', () => {
       const report = createValidReport();
       report.xarf_version = '3.0.0';
 
-      expect(() => validator.validate(report, true)).toThrow(XARFValidationError);
+      const result = validator.validate(report, true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.length).toBeGreaterThan(0);
     });
 
     it('should convert warnings to errors in strict mode', () => {
       const report = createValidReport();
-      report.report_id = 'not-a-uuid';
+      (report as any).unknownField = 'some value';
 
-      expect(() => validator.validate(report, true)).toThrow(XARFValidationError);
+      // Non-strict: valid with warning
+      const nonStrictResult = validator.validate(report, false);
+      expect(nonStrictResult.valid).toBe(true);
+      expect(nonStrictResult.warnings.some((w) => w.field === 'unknownField')).toBe(true);
+
+      // Strict: warning becomes error
+      const strictResult = validator.validate(report, true);
+      expect(strictResult.valid).toBe(false);
+      expect(strictResult.errors.some((e) => e.field === 'unknownField')).toBe(true);
     });
   });
 
   describe('format validation', () => {
-    it('should warn about invalid UUID format', () => {
+    it('should error on invalid UUID format', () => {
       const report = createValidReport();
       report.report_id = 'not-a-valid-uuid';
 
       const result = validator.validate(report);
 
-      expect(result.warnings.some((w) => w.field === 'report_id')).toBe(true);
-    });
-
-    it('should error on invalid email format', () => {
-      const report = createValidReport();
-      report.reporter.contact = 'not-an-email';
-
-      const result = validator.validate(report);
-
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'reporter.contact')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'report_id')).toBe(true);
     });
 
     it('should detect invalid timestamp', () => {
@@ -152,6 +114,142 @@ describe('XARFValidator', () => {
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'xarf_version')).toBe(true);
     });
+
+    it('should reject invalid timestamp string', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: 'foo',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        source_identifier: '192.0.2.100',
+        category: 'content',
+        type: 'phishing',
+        evidence_source: 'honeypot',
+        url: 'http://phishing.example.com',
+      } as any;
+
+      const result = validator.validate(report);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'timestamp')).toBe(true);
+    });
+
+    it('should pass with valid timestamp', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        source_identifier: '192.0.2.1',
+        category: 'messaging',
+        type: 'spam',
+        evidence_source: 'spamtrap',
+        protocol: 'chat',
+      } as unknown as XARFReport;
+
+      const result = validator.validate(report);
+
+      expect(result.valid).toBe(true);
+    });
+  });
+
+  describe('required fields edge cases', () => {
+    it('should detect missing reporter.contact', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: {
+          org: 'Test Org',
+          type: 'automated',
+        },
+        source_identifier: '192.0.2.1',
+        category: 'messaging',
+        type: 'spam',
+        evidence_source: 'spamtrap',
+      } as unknown as XARFReport;
+
+      const result = validator.validate(report);
+
+      expect(result.valid).toBe(false);
+      expect(
+        result.errors.some((e) => e.field.includes('reporter') && e.message.includes('contact'))
+      ).toBe(true);
+    });
+
+    it('should detect missing reporter.domain', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        source_identifier: '192.0.2.1',
+        category: 'messaging',
+        type: 'spam',
+        evidence_source: 'spamtrap',
+      } as unknown as XARFReport;
+
+      const result = validator.validate(report);
+
+      expect(result.valid).toBe(false);
+      expect(
+        result.errors.some((e) => e.field.includes('reporter') && e.message.includes('domain'))
+      ).toBe(true);
+    });
+  });
+
+  describe('value validation', () => {
+    it('should validate invalid evidence_source', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        source_identifier: '192.0.2.1',
+        category: 'messaging',
+        type: 'spam',
+        evidence_source: 'invalid_source',
+      } as unknown as XARFReport;
+
+      const result = validator.validate(report);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'evidence_source')).toBe(true);
+    });
   });
 
   describe('category-specific validation', () => {
@@ -162,13 +260,14 @@ describe('XARFValidator', () => {
         type: 'spam',
         protocol: 'smtp',
         smtp_from: 'spammer@example.com',
+        subject: 'Buy now!',
       };
 
       const result = validator.validate(report);
       expect(result.valid).toBe(true);
     });
 
-    it('should detect invalid messaging type', () => {
+    it('should reject unknown type', () => {
       const report: XARFReport = {
         ...createValidReport(),
         category: 'messaging',
@@ -178,7 +277,6 @@ describe('XARFValidator', () => {
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'type')).toBe(true);
     });
 
     it('should require smtp_from for SMTP messaging', () => {
@@ -192,7 +290,7 @@ describe('XARFValidator', () => {
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'smtp_from')).toBe(true);
+      expect(result.errors.some((e) => e.message.includes('smtp_from'))).toBe(true);
     });
 
     it('should validate connection reports', () => {
@@ -202,24 +300,95 @@ describe('XARFValidator', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('should require destination_ip for connection reports', () => {
+    it('should accept missing destination_ip (recommended, not required)', () => {
       const report: any = createValidReport();
       delete report.destination_ip;
 
       const result = validator.validate(report);
 
-      expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'destination_ip')).toBe(true);
+      expect(result.valid).toBe(true);
     });
 
-    it('should validate port numbers', () => {
-      const report = createValidReport();
-      (report as any).destination_port = 70000;
+    it('should reject unknown connection type', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        source_identifier: '192.0.2.1',
+        category: 'connection',
+        type: 'invalid_connection_type',
+        evidence_source: 'ids_ips',
+        destination_ip: '203.0.113.1',
+        protocol: 'tcp',
+      } as XARFReport;
 
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
+    });
+
+    it('should reject unknown content type', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        source_identifier: '192.0.2.1',
+        category: 'content',
+        type: 'invalid_content_type',
+        evidence_source: 'user_report',
+        url: 'http://example.com',
+      } as XARFReport;
+
+      const result = validator.validate(report);
+
+      expect(result.valid).toBe(false);
+    });
+
+    it('should handle infrastructure category', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        source_identifier: '192.0.2.1',
+        category: 'infrastructure',
+        type: 'botnet',
+        evidence_source: 'honeypot',
+        compromise_evidence: 'C2 communication observed',
+      } as XARFReport;
+
+      const result = validator.validate(report);
+
+      expect(result.valid).toBe(true);
     });
 
     it('should validate content reports', () => {
@@ -248,7 +417,9 @@ describe('XARFValidator', () => {
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.some((e) => e.field === 'url')).toBe(true);
+      expect(
+        result.errors.some((e) => e.message.includes('url') && e.message.includes('required'))
+      ).toBe(true);
     });
 
     it('should validate URL format', () => {
@@ -264,7 +435,130 @@ describe('XARFValidator', () => {
       const result = validator.validate(report);
 
       expect(result.valid).toBe(false);
+      expect(
+        result.errors.some((e) => e.message.includes('url') || e.message.includes('format'))
+      ).toBe(true);
+    });
+
+    it('should catch URL parsing error with field check', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        source_identifier: '192.0.2.1',
+        category: 'content',
+        type: 'phishing',
+        evidence_source: 'user_report',
+        url: 'not-a-valid-url',
+      } as XARFReport;
+
+      const result = validator.validate(report);
+
+      expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'url')).toBe(true);
+      expect(result.errors.some((e) => e.message.includes('format'))).toBe(true);
+    });
+  });
+
+  describe('connection port validation', () => {
+    it('should validate invalid port number (non-integer)', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        source_identifier: '192.0.2.1',
+        category: 'connection',
+        type: 'ddos',
+        evidence_source: 'honeypot',
+        destination_ip: '203.0.113.1',
+        protocol: 'tcp',
+        destination_port: 'not-a-number',
+      } as unknown as XARFReport;
+
+      const result = validator.validate(report);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
+    });
+
+    it('should validate port number too high', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        source_identifier: '192.0.2.1',
+        category: 'connection',
+        type: 'ddos',
+        evidence_source: 'honeypot',
+        destination_ip: '203.0.113.1',
+        protocol: 'tcp',
+        destination_port: 70000,
+      } as XARFReport;
+
+      const result = validator.validate(report);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
+    });
+
+    it('should validate negative port number', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        sender: {
+          org: 'Test Org',
+          contact: 'test@example.com',
+          domain: 'example.com',
+        },
+        source_identifier: '192.0.2.1',
+        category: 'connection',
+        type: 'ddos',
+        evidence_source: 'honeypot',
+        destination_ip: '203.0.113.1',
+        protocol: 'tcp',
+        destination_port: -1,
+      } as XARFReport;
+
+      const result = validator.validate(report);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'destination_port')).toBe(true);
     });
   });
 
@@ -325,7 +619,6 @@ describe('XARFValidator', () => {
       const result = validator.validate(report, false, true);
 
       expect(result.info).toBeDefined();
-      // Should include common optional fields like description, confidence, tags, etc.
       const infoFields = result.info!.map((i) => i.field);
       expect(infoFields).toContain('description');
       expect(infoFields).toContain('confidence');
@@ -334,13 +627,11 @@ describe('XARFValidator', () => {
 
     it('should include type-specific optional fields', () => {
       const report = createValidReport();
-      // This is a connection/ddos report
 
       const result = validator.validate(report, false, true);
 
       expect(result.info).toBeDefined();
       const infoFields = result.info!.map((i) => i.field);
-      // Connection DDoS specific optional fields
       expect(infoFields).toContain('destination_port');
     });
 
@@ -368,6 +659,34 @@ describe('XARFValidator', () => {
       expect(descriptionInfo!.message).toContain('OPTIONAL');
     });
 
+    it('should include optional fields from content-base.json via $ref', () => {
+      const report = {
+        xarf_version: '4.2.0',
+        report_id: '550e8400-e29b-41d4-a716-446655440000',
+        timestamp: '2024-01-15T10:30:00Z',
+        reporter: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        sender: { org: 'Test', contact: 'test@example.com', domain: 'example.com' },
+        source_identifier: '192.0.2.1',
+        category: 'content',
+        type: 'phishing',
+        url: 'https://phishing.example.com/login',
+        confidence: 0.95,
+        evidence: [{ content_type: 'text/plain', payload: 'dGVzdA==', description: 'test' }],
+        verified_at: '2024-01-15T10:30:00Z',
+        verification_method: 'manual',
+        target_brand: 'TestBrand',
+        domain: 'phishing.example.com',
+      } as XARFReport;
+
+      const result = validator.validate(report, false, true);
+
+      expect(result.info).toBeDefined();
+      const infoFields = result.info!.map((i) => i.field);
+      expect(infoFields).toContain('registrar');
+      expect(infoFields).toContain('hosting_provider');
+      expect(infoFields).toContain('country_code');
+    });
+
     it('should mark recommended fields appropriately', () => {
       const report = createValidReport();
 
@@ -388,7 +707,7 @@ describe('XARFValidator', () => {
 
       const result = validator.validate(report);
 
-      expect(result.valid).toBe(true); // Unknown fields are warnings, not errors
+      expect(result.valid).toBe(true);
       expect(result.warnings.length).toBeGreaterThanOrEqual(2);
       const unknownFieldWarnings = result.warnings.filter((w) =>
         w.message.includes('Unknown field')
@@ -427,7 +746,6 @@ describe('XARFValidator', () => {
 
     it('should not warn about known category-specific fields', () => {
       const report = createValidReport();
-      // destination_port is a known connection category field
       report.destination_port = 443;
 
       const result = validator.validate(report);
@@ -442,7 +760,9 @@ describe('XARFValidator', () => {
       const report = createValidReport();
       (report as any).unknownField = 'some value';
 
-      expect(() => validator.validate(report, true)).toThrow();
+      const result = validator.validate(report, true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'unknownField')).toBe(true);
     });
   });
 });

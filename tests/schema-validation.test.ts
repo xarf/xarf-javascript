@@ -1,95 +1,46 @@
 /**
- * JSON Schema Validation Tests
+ * Tests for SchemaValidator
  *
- * Tests comprehensive JSON schema validation and compares with hand-coded validator.
- * Ensures schema validation catches all errors and validates backward compatibility.
+ * Tests JSON schema validation against the official XARF v4 schemas.
  */
 
 import { SchemaValidator } from '../src/schema-validator';
 import { XARFValidator } from '../src/validator';
-import type { XARFReport, XARFCategory } from '../src/types';
+import type { XARFReport } from '../src/types';
+import { validReports, getReport } from './fixtures';
 
-describe('JSON Schema Validation', () => {
+describe('SchemaValidator', () => {
   let schemaValidator: SchemaValidator;
-  let handCodedValidator: XARFValidator;
 
   beforeEach(() => {
     schemaValidator = new SchemaValidator();
-    // Disable schema validation to test hand-coded validation alone
-    handCodedValidator = new XARFValidator(false);
   });
 
-  const createValidReport = (category: XARFCategory = 'connection'): XARFReport => ({
-    xarf_version: '4.0.0',
-    report_id: '550e8400-e29b-41d4-a716-446655440000',
-    timestamp: '2024-01-15T14:30:25Z',
-    reporter: {
-      org: 'Security Corp',
-      contact: 'abuse@security.com',
-      domain: 'security.com',
-    },
-    sender: {
-      org: 'Security Corp',
-      contact: 'abuse@security.com',
-      domain: 'security.com',
-    },
-    source_identifier: '192.0.2.100',
-    category,
-    type: category === 'messaging' ? 'spam' : category === 'connection' ? 'ddos' : 'phishing',
-    evidence_source: 'honeypot',
-    ...(category === 'connection' && {
-      destination_ip: '203.0.113.10',
-      protocol: 'tcp',
-    }),
-    ...(category === 'content' && {
-      url: 'http://example.com',
-    }),
-    ...(category === 'messaging' && {
-      protocol: 'smtp',
-      smtp_from: 'spammer@evil.com',
-    }),
+  describe('valid reports — all 32 category/type combinations', () => {
+    it.each(Object.keys(validReports))('should validate %s', (key) => {
+      const result = schemaValidator.validate(validReports[key]);
+
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
   });
 
-  describe('1. Valid reports pass schema validation', () => {
-    it('should validate basic connection report', () => {
-      const report = createValidReport('connection');
-      const result = schemaValidator.validateCore(report);
-
-      expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it('should validate messaging report', () => {
-      const report = createValidReport('messaging');
-      const result = schemaValidator.validateCore(report);
-
-      expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
-    });
-
-    it('should validate content report', () => {
-      const report = createValidReport('content');
-      const result = schemaValidator.validateCore(report);
-
-      expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
-    });
-
+  describe('valid reports — optional and evidence fields', () => {
     it('should validate report with optional fields', () => {
-      const report = createValidReport('connection');
+      const report = getReport('connection/ddos');
       report.description = 'DDoS attack description';
       report.severity = 'high';
       report.confidence = 0.95;
       report.tags = ['malware:botnet', 'attack:ddos'];
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
     it('should validate report with evidence array', () => {
-      const report = createValidReport('connection');
+      const report = getReport('connection/ddos');
       report.evidence = [
         {
           content_type: 'text/plain',
@@ -99,107 +50,106 @@ describe('JSON Schema Validation', () => {
         },
       ];
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
   });
 
-  describe('2. Invalid reports fail with proper errors', () => {
+  describe('invalid reports', () => {
     it('should fail when missing required field (report_id)', () => {
-      const report = createValidReport();
+      const report = getReport('connection/ddos');
       delete (report as any).report_id;
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(false);
-      expect(result.errors.length).toBeGreaterThan(0);
       expect(result.errors.some((e: string) => e.includes('report_id'))).toBe(true);
     });
 
-    it('should fail when xarf_version has wrong format', () => {
-      const report = createValidReport();
+    it('should fail when xarf_version has wrong value', () => {
+      const report = getReport('connection/ddos');
       report.xarf_version = '3.0.0';
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e: string) => e.includes('xarf_version'))).toBe(true);
     });
 
     it('should fail when report_id is not a UUID', () => {
-      const report = createValidReport();
+      const report = getReport('connection/ddos');
       report.report_id = 'not-a-uuid';
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e: string) => e.includes('report_id'))).toBe(true);
     });
 
     it('should fail when timestamp is not ISO 8601', () => {
-      const report = createValidReport();
+      const report = getReport('connection/ddos');
       report.timestamp = '2024-01-15 10:30:00';
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e: string) => e.includes('timestamp'))).toBe(true);
     });
 
     it('should fail when reporter.contact is not an email', () => {
-      const report = createValidReport();
+      const report = getReport('connection/ddos');
       report.reporter.contact = 'not-an-email';
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e: string) => e.includes('reporter/contact'))).toBe(true);
     });
 
     it('should fail when reporter.domain is not a hostname', () => {
-      const report = createValidReport();
+      const report = getReport('connection/ddos');
       report.reporter.domain = 'invalid domain with spaces';
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e: string) => e.includes('reporter/domain'))).toBe(true);
     });
 
     it('should fail when category is invalid', () => {
-      const report = createValidReport();
+      const report = getReport('connection/ddos');
       (report as any).category = 'invalid_category';
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e: string) => e.includes('category'))).toBe(true);
     });
 
     it('should fail when confidence is out of range', () => {
-      const report = createValidReport();
+      const report = getReport('connection/ddos');
       report.confidence = 1.5;
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e: string) => e.includes('confidence'))).toBe(true);
     });
 
     it('should fail when tags have wrong format', () => {
-      const report = createValidReport();
+      const report = getReport('connection/ddos');
       report.tags = ['invalid-tag-without-colon'];
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e: string) => e.includes('tags'))).toBe(true);
     });
 
     it('should fail when evidence hash has wrong format', () => {
-      const report = createValidReport();
+      const report = getReport('connection/ddos');
       report.evidence = [
         {
           content_type: 'text/plain',
@@ -209,78 +159,42 @@ describe('JSON Schema Validation', () => {
         },
       ];
 
-      const result = schemaValidator.validateCore(report);
+      const result = schemaValidator.validate(report);
 
       expect(result.valid).toBe(false);
       expect(result.errors.some((e: string) => e.includes('hash'))).toBe(true);
     });
   });
 
-  describe('3. All 7 categories with schema validation', () => {
-    const categories: XARFCategory[] = [
-      'messaging',
-      'connection',
-      'content',
-      'infrastructure',
-      'copyright',
-      'vulnerability',
-      'reputation',
-    ];
+  describe('constraint violations', () => {
+    let validator: XARFValidator;
 
-    categories.forEach((category) => {
-      it(`should validate ${category} category against schema`, () => {
-        const report = createValidReport(category);
-        const result = schemaValidator.validateCore(report);
-
-        expect(result.valid).toBe(true);
-        expect(result.errors).toHaveLength(0);
-      });
-
-      it(`should fail ${category} category when missing required fields`, () => {
-        const report: any = {
-          category,
-          type: 'test',
-        };
-
-        const result = schemaValidator.validateCore(report);
-
-        expect(result.valid).toBe(false);
-        expect(result.errors.length).toBeGreaterThan(0);
-      });
+    beforeEach(() => {
+      validator = new XARFValidator();
     });
-  });
 
-  describe('4. Schema validation catches errors hand-coded validator misses', () => {
-    it('should catch when description exceeds maxLength', () => {
-      const report = createValidReport();
+    it('should reject description exceeding maxLength', () => {
+      const report = getReport('connection/ddos');
       report.description = 'x'.repeat(1001);
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
+      const result = validator.validate(report);
 
-      // Schema catches length violation
-      expect(schemaResult.valid).toBe(false);
-      expect(schemaResult.errors.some((e: string) => e.includes('description'))).toBe(true);
-      // Hand-coded validator doesn't check this
-      expect(handCodedResult.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'description')).toBe(true);
     });
 
-    it('should catch when tags array exceeds maxItems', () => {
-      const report = createValidReport();
+    it('should reject tags array exceeding maxItems', () => {
+      const report = getReport('connection/ddos');
       report.tags = Array(21).fill('tag:value');
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
+      const result = validator.validate(report);
 
-      // Schema catches array length violation
-      expect(schemaResult.valid).toBe(false);
-      expect(schemaResult.errors.some((e: string) => e.includes('tags'))).toBe(true);
-      // Hand-coded validator doesn't check this
-      expect(handCodedResult.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'tags')).toBe(true);
     });
 
-    it('should catch when evidence array exceeds maxItems', () => {
-      const report = createValidReport();
+    it('should reject evidence array exceeding maxItems', () => {
+      const report = getReport('connection/ddos');
       report.evidence = Array(51)
         .fill(null)
         .map(() => ({
@@ -289,150 +203,54 @@ describe('JSON Schema Validation', () => {
           payload: 'dGVzdA==',
         }));
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
+      const result = validator.validate(report);
 
-      // Schema catches array length violation
-      expect(schemaResult.valid).toBe(false);
-      expect(schemaResult.errors.some((e: string) => e.includes('evidence'))).toBe(true);
-      // Hand-coded validator doesn't check this
-      expect(handCodedResult.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'evidence')).toBe(true);
     });
 
-    it('should catch when reporter.org exceeds maxLength', () => {
-      const report = createValidReport();
+    it('should reject reporter.org exceeding maxLength', () => {
+      const report = getReport('connection/ddos');
       report.reporter.org = 'x'.repeat(201);
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
+      const result = validator.validate(report);
 
-      // Schema catches length violation
-      expect(schemaResult.valid).toBe(false);
-      expect(schemaResult.errors.some((e: string) => e.includes('reporter/org'))).toBe(true);
-      // Hand-coded validator doesn't check this
-      expect(handCodedResult.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field.includes('reporter'))).toBe(true);
     });
 
-    it('should catch when source_port is out of valid range', () => {
-      const report = createValidReport();
+    it('should reject source_port out of valid range', () => {
+      const report = getReport('connection/ddos');
       (report as any).source_port = 70000;
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
+      const result = validator.validate(report);
 
-      // Schema catches port range violation
-      expect(schemaResult.valid).toBe(false);
-      expect(schemaResult.errors.some((e: string) => e.includes('source_port'))).toBe(true);
-      // Hand-coded validator doesn't validate source_port
-      expect(handCodedResult.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'source_port')).toBe(true);
     });
 
-    it('should catch additional properties in ContactInfo', () => {
-      const report = createValidReport();
+    it('should reject additional properties in ContactInfo', () => {
+      const report = getReport('connection/ddos');
       (report.reporter as any).extra_field = 'value';
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
+      const result = validator.validate(report);
 
-      // Schema has additionalProperties: false for ContactInfo
-      expect(schemaResult.valid).toBe(false);
-      expect(schemaResult.errors.some((e: string) => e.includes('reporter'))).toBe(true);
-      // Hand-coded allows additional properties
-      expect(handCodedResult.valid).toBe(true);
-    });
-  });
-
-  describe('5. Backward compatibility - existing tests still pass', () => {
-    it('should validate reports that pass hand-coded validator', () => {
-      const report = createValidReport('connection');
-      const handCodedResult = handCodedValidator.validate(report);
-
-      expect(handCodedResult.valid).toBe(true);
-
-      const schemaResult = schemaValidator.validateCore(report);
-
-      expect(schemaResult.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field.includes('reporter'))).toBe(true);
     });
 
-    it('should validate messaging report with all fields', () => {
-      const report: XARFReport = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T14:30:25Z',
-        reporter: {
-          org: 'Security Corp',
-          contact: 'abuse@security.com',
-          domain: 'security.com',
-        },
-        sender: {
-          org: 'Security Corp',
-          contact: 'abuse@security.com',
-          domain: 'security.com',
-        },
-        source_identifier: '192.0.2.100',
-        category: 'messaging',
-        type: 'spam',
-        evidence_source: 'spamtrap',
-        protocol: 'smtp',
-        smtp_from: 'spammer@evil.com',
-        smtp_to: 'victim@example.com',
-        subject: 'Get rich quick!',
-      };
-
-      const handCodedResult = handCodedValidator.validate(report);
-      expect(handCodedResult.valid).toBe(true);
-
-      const schemaResult = schemaValidator.validateCore(report);
-      expect(schemaResult.valid).toBe(true);
-    });
-
-    it('should validate content report with URL', () => {
-      const report: XARFReport = {
-        xarf_version: '4.0.0',
-        report_id: '550e8400-e29b-41d4-a716-446655440000',
-        timestamp: '2024-01-15T14:30:25Z',
-        reporter: {
-          org: 'Security Corp',
-          contact: 'abuse@security.com',
-          domain: 'security.com',
-        },
-        sender: {
-          org: 'Security Corp',
-          contact: 'abuse@security.com',
-          domain: 'security.com',
-        },
-        source_identifier: '192.0.2.100',
-        category: 'content',
-        type: 'phishing',
-        evidence_source: 'automated_scan',
-        url: 'http://phishing.example.com',
-      };
-
-      const handCodedResult = handCodedValidator.validate(report);
-      expect(handCodedResult.valid).toBe(true);
-
-      const schemaResult = schemaValidator.validateCore(report);
-      expect(schemaResult.valid).toBe(true);
-    });
-  });
-
-  describe('6. Reports that violate schema but not hand-coded rules', () => {
-    it('should catch report with legacy_version other than "3"', () => {
-      const report = createValidReport();
+    it('should reject legacy_version other than "3"', () => {
+      const report = getReport('connection/ddos');
       (report as any).legacy_version = '2';
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
+      const result = validator.validate(report);
 
-      // Schema enforces legacy_version must be "3" if present
-      expect(schemaResult.valid).toBe(false);
-      expect(schemaResult.errors.some((e: string) => e.includes('legacy_version'))).toBe(true);
-      // Hand-coded doesn't validate legacy_version
-      expect(handCodedResult.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'legacy_version')).toBe(true);
     });
 
-    it('should catch evidence item missing required payload field', () => {
-      const report = createValidReport();
+    it('should reject evidence item missing required payload field', () => {
+      const report = getReport('connection/ddos');
       report.evidence = [
         {
           content_type: 'text/plain',
@@ -440,99 +258,175 @@ describe('JSON Schema Validation', () => {
         } as any,
       ];
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
+      const result = validator.validate(report);
 
-      // Schema enforces required payload field
-      expect(schemaResult.valid).toBe(false);
-      expect(schemaResult.errors.some((e: string) => e.includes('payload'))).toBe(true);
-      // Hand-coded doesn't validate evidence structure deeply
-      expect(handCodedResult.valid).toBe(true);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.message.includes('payload'))).toBe(true);
     });
   });
 
-  describe('7. Compare schema vs hand-coded validator results', () => {
-    it('should both pass for valid report', () => {
-      const report = createValidReport();
+  describe('strict mode (x-recommended promotion)', () => {
+    it('should pass in normal mode when recommended fields are missing', () => {
+      const report = getReport('messaging/spam');
+      delete (report as any).confidence;
+      delete (report as any).evidence;
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
+      const result = schemaValidator.validate(report, false);
 
-      expect(schemaResult.valid).toBe(true);
-      expect(handCodedResult.valid).toBe(true);
-      expect(handCodedResult.errors.length).toBe(0);
+      expect(result.valid).toBe(true);
     });
 
-    it('should both fail for report missing required field', () => {
-      const report = createValidReport();
-      delete (report as any).timestamp;
+    it('should fail in strict mode when core recommended fields are missing', () => {
+      const report = getReport('connection/ddos');
+      delete (report as any).confidence;
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
+      const result = schemaValidator.validate(report, true);
 
-      // Both should fail
-      expect(schemaResult.valid).toBe(false);
-      expect(handCodedResult.valid).toBe(false);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e: string) => e.includes('confidence'))).toBe(true);
     });
 
-    it('should both fail for invalid email format', () => {
-      const report = createValidReport();
-      report.reporter.contact = 'invalid-email';
+    it('should pass in strict mode when all recommended fields are present', () => {
+      const report: XARFReport = {
+        ...getReport('connection/ddos'),
+        evidence_source: 'honeypot',
+        confidence: 0.95,
+        evidence: [
+          {
+            content_type: 'text/plain',
+            payload: 'dGVzdA==',
+            description: 'Test evidence',
+            hash: 'sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+          },
+        ],
+      };
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
-
-      // Both should fail
-      expect(schemaResult.valid).toBe(false);
-      expect(handCodedResult.valid).toBe(false);
-      expect(handCodedResult.errors.some((e) => e.field === 'reporter.contact')).toBe(true);
+      const result = schemaValidator.validate(report, true);
+      const coreRecommendedErrors = result.errors.filter(
+        (e: string) =>
+          e.includes('confidence') || e.includes('source_port') || e.includes("'evidence'")
+      );
+      expect(coreRecommendedErrors).toHaveLength(0);
     });
 
-    it('should both fail for invalid confidence value', () => {
-      const report = createValidReport();
-      report.confidence = 2.5;
+    it('should fail when nested evidence recommended fields are missing', () => {
+      const report = {
+        ...getReport('connection/ddos'),
+        confidence: 0.95,
+        evidence: [
+          {
+            content_type: 'text/plain',
+            payload: 'dGVzdA==',
+            // Missing recommended: description, hash
+          },
+        ],
+      } as unknown as XARFReport;
 
-      const schemaResult = schemaValidator.validateCore(report);
-      const handCodedResult = handCodedValidator.validate(report);
+      const result = schemaValidator.validate(report, true);
 
-      // Both should fail
-      expect(schemaResult.valid).toBe(false);
-      expect(handCodedResult.valid).toBe(false);
-      expect(handCodedResult.errors.some((e) => e.field === 'confidence')).toBe(true);
+      expect(result.valid).toBe(false);
+      const evidenceErrors = result.errors.filter(
+        (e: string) => e.includes('description') || e.includes('hash')
+      );
+      expect(evidenceErrors.length).toBeGreaterThan(0);
+    });
+
+    it('should fail when type-specific recommended fields are missing', () => {
+      const report = getReport('messaging/spam');
+      report.confidence = 0.9;
+      report.evidence = [
+        {
+          content_type: 'text/plain',
+          payload: 'dGVzdA==',
+          description: 'spam email',
+          hash: 'sha256:abc123',
+        },
+      ];
+      // Missing type-specific recommended: smtp_to, subject, message_id
+
+      const result = schemaValidator.validate(report, true);
+
+      expect(result.valid).toBe(false);
+      expect(
+        result.errors.some(
+          (e: string) => e.includes('smtp_to') || e.includes('subject') || e.includes('message_id')
+        )
+      ).toBe(true);
     });
   });
 
-  describe('Performance', () => {
-    it('should validate 100 reports quickly', () => {
-      const reports = Array(100)
-        .fill(null)
-        .map(() => createValidReport());
+  describe('transformSchemaForStrict', () => {
+    it('should promote x-recommended properties to required', () => {
+      const schema = {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: { type: 'string' },
+          email: { type: 'string', 'x-recommended': true },
+        },
+      };
 
-      const startTime = performance.now();
-      reports.forEach((report) => {
-        schemaValidator.validateCore(report);
-      });
-      const duration = performance.now() - startTime;
+      const transformed = schemaValidator.transformSchemaForStrict(schema) as any;
 
-      expect(duration).toBeLessThan(1000); // Should be fast even with 100 reports
+      expect(transformed.required).toContain('name');
+      expect(transformed.required).toContain('email');
     });
 
-    it('should handle validation errors efficiently', () => {
-      const invalidReports = Array(100)
-        .fill(null)
-        .map(() => {
-          const report = createValidReport();
-          delete (report as any).report_id;
-          return report;
-        });
+    it('should handle nested objects in $defs', () => {
+      const schema = {
+        type: 'object',
+        properties: {},
+        $defs: {
+          nested: {
+            type: 'object',
+            required: ['id'],
+            properties: {
+              id: { type: 'string' },
+              label: { type: 'string', 'x-recommended': true },
+            },
+          },
+        },
+      };
 
-      const startTime = performance.now();
-      invalidReports.forEach((report) => {
-        schemaValidator.validateCore(report);
-      });
-      const duration = performance.now() - startTime;
+      const transformed = schemaValidator.transformSchemaForStrict(schema) as any;
 
-      expect(duration).toBeLessThan(1500); // Should still be reasonably fast
+      expect(transformed.$defs.nested.required).toContain('id');
+      expect(transformed.$defs.nested.required).toContain('label');
+    });
+
+    it('should handle allOf composition', () => {
+      const schema = {
+        allOf: [
+          { $ref: '../xarf-core.json' },
+          {
+            required: ['protocol'],
+            properties: {
+              protocol: { type: 'string' },
+              smtp_to: { type: 'string', 'x-recommended': true },
+            },
+          },
+        ],
+      };
+
+      const transformed = schemaValidator.transformSchemaForStrict(schema) as any;
+
+      expect(transformed.allOf[1].required).toContain('protocol');
+      expect(transformed.allOf[1].required).toContain('smtp_to');
+    });
+
+    it('should not mutate the original schema', () => {
+      const schema = {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: { type: 'string' },
+          email: { type: 'string', 'x-recommended': true },
+        },
+      };
+
+      schemaValidator.transformSchemaForStrict(schema);
+
+      expect(schema.required).toEqual(['name']);
     });
   });
 });

@@ -115,52 +115,6 @@ describe('SchemaRegistry', () => {
     });
   });
 
-  describe('getEvidenceSources', () => {
-    it('should return valid evidence sources', () => {
-      const sources = registry.getEvidenceSources();
-
-      expect(sources.size).toBeGreaterThan(0);
-      expect(sources.has('spamtrap')).toBe(true);
-      expect(sources.has('honeypot')).toBe(true);
-      expect(sources.has('user_report')).toBe(true);
-    });
-  });
-
-  describe('isValidEvidenceSource', () => {
-    it('should return true for valid sources', () => {
-      expect(registry.isValidEvidenceSource('spamtrap')).toBe(true);
-      expect(registry.isValidEvidenceSource('honeypot')).toBe(true);
-    });
-
-    it('should return false for invalid sources', () => {
-      expect(registry.isValidEvidenceSource('invalid_source')).toBe(false);
-    });
-  });
-
-  describe('getSeverities', () => {
-    it('should return valid severity levels', () => {
-      const severities = registry.getSeverities();
-
-      expect(severities.size).toBe(4);
-      expect(severities.has('low')).toBe(true);
-      expect(severities.has('medium')).toBe(true);
-      expect(severities.has('high')).toBe(true);
-      expect(severities.has('critical')).toBe(true);
-    });
-  });
-
-  describe('isValidSeverity', () => {
-    it('should return true for valid severities', () => {
-      expect(registry.isValidSeverity('low')).toBe(true);
-      expect(registry.isValidSeverity('critical')).toBe(true);
-    });
-
-    it('should return false for invalid severities', () => {
-      expect(registry.isValidSeverity('extreme')).toBe(false);
-      expect(registry.isValidSeverity('')).toBe(false);
-    });
-  });
-
   describe('getRequiredFields', () => {
     it('should return required fields from core schema', () => {
       const required = registry.getRequiredFields();

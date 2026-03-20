@@ -7,7 +7,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import type { XARFCategory, SeverityLevel } from './types';
+import type { XARFCategory } from './types';
 import { findSchemasDir, loadSchemaFile } from './schema-utils';
 
 /**
@@ -71,8 +71,6 @@ export class SchemaRegistry {
   // Cached validation data
   private categoriesCache: Set<XARFCategory> | null = null;
   private typesPerCategoryCache: Map<string, Set<string>> | null = null;
-  private evidenceSourcesCache: Set<string> | null = null;
-  private severitiesCache: Set<SeverityLevel> | null = null;
   private requiredFieldsCache: Set<string> | null = null;
   private contactRequiredFieldsCache: Set<string> | null = null;
 
@@ -131,7 +129,8 @@ export class SchemaRegistry {
             const schemaPath = path.join(typesDir, file);
             const schema = loadSchemaFile<SchemaDefinition>(schemaPath);
             if (schema) {
-              this.typeSchemas.set(`${match[1]}/${match[2]}`, schema);
+              const normalizedType = match[2].replace(/-/g, '_');
+              this.typeSchemas.set(`${match[1]}/${normalizedType}`, schema);
             }
           }
         }
@@ -196,9 +195,7 @@ export class SchemaRegistry {
       if (!this.typesPerCategoryCache.has(category)) {
         this.typesPerCategoryCache.set(category, new Set());
       }
-      // Convert filename format (e.g., "bulk-messaging") to schema format (e.g., "bulk_messaging")
-      const normalizedType = type.replace(/-/g, '_');
-      this.typesPerCategoryCache.get(category)!.add(normalizedType);
+      this.typesPerCategoryCache.get(category)!.add(type);
     }
   }
 
@@ -219,99 +216,6 @@ export class SchemaRegistry {
    */
   isValidType(category: string, type: string): boolean {
     return this.getTypesForCategory(category).has(type);
-  }
-
-  /**
-   * Extract evidence sources from core schema examples
-   * @param sources - Set to add sources to
-   */
-  private extractCoreEvidenceSources(sources: Set<string>): void {
-    const examples = this.coreSchema?.properties?.evidence_source?.examples;
-    if (!examples) {
-      return;
-    }
-    for (const example of examples) {
-      if (typeof example === 'string') {
-        sources.add(example);
-      }
-    }
-  }
-
-  /**
-   * Extract evidence sources from type schemas
-   * @param sources - Set to add sources to
-   */
-  private extractTypeEvidenceSources(sources: Set<string>): void {
-    for (const schema of this.typeSchemas.values()) {
-      this.extractEvidenceSourcesFromSchema(schema, sources);
-    }
-  }
-
-  /**
-   * Extract evidence sources from a single schema
-   * @param schema - Schema to extract from
-   * @param sources - Set to add sources to
-   */
-  private extractEvidenceSourcesFromSchema(schema: SchemaDefinition, sources: Set<string>): void {
-    if (!schema.allOf) {
-      return;
-    }
-    for (const subSchema of schema.allOf) {
-      const enumValues = subSchema.properties?.evidence_source?.enum;
-      if (enumValues) {
-        enumValues.forEach((source: string) => sources.add(source));
-      }
-    }
-  }
-
-  /**
-   * Get valid evidence sources from schema
-   * @returns Set of valid evidence source values
-   */
-  getEvidenceSources(): Set<string> {
-    if (this.evidenceSourcesCache) {
-      return this.evidenceSourcesCache;
-    }
-
-    const sources = new Set<string>();
-    this.extractCoreEvidenceSources(sources);
-    this.extractTypeEvidenceSources(sources);
-
-    this.evidenceSourcesCache = sources;
-    return sources;
-  }
-
-  /**
-   * Check if an evidence source is valid
-   * @param source - Evidence source to check
-   * @returns true if valid
-   */
-  isValidEvidenceSource(source: string): boolean {
-    return this.getEvidenceSources().has(source);
-  }
-
-  /**
-   * Get valid severity levels
-   * @returns Set of valid severity values
-   */
-  getSeverities(): Set<SeverityLevel> {
-    if (this.severitiesCache) {
-      return this.severitiesCache;
-    }
-
-    // Severity is typically defined with an enum in schemas
-    // For now, use the standard XARF severities
-    this.severitiesCache = new Set<SeverityLevel>(['low', 'medium', 'high', 'critical']);
-    return this.severitiesCache;
-  }
-
-  /**
-   * Check if a severity is valid
-   * @param severity - Severity to check
-   * @returns true if valid
-   */
-  isValidSeverity(severity: string): boolean {
-    return this.getSeverities().has(severity as SeverityLevel);
   }
 
   /**
@@ -348,20 +252,8 @@ export class SchemaRegistry {
    * @returns Schema definition or null
    */
   getTypeSchema(category: string, type: string): SchemaDefinition | null {
-    // Try exact match first
-    const exactKey = `${category}/${type}`;
-    if (this.typeSchemas.has(exactKey)) {
-      return this.typeSchemas.get(exactKey) || null;
-    }
-
-    // Try with underscores converted to hyphens (filename format)
-    const hyphenatedType = type.replace(/_/g, '-');
-    const hyphenKey = `${category}/${hyphenatedType}`;
-    if (this.typeSchemas.has(hyphenKey)) {
-      return this.typeSchemas.get(hyphenKey) || null;
-    }
-
-    return null;
+    const key = `${category}/${type}`;
+    return this.typeSchemas.get(key) || null;
   }
 
   /**

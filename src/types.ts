@@ -3,7 +3,7 @@
  */
 
 /**
- * Valid XARF categories (7 total as per XARF v4.0.0 specification)
+ * Valid XARF categories (7 total as per XARF v4.2.0 specification)
  */
 export type XARFCategory =
   | 'messaging'
@@ -15,30 +15,30 @@ export type XARFCategory =
   | 'reputation';
 
 /**
- * Valid reporter types
- */
-export type ReporterType = 'automated' | 'manual' | 'hybrid';
-
-/**
- * Valid evidence sources
+ * Valid evidence sources.
+ * Known values from xarf-core.json examples are listed for autocomplete.
+ * Any string is accepted at the base level; type-specific schemas may
+ * restrict to an enum which is enforced at runtime via AJV validation.
  */
 export type EvidenceSource =
   | 'spamtrap'
+  | 'user_complaint'
+  | 'automated_filter'
   | 'honeypot'
+  | 'crawler'
   | 'user_report'
   | 'automated_scan'
-  | 'manual_analysis'
+  | 'spam_analysis'
+  | 'firewall_logs'
+  | 'ids_detection'
+  | 'flow_analysis'
   | 'vulnerability_scan'
   | 'researcher_analysis'
+  | 'automated_discovery'
+  | 'traffic_analysis'
   | 'threat_intelligence'
-  | 'flow_analysis'
-  | 'ids_ips'
-  | 'siem';
-
-/**
- * Valid severity levels
- */
-export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  | (string & {}); // Accepts any string while preserving autocomplete for known values
 
 /**
  * Contact information for reporter and sender
@@ -50,23 +50,14 @@ export interface ContactInfo {
 }
 
 /**
- * Reporter information (legacy type, deprecated)
- * @deprecated Use ContactInfo instead
- */
-export interface XARFReporter {
-  org?: string;
-  contact: string;
-  type: ReporterType;
-}
-
-/**
  * Evidence item
  */
 export interface XARFEvidence {
   content_type: string;
-  description: string;
   payload: string;
+  description?: string;
   hash?: string;
+  size?: number;
 }
 
 /**
@@ -85,9 +76,11 @@ export interface XARFReport {
 
   // Recommended fields (optional per XARF schema)
   evidence_source?: EvidenceSource;
+  source_port?: number;
 
   // Optional base fields
   description?: string;
+  legacy_version?: '3';
   evidence?: XARFEvidence[];
   tags?: string[];
   confidence?: number;
@@ -97,96 +90,103 @@ export interface XARFReport {
   [key: string]: unknown;
 }
 
-/**
- * Messaging category report
- */
-export interface MessagingReport extends XARFReport {
-  category: 'messaging';
-  protocol?: string;
-  smtp_from?: string;
-  smtp_to?: string;
-  subject?: string;
-  message_id?: string;
-  sender_display_name?: string;
-  target_victim?: string;
-  message_content?: string;
-}
+// Re-export category types
+import { MessagingReport } from './types-messaging';
+import { ConnectionReport } from './types-connection';
+import { ContentReport } from './types-content';
+import { InfrastructureReport } from './types-infrastructure';
+import { CopyrightReport } from './types-copyright';
+import { VulnerabilityReport } from './types-vulnerability';
+import { ReputationReport } from './types-reputation';
 
-/**
- * Connection category report
- */
-export interface ConnectionReport extends XARFReport {
-  category: 'connection';
-  destination_ip: string;
-  protocol: string;
-  destination_port?: number;
-  source_port?: number;
-  attack_type?: string;
-  duration_minutes?: number;
-  packet_count?: number;
-  byte_count?: number;
-  attempt_count?: number;
-  successful_logins?: number;
-  usernames_attempted?: string[];
-  attack_pattern?: string;
-}
+export type {
+  MessagingBaseReport,
+  SpamIndicators,
+  SpamReport,
+  BulkIndicators,
+  BulkMessagingReport,
+  MessagingReport,
+} from './types-messaging';
 
-/**
- * Content category report
- */
-export interface ContentReport extends XARFReport {
-  category: 'content';
-  url: string;
-  content_type?: string;
-  attack_type?: string;
-  affected_pages?: string[];
-  cms_platform?: string;
-  vulnerability_exploited?: string;
-  affected_parameters?: string[];
-  payload_detected?: string;
-  data_exposed?: string[];
-  database_type?: string;
-  records_potentially_affected?: number;
-}
+export type {
+  ConnectionBaseReport,
+  LoginAttackReport,
+  PortScanReport,
+  DdosReport,
+  InfectedHostReport,
+  ReconnaissanceReport,
+  ScrapingReport,
+  SqlInjectionReport,
+  VulnerabilityScanReport,
+  ConnectionReport,
+} from './types-connection';
 
-/**
- * Infrastructure category report
- */
-export interface InfrastructureReport extends XARFReport {
-  category: 'infrastructure';
-  infrastructure_type?: string;
-  affected_services?: string[];
-}
+export type {
+  ContentBaseReport,
+  PhishingReport,
+  MalwareReport,
+  CsamReport,
+  CsemReport,
+  ExposedDataReport,
+  BrandInfringementReport,
+  FraudReport,
+  CompromiseIndicator,
+  WebshellDetails,
+  RemoteCompromiseReport,
+  RegistrantDetails,
+  SuspiciousRegistrationReport,
+  ContentReport,
+} from './types-content';
 
-/**
- * Copyright category report
- */
-export interface CopyrightReport extends XARFReport {
-  category: 'copyright';
-  copyright_holder?: string;
-  infringing_content?: string;
-  original_content?: string;
-}
+export type {
+  InfrastructureBaseReport,
+  BotnetReport,
+  CompromisedServerReport,
+  InfrastructureReport,
+} from './types-infrastructure';
 
-/**
- * Vulnerability category report
- */
-export interface VulnerabilityReport extends XARFReport {
-  category: 'vulnerability';
-  cve_id?: string;
-  vulnerability_type?: string;
-  affected_software?: string;
-  affected_version?: string;
-}
+export type {
+  CopyrightBaseReport,
+  CopyrightCopyrightReport,
+  SwarmInfo,
+  PeerInfo,
+  CopyrightP2pReport,
+  FileInfo,
+  CyberlockerTakedownInfo,
+  CyberlockerUploaderInfo,
+  CopyrightCyberlockerReport,
+  UgcContentInfo,
+  UgcUploaderInfo,
+  UgcMatchDetails,
+  UgcMonetizationInfo,
+  CopyrightUgcPlatformReport,
+  LinkSiteLinkInfo,
+  LinkedContentItem,
+  LinkSiteRanking,
+  CopyrightLinkSiteReport,
+  MessageInfo,
+  UsenetEncodingInfo,
+  UsenetNzbInfo,
+  UsenetServerInfo,
+  CopyrightUsenetReport,
+  CopyrightReport,
+} from './types-copyright';
 
-/**
- * Reputation category report
- */
-export interface ReputationReport extends XARFReport {
-  category: 'reputation';
-  reputation_score?: number;
-  blocklists?: string[];
-}
+export type {
+  VulnerabilityBaseReport,
+  ImpactAssessment,
+  CveReport,
+  OpenServiceReport,
+  MisconfigurationReport,
+  VulnerabilityReport,
+} from './types-vulnerability';
+
+export type {
+  ReputationBaseReport,
+  BlocklistReport,
+  ThreatIntelligenceReport,
+  ReputationReport,
+} from './types-reputation';
 
 /**
  * Union type for all report types

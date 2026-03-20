@@ -4,7 +4,7 @@
  * Tests for v3 to v4 conversion and backward compatibility
  */
 
-import { XARFParser } from '../src/parser';
+import { parse } from '../src/parser';
 import { isXARFv3, convertV3toV4, getV3DeprecationWarning } from '../src/v3-legacy';
 import type { XARFv3Report } from '../src/v3-legacy';
 
@@ -42,7 +42,7 @@ describe('XARFv3 Detection', () => {
 
   it('should not detect v4 report as v3', () => {
     const v4Report = {
-      xarf_version: '4.0.0',
+      xarf_version: '4.2.0',
       report_id: 'test-id',
       timestamp: '2024-01-15T10:00:00Z',
       reporter: { contact: 'test@example.com', type: 'manual' },
@@ -85,7 +85,7 @@ describe('XARFv3 Conversion', () => {
       const warnings: string[] = [];
       const v4Report = convertV3toV4(v3Report, warnings);
 
-      expect(v4Report.xarf_version).toBe('4.0.0');
+      expect(v4Report.xarf_version).toBe('4.2.0');
       expect(v4Report.category).toBe('messaging');
       expect(v4Report.type).toBe('spam');
       expect(v4Report.source_identifier).toBe('192.168.1.100');
@@ -97,7 +97,7 @@ describe('XARFv3 Conversion', () => {
       expect(v4Report.sender.domain).toBe('antispam.example');
       expect(v4Report.timestamp).toBe('2024-01-15T14:30:25Z');
       expect(v4Report.description).toBe('Spam email detected');
-      expect(v4Report._internal?.legacy_version).toBe('3');
+      expect(v4Report.legacy_version).toBe('3');
       expect(v4Report._internal?.original_report_type).toBe('Spam');
 
       // Category-specific fields
@@ -115,6 +115,7 @@ describe('XARFv3 Conversion', () => {
         Report: {
           ReportType: 'spam',
           Date: '2024-01-15T10:00:00Z',
+          Protocol: 'smtp',
           Source: {
             IP: '10.0.0.1',
             Port: 25,
@@ -155,7 +156,30 @@ describe('XARFv3 Conversion', () => {
       expect((v4Report as any).destination_ip).toBe('198.51.100.10');
       expect((v4Report as any).destination_port).toBe(80);
       expect((v4Report as any).protocol).toBe('tcp');
-      expect((v4Report as any).attempt_count).toBe(10000);
+      expect((v4Report as any).attack_count).toBe(10000);
+    });
+
+    it('should not inject undefined fields for absent optional v3 fields', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrgEmail: 'security@example.com',
+        },
+        Report: {
+          ReportType: 'DDoS',
+          Date: '2024-01-15T15:00:00Z',
+          SourceIp: '203.0.113.50',
+          Protocol: 'tcp',
+          // No DestinationIp, DestinationPort, or AttackCount
+        },
+      };
+
+      const v4Report = convertV3toV4(v3Report);
+      expect(v4Report.category).toBe('connection');
+      expect(v4Report.type).toBe('ddos');
+      expect('destination_ip' in v4Report).toBe(false);
+      expect('destination_port' in v4Report).toBe(false);
+      expect('attack_count' in v4Report).toBe(false);
     });
 
     it('should convert v3 Login-Attack report', () => {
@@ -170,6 +194,7 @@ describe('XARFv3 Conversion', () => {
           SourceIp: '192.0.2.50',
           DestinationIp: '203.0.113.10',
           DestinationPort: 22,
+          Protocol: 'tcp',
         },
       };
 
@@ -188,6 +213,7 @@ describe('XARFv3 Conversion', () => {
           ReportType: 'Port-Scan',
           Date: '2024-01-15T12:00:00Z',
           SourceIp: '192.0.2.99',
+          Protocol: 'tcp',
         },
       };
 
@@ -287,6 +313,7 @@ describe('XARFv3 Conversion', () => {
           ReportType: 'Spam',
           Date: '2024-01-15T10:00:00Z',
           SourceIp: '192.0.2.1',
+          Protocol: 'smtp',
           Attachment: [
             {
               ContentType: 'message/rfc822',
@@ -303,6 +330,7 @@ describe('XARFv3 Conversion', () => {
       expect(v4Report.evidence?.[0].content_type).toBe('message/rfc822');
       expect(v4Report.evidence?.[0].payload).toBe('base64encodeddata');
       expect(v4Report.evidence?.[0].description).toBe('Original email');
+      expect(v4Report.evidence?.[0].size).toBe(Buffer.from('base64encodeddata', 'base64').length);
     });
 
     it('should convert v3 Samples to v4 evidence', () => {
@@ -315,6 +343,7 @@ describe('XARFv3 Conversion', () => {
           ReportType: 'Malware',
           Date: '2024-01-15T10:00:00Z',
           SourceIp: '192.0.2.1',
+          Url: 'http://malware.example/payload',
           Samples: [
             {
               ContentType: 'application/octet-stream',
@@ -327,12 +356,12 @@ describe('XARFv3 Conversion', () => {
       const v4Report = convertV3toV4(v3Report);
       expect(v4Report.evidence).toBeDefined();
       expect(v4Report.evidence?.[0].content_type).toBe('application/octet-stream');
-      expect(v4Report.evidence?.[0].description).toBe('Evidence from v3 report');
+      expect(v4Report.evidence?.[0].description).toBeUndefined();
     });
   });
 
   describe('Unknown Type Handling', () => {
-    it('should handle unknown v3 report type with warning', () => {
+    it('should throw on unknown v3 report type', () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -345,18 +374,42 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const warnings: string[] = [];
-      const v4Report = convertV3toV4(v3Report, warnings);
-
-      expect(v4Report.category).toBe('content');
-      expect(v4Report.type).toBe('unclassified');
-      expect(warnings.length).toBeGreaterThan(0);
-      expect(warnings[0]).toContain('Unknown v3 ReportType');
+      expect(() => convertV3toV4(v3Report)).toThrow("unknown ReportType 'UnknownType'");
     });
   });
 
-  describe('Missing Source IP Handling', () => {
-    it('should handle missing source IP with warning', () => {
+  describe('Missing Reporter Email Handling', () => {
+    it('should throw when both reporter email fields are absent', () => {
+      const v3Report = {
+        Version: '3',
+        ReporterInfo: {},
+        Report: {
+          ReportType: 'Spam',
+          Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.1',
+        },
+      } as XARFv3Report;
+
+      expect(() => convertV3toV4(v3Report)).toThrow('missing reporter email');
+    });
+
+    it('should throw when reporter email has no domain part', () => {
+      const v3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrgEmail: 'not-an-email',
+        },
+        Report: {
+          ReportType: 'Spam',
+          Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.1',
+        },
+      } as XARFv3Report;
+
+      expect(() => convertV3toV4(v3Report)).toThrow('not a valid email address');
+    });
+
+    it('should warn when ReporterOrg is missing', () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -365,21 +418,132 @@ describe('XARFv3 Conversion', () => {
         Report: {
           ReportType: 'Spam',
           Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.1',
+          Protocol: 'smtp',
         },
       };
 
       const warnings: string[] = [];
       const v4Report = convertV3toV4(v3Report, warnings);
 
-      expect(v4Report.source_identifier).toBe('unknown');
-      expect(warnings.some((w) => w.includes('No source IP found'))).toBe(true);
+      expect(warnings.some((w) => w.includes('No ReporterOrg found'))).toBe(true);
+      expect(v4Report.reporter.org).toBe('Unknown Organization');
+    });
+  });
+
+  describe('Missing Source Identifier Handling', () => {
+    it('should throw when no source identifier can be extracted', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Test Org',
+          ReporterOrgEmail: 'test@example.com',
+        },
+        Report: {
+          ReportType: 'Botnet',
+          Date: '2024-01-15T10:00:00Z',
+        },
+      };
+
+      expect(() => convertV3toV4(v3Report)).toThrow('no source identifier found');
+    });
+
+    it('should extract source identifier from Source.URL when no IP is present', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Security Vendor',
+          ReporterOrgEmail: 'abuse@security.example',
+        },
+        Report: {
+          ReportType: 'Phishing',
+          Date: '2024-01-15T10:00:00Z',
+          Source: { URL: 'https://malicious-example.net/banking-login/' },
+          Url: 'https://malicious-example.net/banking-login/',
+        },
+      };
+
+      const v4Report = convertV3toV4(v3Report);
+      expect(v4Report.source_identifier).toBe('https://malicious-example.net/banking-login/');
+      expect((v4Report as any).url).toBe('https://malicious-example.net/banking-login/');
+    });
+
+    it('should extract source identifier from Url when no Source is present', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Test Org',
+          ReporterOrgEmail: 'test@example.com',
+        },
+        Report: {
+          ReportType: 'Malware',
+          Date: '2024-01-15T10:00:00Z',
+          Url: 'http://malware.example/payload.exe',
+        },
+      };
+
+      const v4Report = convertV3toV4(v3Report);
+      expect(v4Report.source_identifier).toBe('http://malware.example/payload.exe');
+    });
+  });
+
+  describe('Missing Protocol Handling', () => {
+    it('should throw when messaging report has no protocol', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Test Org',
+          ReporterOrgEmail: 'test@example.com',
+        },
+        Report: {
+          ReportType: 'Spam',
+          Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.1',
+        },
+      };
+
+      expect(() => convertV3toV4(v3Report)).toThrow('missing protocol for messaging type');
+    });
+
+    it('should throw when connection report has no protocol', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Test Org',
+          ReporterOrgEmail: 'test@example.com',
+        },
+        Report: {
+          ReportType: 'DDoS',
+          Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.1',
+        },
+      };
+
+      expect(() => convertV3toV4(v3Report)).toThrow('missing protocol for connection type');
+    });
+  });
+
+  describe('Missing URL Handling', () => {
+    it('should throw when content report has no URL', () => {
+      const v3Report: XARFv3Report = {
+        Version: '3',
+        ReporterInfo: {
+          ReporterOrg: 'Test Org',
+          ReporterOrgEmail: 'test@example.com',
+        },
+        Report: {
+          ReportType: 'Phishing',
+          Date: '2024-01-15T10:00:00Z',
+          SourceIp: '192.0.2.100',
+        },
+      };
+
+      expect(() => convertV3toV4(v3Report)).toThrow('missing URL for content type');
     });
   });
 });
 
 describe('XARFParser v3 Integration', () => {
-  let parser: XARFParser;
-
   beforeEach(() => {
     // Mock console.warn to avoid noise in tests
     jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -390,8 +554,6 @@ describe('XARFParser v3 Integration', () => {
   });
 
   it('should parse v3 spam report automatically', () => {
-    parser = new XARFParser(false);
-
     const v3Report = {
       Version: '3',
       ReporterInfo: {
@@ -408,21 +570,18 @@ describe('XARFParser v3 Integration', () => {
       },
     };
 
-    const result = parser.parse(v3Report);
+    const { report, warnings } = parse(v3Report);
 
-    expect(result.xarf_version).toBe('4.0.0');
-    expect(result.category).toBe('messaging');
-    expect(result.type).toBe('spam');
-    expect(result._internal?.legacy_version).toBe('3');
+    expect(report.xarf_version).toBe('4.2.0');
+    expect(report.category).toBe('messaging');
+    expect(report.type).toBe('spam');
+    expect(report.legacy_version).toBe('3');
 
-    const warnings = parser.getWarnings();
     expect(warnings.length).toBeGreaterThan(0);
     expect(warnings[0]).toContain('DEPRECATION WARNING');
   });
 
   it('should validate v3 report as valid', () => {
-    parser = new XARFParser();
-
     const v3Report = {
       Version: '3',
       ReporterInfo: {
@@ -432,21 +591,19 @@ describe('XARFParser v3 Integration', () => {
         ReportType: 'DDoS',
         Date: '2024-01-15T10:00:00Z',
         SourceIp: '192.0.2.50',
+        SourcePort: 54321,
         DestinationIp: '203.0.113.10',
         Protocol: 'tcp',
       },
     };
 
-    const isValid = parser.validate(v3Report);
-    expect(isValid).toBe(true);
+    const { errors, warnings } = parse(v3Report);
+    expect(errors).toHaveLength(0);
 
-    const warnings = parser.getWarnings();
     expect(warnings.length).toBeGreaterThan(0);
   });
 
   it('should provide warnings when parsing v3 report', () => {
-    parser = new XARFParser();
-
     const v3Report = {
       Version: '3',
       ReporterInfo: {
@@ -456,14 +613,14 @@ describe('XARFParser v3 Integration', () => {
         ReportType: 'Spam',
         Date: '2024-01-15T10:00:00Z',
         SourceIp: '192.0.2.1',
+        Protocol: 'smtp',
       },
     };
 
-    parser.parse(v3Report);
-    const warnings = parser.getWarnings();
+    const { warnings } = parse(v3Report);
 
     expect(warnings.length).toBeGreaterThan(0);
-    expect(warnings.some((w) => w.includes('v3 format'))).toBe(true);
+    expect(warnings.some((w: string) => w.includes('v3 format'))).toBe(true);
   });
 });
 
