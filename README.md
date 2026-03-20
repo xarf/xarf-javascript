@@ -29,10 +29,12 @@ npm install xarf
 ```typescript
 import { parse } from 'xarf';
 
+// Missing first_seen and source_port produce validation errors.
 const { report, errors, warnings } = parse({
   xarf_version: '4.2.0',
   report_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   timestamp: '2024-01-15T10:30:00Z',
+  // first_seen: '2024-01-15T10:00:00Z',
   reporter: {
     org: 'Security Team',
     contact: 'abuse@example.com',
@@ -44,6 +46,7 @@ const { report, errors, warnings } = parse({
     domain: 'example.com',
   },
   source_identifier: '192.0.2.100',
+  // source_port: 1234,
   category: 'connection',
   type: 'ddos',
   evidence_source: 'honeypot',
@@ -178,10 +181,6 @@ schemaRegistry.getTypesForCategory('connection');
 
 // Check if a category/type combination is valid
 schemaRegistry.isValidType('connection', 'ddos'); // true
-
-// Get valid evidence sources
-schemaRegistry.getEvidenceSources();
-// Set { 'honeypot', 'spamtrap', 'user_report', ... }
 
 // Get field metadata including descriptions
 schemaRegistry.getFieldMetadata('confidence');
