@@ -6,9 +6,7 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import type { XARFReport } from './types';
-import * as fs from 'fs';
-import * as path from 'path';
-import { findSchemasDir } from './schema-utils';
+import { bundledSchemas } from './bundled-schemas';
 import { schemaRegistry } from './schema-registry';
 
 /**
@@ -43,7 +41,6 @@ export class SchemaValidator {
   private strictAjv: Ajv;
   private coreSchemaLoaded = false;
   private masterSchemaLoaded = false;
-  private schemasDir: string;
 
   /**
    * Create a configured AJV instance
@@ -68,10 +65,6 @@ export class SchemaValidator {
   constructor() {
     this.ajv = SchemaValidator.createAjvInstance();
     this.strictAjv = SchemaValidator.createAjvInstance();
-
-    // Determine schemas directory path
-    // Schemas are fetched from xarf-spec to project_root/schemas/ and copied to dist/schemas/ on build
-    this.schemasDir = findSchemasDir();
   }
 
   /**
@@ -153,20 +146,16 @@ export class SchemaValidator {
   }
 
   /**
-   * Load a schema file from the schemas directory
-   * Helper method to load schemas synchronously
-   * @param relativePath - Relative path to schema file within schemas directory
-   * @returns Parsed schema object
+   * Load a schema by its path relative to the schemas root.
+   * @param relativePath - e.g. 'xarf-core.json' or 'types/messaging-spam.json'
+   * @returns Schema object
    */
   private loadSchemaFile(relativePath: string): object {
-    const schemaPath = path.join(this.schemasDir, relativePath);
-
-    if (!fs.existsSync(schemaPath)) {
-      throw new Error(`Schema file not found: ${schemaPath}`);
+    const schema = bundledSchemas[relativePath];
+    if (!schema) {
+      throw new Error(`Schema not found: ${relativePath}`);
     }
-
-    const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
-    return JSON.parse(schemaContent);
+    return schema;
   }
 
   /**
@@ -232,7 +221,8 @@ export class SchemaValidator {
       // If we have a basePath (e.g., we're in "types/content-phishing.json"),
       // prepend the directory from basePath
       if (basePath) {
-        const baseDir = path.dirname(basePath);
+        const slashIndex = basePath.lastIndexOf('/');
+        const baseDir = slashIndex >= 0 ? basePath.substring(0, slashIndex) : '';
         if (baseDir && baseDir !== '.') {
           relativePath = `${baseDir}/${relativePath}`;
         }
@@ -313,15 +303,7 @@ export class SchemaValidator {
     }
 
     try {
-      const coreSchemaPath = path.join(this.schemasDir, 'xarf-core.json');
-      if (!fs.existsSync(coreSchemaPath)) {
-        throw new Error(`Core schema not found at: ${coreSchemaPath}`);
-      }
-
-      const coreSchema = JSON.parse(fs.readFileSync(coreSchemaPath, 'utf-8')) as Record<
-        string,
-        unknown
-      >;
+      const coreSchema = this.loadSchemaFile('xarf-core.json') as Record<string, unknown>;
       const strictCoreSchema = this.transformSchemaForStrict(coreSchema) as Record<string, unknown>;
 
       // Register core schema under BOTH the relative path and full URL
@@ -352,40 +334,26 @@ export class SchemaValidator {
    * This ensures all $refs can be resolved during compilation
    */
   private preloadAllTypeSchemas(): void {
-    const typesDir = path.join(this.schemasDir, 'types');
+    for (const [relativePath, schema] of Object.entries(bundledSchemas)) {
+      if (!relativePath.startsWith('types/')) {
+        continue;
+      }
+      try {
+        // Build the FULL URL that AJV will resolve
+        // Master schema id is https://xarf.org/schemas/v4/xarf-v4-master.json
+        // When it references "types/messaging-spam.json", AJV resolves to full URL
+        const fullUrl = `https://xarf.org/schemas/v4/${relativePath}`;
 
-    if (!fs.existsSync(typesDir)) {
-      return;
-    }
-
-    const files = fs.readdirSync(typesDir);
-
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        try {
-          const schemaPath = path.join(typesDir, file);
-          const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8')) as Record<
-            string,
-            unknown
-          >;
-
-          // Build the FULL URL that AJV will resolve
-          // Master schema id is https://xarf.org/schemas/v4/xarf-v4-master.json
-          // When it references "types/messaging-spam.json", AJV resolves to full URL
-          const relativePath = `types/${file}`;
-          const fullUrl = `https://xarf.org/schemas/v4/${relativePath}`;
-
-          // Add schema under the FULL URL (what AJV resolves to)
-          if (!this.ajv.getSchema(fullUrl)) {
-            this.ajv.addSchema({ ...schema, $id: fullUrl });
-            const strictSchema = this.transformSchemaForStrict(schema) as Record<string, unknown>;
-            this.strictAjv.addSchema({ ...strictSchema, $id: fullUrl });
-          }
-        } catch (error) {
-          // Ignore errors loading individual schemas
-          // Explicitly acknowledge error to satisfy linter
-          void error;
+        // Add schema under the FULL URL (what AJV resolves to)
+        if (!this.ajv.getSchema(fullUrl)) {
+          this.ajv.addSchema({ ...schema, $id: fullUrl });
+          const strictSchema = this.transformSchemaForStrict(schema) as Record<string, unknown>;
+          this.strictAjv.addSchema({ ...strictSchema, $id: fullUrl });
         }
+      } catch (error) {
+        // Ignore errors loading individual schemas
+        // Explicitly acknowledge error to satisfy linter
+        void error;
       }
     }
   }

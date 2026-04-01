@@ -20,8 +20,8 @@ const baseInput = {
 };
 
 describe('createEvidence', () => {
-  it('should base64-encode string payload and compute sha256 hash by default', () => {
-    const evidence = createEvidence('text/plain', 'Sample data', {
+  it('should base64-encode string payload and compute sha256 hash by default', async () => {
+    const evidence = await createEvidence('text/plain', 'Sample data', {
       description: 'Test evidence',
     });
 
@@ -32,28 +32,25 @@ describe('createEvidence', () => {
     expect(evidence.hash).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
-  it('should base64-encode Buffer payload', () => {
+  it('should base64-encode Buffer payload', async () => {
     const buffer = Buffer.from('test data', 'utf8');
-    const evidence = createEvidence('application/octet-stream', buffer);
+    const evidence = await createEvidence('application/octet-stream', buffer);
 
     expect(evidence.payload).toBe(buffer.toString('base64'));
     expect(evidence.size).toBe(buffer.length);
     expect(evidence.hash).toMatch(/^sha256:/);
   });
 
-  it('should use the requested hash algorithm', () => {
-    const sha512 = createEvidence('text/plain', 'data', { hashAlgorithm: 'sha512' });
+  it('should use the requested hash algorithm', async () => {
+    const sha512 = await createEvidence('text/plain', 'data', { hashAlgorithm: 'sha512' });
     expect(sha512.hash).toMatch(/^sha512:[0-9a-f]{128}$/);
 
-    const sha1 = createEvidence('text/plain', 'data', { hashAlgorithm: 'sha1' });
+    const sha1 = await createEvidence('text/plain', 'data', { hashAlgorithm: 'sha1' });
     expect(sha1.hash).toMatch(/^sha1:[0-9a-f]{40}$/);
-
-    const md5 = createEvidence('text/plain', 'data', { hashAlgorithm: 'md5' });
-    expect(md5.hash).toMatch(/^md5:[0-9a-f]{32}$/);
   });
 
-  it('should include description when provided', () => {
-    const evidence = createEvidence('text/plain', 'data', { description: 'Log excerpt' });
+  it('should include description when provided', async () => {
+    const evidence = await createEvidence('text/plain', 'data', { description: 'Log excerpt' });
 
     expect(evidence.description).toBe('Log excerpt');
   });
@@ -249,8 +246,8 @@ describe('createReport', () => {
       expect(report.tags).toContain('type:phishing');
     });
 
-    it('should preserve evidence array in output', () => {
-      const evidence = createEvidence('text/plain', 'data', { description: 'Test' });
+    it('should preserve evidence array in output', async () => {
+      const evidence = await createEvidence('text/plain', 'data', { description: 'Test' });
       const { report } = createReport({
         ...baseInput,
         category: 'content',

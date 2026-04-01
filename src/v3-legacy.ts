@@ -7,6 +7,7 @@
 
 import type { XARFReport, XARFCategory, XARFEvidence, EvidenceSource } from './types';
 import { XARFParseError } from './errors';
+import { generateUUID, generateHash, fromBase64 } from './crypto-utils';
 
 /**
  * XARF v3 ReporterInfo structure
@@ -111,42 +112,44 @@ export function isXARFv3(data: Record<string, unknown>): boolean {
  * Convert v3 evidence/attachment to v4 format
  * @param v3Attachments - Array of XARF v3 attachment objects
  * @param warnings - Optional array to collect conversion warnings
- * @returns Array of XARF v4 evidence objects, or undefined if no attachments
+ * @returns Promise resolving to an array of XARF v4 evidence objects, or undefined if no attachments
  */
-function convertEvidence(
+async function convertEvidence(
   v3Attachments?: XARFv3Attachment[],
   warnings?: string[]
-): XARFEvidence[] | undefined {
+): Promise<XARFEvidence[] | undefined> {
   if (!v3Attachments || v3Attachments.length === 0) {
     return undefined;
   }
 
-  return v3Attachments.map((attachment) => {
-    if (!attachment.Description) {
-      warnings?.push('Evidence attachment has no description, omitting field');
-    }
-    const hashValue = createHash('sha256')
-      .update(Buffer.from(attachment.Data, 'base64'))
-      .digest('hex');
-    return {
-      content_type: attachment.ContentType,
-      ...(attachment.Description ? { description: attachment.Description } : {}),
-      payload: attachment.Data,
-      hash: `sha256:${hashValue}`,
-      size: Buffer.from(attachment.Data, 'base64').length,
-    };
-  });
+  return Promise.all(
+    v3Attachments.map(async (attachment) => {
+      if (!attachment.Description) {
+        warnings?.push('Evidence attachment has no description, omitting field');
+      }
+      const attachmentBytes = fromBase64(attachment.Data);
+      const hashValue = await generateHash(attachmentBytes, 'sha256');
+      return {
+        content_type: attachment.ContentType,
+        ...(attachment.Description ? { description: attachment.Description } : {}),
+        payload: attachment.Data,
+        hash: `sha256:${hashValue}`,
+        size: attachmentBytes.length,
+      };
+    })
+  );
 }
-
-import { randomUUID, createHash } from 'crypto';
 
 /**
  * Convert XARF v3 report to v4 format
  * @param v3Report - XARF v3 report object
  * @param warnings - Array to collect conversion warnings
- * @returns Converted XARF v4 report
+ * @returns Promise resolving to the converted XARF v4 report
  */
-export function convertV3toV4(v3Report: XARFv3Report, warnings?: string[]): XARFReport {
+export async function convertV3toV4(
+  v3Report: XARFv3Report,
+  warnings?: string[]
+): Promise<XARFReport> {
   const report = v3Report.Report;
 
   // Map v3 ReportType to v4 category and type
@@ -305,25 +308,25 @@ function addContentFields(v4Report: XARFReport, v3Report: XARFv3Report['Report']
  * @param mapping.category - XARF v4 category to map to
  * @param mapping.type - XARF v4 type to map to
  * @param warnings - Optional array to collect conversion warnings
- * @returns Converted XARF v4 report
+ * @returns Promise resolving to the converted XARF v4 report
  */
-function convertWithMapping(
+async function convertWithMapping(
   v3Report: XARFv3Report,
   mapping: { category: XARFCategory; type: string },
   warnings?: string[]
-): XARFReport {
+): Promise<XARFReport> {
   const report = v3Report.Report;
   const reporterInfo = v3Report.ReporterInfo;
 
   const sourceIdentifier = extractSourceIdentifier(report);
   // Only set evidence_source if explicitly provided in v3 report - it's optional in v4
   const evidenceSource = report.AdditionalInfo?.DetectionMethod as string | undefined;
-  const evidence = convertEvidence(report.Attachment || report.Samples, warnings);
+  const evidence = await convertEvidence(report.Attachment || report.Samples, warnings);
   const contactInfo = extractContactInfo(reporterInfo, warnings);
 
   const v4Report: XARFReport & { _internal?: Record<string, unknown> } = {
     xarf_version: '4.2.0',
-    report_id: randomUUID(),
+    report_id: generateUUID(),
     timestamp: report.Date,
     reporter: contactInfo,
     sender: contactInfo,

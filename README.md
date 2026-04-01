@@ -115,7 +115,7 @@ const { report, errors, warnings, info } = parse(jsonData, options?);
 - `options.strict?: boolean` — Throw `XARFValidationError` on validation failures (default: `false`)
 - `options.showMissingOptional?: boolean` — Include info about missing optional fields (default: `false`)
 
-**Returns `ParseResult`:**
+**Returns `Promise<ParseResult>`:**
 
 - `report: XARFReport` — The parsed report, typed by category
 - `errors: string[]` — Validation errors (empty if valid)
@@ -158,11 +158,11 @@ const evidence = createEvidence(contentType, payload, options?);
 **Parameters:**
 
 - `contentType: string` — MIME type of the evidence (e.g., `'message/rfc822'`)
-- `payload: string | Buffer` — The evidence data
+- `payload: string | Uint8Array` — The evidence data
 - `options.description?: string` — Human-readable description
-- `options.hashAlgorithm?: 'sha256' | 'sha512' | 'sha1' | 'md5'` — Hash algorithm (default: `'sha256'`)
+- `options.hashAlgorithm?: 'sha256' | 'sha512' | 'sha1'` — Hash algorithm (default: `'sha256'`)
 
-**Returns `XARFEvidence`** with computed `hash`, `size`, and base64-encoded `payload`.
+**Returns `Promise<XARFEvidence>`** with computed `hash`, `size`, and base64-encoded `payload`.
 
 ### `schemaRegistry`
 
@@ -237,23 +237,22 @@ Unknown v3 report types cause a parse error listing the supported types. See [MI
 
 ## Schema Management
 
-This library validates against the official [xarf-spec](https://github.com/xarf/xarf-spec) JSON schemas. Schemas are fetched automatically on `npm install` based on the version configured in `package.json`:
-
-```json
-"xarfSpec": {
-  "version": "v4.2.0"
-}
-```
+This library validates against the official [xarf-spec](https://github.com/xarf/xarf-spec) JSON schemas. Previously, schemas were downloaded from GitHub during `npm install` via a postinstall script. They are now bundled directly in the repository under `src/schemas/`, so no network access is needed during `npm install` or `npm run build`. Contributors and CI get working schemas out of the box.
 
 ```bash
 # Check if a newer version of xarf-spec is available
 npm run check-schema-updates
 
-# Re-fetch schemas (e.g., if missing or to force a refresh)
+# Update bundled schemas to the version configured in package.json (maintainers only)
 npm run fetch-schemas
 ```
 
-To update to a newer spec version, change the version in `package.json` and run `npm install`.
+To update to a newer spec version:
+
+1. Bump `xarfSpec.version` in `package.json`
+2. Run `npm run fetch-schemas`
+3. If new schema files were added, add the corresponding imports and entries to `src/bundled-schemas.ts`
+4. Commit the changes in `src/schemas/` and `src/bundled-schemas.ts`
 
 ## Development
 

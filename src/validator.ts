@@ -7,8 +7,7 @@
 import type { XARFReport } from './types';
 import { validator as schemaValidator } from './schema-validator';
 import { schemaRegistry } from './schema-registry';
-import { findSchemasDir, loadSchemaFile } from './schema-utils';
-import * as path from 'path';
+import { loadSchemaFile } from './schema-utils';
 
 /**
  * Validation result with detailed error information
@@ -84,7 +83,6 @@ export class XARFValidator {
   private warnings: ValidationWarning[] = [];
   private info: ValidationInfo[] = [];
   private useSchemaValidation: boolean;
-  private schemasDir: string;
   private coreSchemaCache: SchemaDefinition | null = null;
 
   /**
@@ -93,7 +91,6 @@ export class XARFValidator {
    */
   constructor(useSchemaValidation = true) {
     this.useSchemaValidation = useSchemaValidation;
-    this.schemasDir = findSchemasDir();
   }
 
   /**
@@ -104,9 +101,7 @@ export class XARFValidator {
     if (this.coreSchemaCache) {
       return this.coreSchemaCache;
     }
-    this.coreSchemaCache = loadSchemaFile<SchemaDefinition>(
-      path.join(this.schemasDir, 'xarf-core.json')
-    );
+    this.coreSchemaCache = loadSchemaFile<SchemaDefinition>('xarf-core.json');
     return this.coreSchemaCache;
   }
 
@@ -151,7 +146,7 @@ export class XARFValidator {
       return null;
     }
     const filename = ref.replace(/^\.\//, '').replace(/^\.\.\//, '');
-    return loadSchemaFile<SchemaDefinition>(path.join(this.schemasDir, 'types', filename));
+    return loadSchemaFile<SchemaDefinition>(`types/${filename}`);
   }
 
   /**

@@ -6,8 +6,7 @@ yarn.lock
 dist/
 *.tsbuildinfo
 
-# Fetched XARF schemas (downloaded from xarf-spec on npm install)
-schemas/
+# Temporary extraction directory (used by npm run fetch-schemas)
 .xarf-temp/
 
 # Test coverage

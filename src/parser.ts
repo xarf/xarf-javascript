@@ -59,16 +59,16 @@ function parseJSON(jsonData: string | Record<string, unknown>): Record<string, u
  * @param data
  * @param warnings
  */
-function handleV3Conversion(
+async function handleV3Conversion(
   data: Record<string, unknown>,
   warnings: string[]
-): Record<string, unknown> {
+): Promise<Record<string, unknown>> {
   if (!isXARFv3(data)) {
     return data;
   }
 
   const conversionWarnings: string[] = [];
-  const v4Report = convertV3toV4(data as XARFv3Report, conversionWarnings);
+  const v4Report = await convertV3toV4(data as XARFv3Report, conversionWarnings);
 
   warnings.push(getV3DeprecationWarning());
   warnings.push(...conversionWarnings);
@@ -109,20 +109,20 @@ function castToReportType(data: Record<string, unknown>, category: string): XARF
  * v3 reports are automatically converted to v4 with a deprecation warning.
  * @param jsonData - JSON string or object containing XARF report
  * @param options - Parse options
- * @returns Parse result with report, errors, and warnings
+ * @returns Promise resolving to a parse result with report, errors, and warnings
  * @throws {XARFParseError} If JSON parsing fails (malformed JSON)
  */
-export function parse(
+export async function parse(
   jsonData: string | Record<string, unknown>,
   options?: ParseOptions
-): ParseResult {
+): Promise<ParseResult> {
   const strict = options?.strict ?? false;
   const showMissingOptional = options?.showMissingOptional ?? false;
   const errors: string[] = [];
   const warnings: string[] = [];
 
   let data = parseJSON(jsonData);
-  data = handleV3Conversion(data, warnings);
+  data = await handleV3Conversion(data, warnings);
 
   const result = validator.validate(data as XARFReport, strict, showMissingOptional);
   errors.push(...result.errors.map((e) => `${e.field}: ${e.message}`));

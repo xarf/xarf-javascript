@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-04-01
+
+### Breaking Changes
+
+- **Async `parse()`**: `parse()` now returns `Promise<ParseResult>` instead of `ParseResult`.
+  All callers must `await` it.
+
+  ```ts
+  // Before
+  const result = parse(json);
+  // After
+  const result = await parse(json);
+  ```
+
+- **Async `createEvidence()`**: `createEvidence()` now returns `Promise<XARFEvidence>`.
+  All callers must `await` it.
+
+  ```ts
+  // Before
+  const evidence = createEvidence('text/plain', payload);
+  // After
+  const evidence = await createEvidence('text/plain', payload);
+  ```
+
+- **`createEvidence()` payload type**: `Buffer` is no longer accepted; use `Uint8Array` instead.
+
+  ```ts
+  // Before
+  createEvidence('application/octet-stream', buffer);
+  // After
+  createEvidence('application/octet-stream', new Uint8Array(buffer));
+  ```
+
+- **MD5 hash removed**: `hashAlgorithm: 'md5'` is no longer supported. The Web Crypto API
+  intentionally excludes MD5 as insecure. Use `'sha256'` (default), `'sha512'`, or `'sha1'`.
+
+- **Node.js minimum version raised to 19.0.0**: Required for `globalThis.crypto` (Web Crypto API).
+  Node 18 reached EOL in April 2025.
+
+### Added
+
+- **Browser compatibility**: Library now works in all modern browsers without a bundler shim.
+  No `fs`, `crypto`, or `Buffer` Node.js APIs are used at runtime.
+- **Bundled schemas**: JSON schemas are committed to `src/schemas/` and statically imported.
+  No network fetch occurs on `npm install`.
+- **`src/crypto-utils.ts`**: New module providing UUID generation, hashing, and base64
+  encode/decode via the standard Web Crypto API.
+- **Runtime Web Crypto guard**: Clear error message if `globalThis.crypto` is unavailable
+  (e.g., running on Node 16–18).
+
+### Changed
+
+- Schema loading no longer uses the filesystem at runtime; all 35 schemas are bundled.
+- `postinstall` script removed from npm lifecycle; use `npm run fetch-schemas` to update
+  schemas during development.
+
 ## [1.0.0] - 2025-11-30
 
 ### Breaking Changes
@@ -93,7 +149,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Vulnerability (cve, misconfiguration, open_service)
   - Reputation (blocklist, threat_intelligence)
 - Support for `on_behalf_of` field for delegated reporting
-- Evidence generation with automatic hashing (SHA256, SHA512, SHA1, MD5)
+- Evidence generation with automatic hashing (SHA256, SHA512, SHA1)
 - Sample report generation for testing
 - Comprehensive test suite with 80%+ coverage
 - ESLint and Prettier configuration

@@ -5,7 +5,7 @@
  * validation, and type safety derived from parser types.
  */
 
-import { createHash, randomUUID } from 'crypto';
+import { generateUUID, generateHash, toBase64 } from './crypto-utils';
 import { XARFValidator } from './validator';
 import type {
   XARFEvidence,
@@ -87,23 +87,10 @@ export interface CreateReportResult {
  */
 export interface EvidenceOptions {
   description?: string;
-  hashAlgorithm?: 'sha256' | 'sha512' | 'sha1' | 'md5';
+  hashAlgorithm?: 'sha256' | 'sha512' | 'sha1';
 }
 
 const validator = new XARFValidator();
-
-/**
- * Generate a hash of the given data.
- * @param data
- * @param algorithm
- */
-function generateHash(
-  data: string | Buffer,
-  algorithm: 'sha256' | 'sha512' | 'sha1' | 'md5' = 'sha256'
-): string {
-  const buffer = typeof data === 'string' ? Buffer.from(data, 'utf8') : data;
-  return createHash(algorithm).update(buffer).digest('hex');
-}
 
 /**
  * Create a validated XARF report with auto-generated metadata fields.
@@ -124,7 +111,7 @@ export function createReport(
   const report = {
     ...input,
     xarf_version: SPEC_VERSION,
-    report_id: input.report_id ?? randomUUID(),
+    report_id: input.report_id ?? generateUUID(),
     timestamp: input.timestamp ?? new Date().toISOString(),
   } as XARFReport;
 
@@ -148,22 +135,22 @@ export function createReport(
  * @param contentType - MIME type of the evidence
  * @param payload - The evidence data
  * @param options - Optional description and hash algorithm
- * @returns Evidence object with computed hash
+ * @returns Promise resolving to an evidence object with computed hash
  */
-export function createEvidence(
+export async function createEvidence(
   contentType: string,
-  payload: string | Buffer,
+  payload: string | Uint8Array,
   options?: EvidenceOptions
-): XARFEvidence {
+): Promise<XARFEvidence> {
   const hashAlgorithm = options?.hashAlgorithm ?? 'sha256';
-  const payloadBuffer = typeof payload === 'string' ? Buffer.from(payload, 'utf8') : payload;
-  const hashValue = generateHash(payloadBuffer, hashAlgorithm);
+  const payloadBytes = typeof payload === 'string' ? new TextEncoder().encode(payload) : payload;
+  const hashValue = await generateHash(payloadBytes, hashAlgorithm);
 
   const evidence: XARFEvidence = {
     content_type: contentType,
-    payload: payloadBuffer.toString('base64'),
+    payload: toBase64(payloadBytes),
     hash: `${hashAlgorithm}:${hashValue}`,
-    size: payloadBuffer.length,
+    size: payloadBytes.length,
   };
   if (options?.description !== undefined) {
     evidence.description = options.description;

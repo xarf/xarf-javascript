@@ -16,7 +16,7 @@ const tar = require('tar');
 
 // Configuration
 const GITHUB_REPO = 'xarf/xarf-spec';
-const SCHEMAS_DIR = path.join(__dirname, '..', 'schemas');
+const SCHEMAS_DIR = path.join(__dirname, '..', 'src', 'schemas');
 const PACKAGE_JSON = path.join(__dirname, '..', 'package.json');
 
 /**

@@ -43,7 +43,7 @@ We actively welcome pull requests! Here's how to contribute:
 
 ### Prerequisites
 
-- **Node.js**: Version 16.0.0 or higher
+- **Node.js**: Version 19.0.0 or higher
 - **npm**: Version 7.0.0 or higher
 - **Git**: Latest stable version
 

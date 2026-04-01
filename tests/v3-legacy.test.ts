@@ -64,7 +64,7 @@ describe('XARFv3 Detection', () => {
 
 describe('XARFv3 Conversion', () => {
   describe('Spam Report Conversion', () => {
-    it('should convert v3 spam report to v4 messaging report', () => {
+    it('should convert v3 spam report to v4 messaging report', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -83,7 +83,7 @@ describe('XARFv3 Conversion', () => {
       };
 
       const warnings: string[] = [];
-      const v4Report = convertV3toV4(v3Report, warnings);
+      const v4Report = await convertV3toV4(v3Report, warnings);
 
       expect(v4Report.xarf_version).toBe('4.2.0');
       expect(v4Report.category).toBe('messaging');
@@ -106,7 +106,7 @@ describe('XARFv3 Conversion', () => {
       expect((v4Report as any).subject).toBe('Buy now!');
     });
 
-    it('should handle v3 spam with Source object', () => {
+    it('should handle v3 spam with Source object', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -123,14 +123,14 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.source_identifier).toBe('10.0.0.1');
       expect((v4Report as any).source_port).toBe(25);
     });
   });
 
   describe('Connection Report Conversion', () => {
-    it('should convert v3 DDoS report to v4 connection report', () => {
+    it('should convert v3 DDoS report to v4 connection report', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -148,7 +148,7 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
 
       expect(v4Report.category).toBe('connection');
       expect(v4Report.type).toBe('ddos');
@@ -159,7 +159,7 @@ describe('XARFv3 Conversion', () => {
       expect((v4Report as any).attack_count).toBe(10000);
     });
 
-    it('should not inject undefined fields for absent optional v3 fields', () => {
+    it('should not inject undefined fields for absent optional v3 fields', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -174,7 +174,7 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.category).toBe('connection');
       expect(v4Report.type).toBe('ddos');
       expect('destination_ip' in v4Report).toBe(false);
@@ -182,7 +182,7 @@ describe('XARFv3 Conversion', () => {
       expect('attack_count' in v4Report).toBe(false);
     });
 
-    it('should convert v3 Login-Attack report', () => {
+    it('should convert v3 Login-Attack report', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -198,12 +198,12 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.category).toBe('connection');
       expect(v4Report.type).toBe('login_attack');
     });
 
-    it('should convert v3 Port-Scan report', () => {
+    it('should convert v3 Port-Scan report', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -217,14 +217,14 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.category).toBe('connection');
       expect(v4Report.type).toBe('port_scan');
     });
   });
 
   describe('Content Report Conversion', () => {
-    it('should convert v3 Phishing report to v4 content report', () => {
+    it('should convert v3 Phishing report to v4 content report', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -238,13 +238,13 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.category).toBe('content');
       expect(v4Report.type).toBe('phishing');
       expect((v4Report as any).url).toBe('http://evil-phishing.example');
     });
 
-    it('should convert v3 Malware report', () => {
+    it('should convert v3 Malware report', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -258,14 +258,14 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.category).toBe('content');
       expect(v4Report.type).toBe('malware');
     });
   });
 
   describe('Other Categories', () => {
-    it('should convert v3 Botnet report', () => {
+    it('should convert v3 Botnet report', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -278,12 +278,12 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.category).toBe('infrastructure');
       expect(v4Report.type).toBe('botnet');
     });
 
-    it('should convert v3 Copyright report', () => {
+    it('should convert v3 Copyright report', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -296,14 +296,14 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.category).toBe('copyright');
       expect(v4Report.type).toBe('copyright');
     });
   });
 
   describe('Evidence Conversion', () => {
-    it('should convert v3 Attachment to v4 evidence', () => {
+    it('should convert v3 Attachment to v4 evidence', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -324,7 +324,7 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.evidence).toBeDefined();
       expect(v4Report.evidence?.length).toBe(1);
       expect(v4Report.evidence?.[0].content_type).toBe('message/rfc822');
@@ -333,7 +333,7 @@ describe('XARFv3 Conversion', () => {
       expect(v4Report.evidence?.[0].size).toBe(Buffer.from('base64encodeddata', 'base64').length);
     });
 
-    it('should convert v3 Samples to v4 evidence', () => {
+    it('should convert v3 Samples to v4 evidence', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -353,7 +353,7 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.evidence).toBeDefined();
       expect(v4Report.evidence?.[0].content_type).toBe('application/octet-stream');
       expect(v4Report.evidence?.[0].description).toBeUndefined();
@@ -361,7 +361,7 @@ describe('XARFv3 Conversion', () => {
   });
 
   describe('Unknown Type Handling', () => {
-    it('should throw on unknown v3 report type', () => {
+    it('should throw on unknown v3 report type', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -374,12 +374,12 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      expect(() => convertV3toV4(v3Report)).toThrow("unknown ReportType 'UnknownType'");
+      await expect(convertV3toV4(v3Report)).rejects.toThrow("unknown ReportType 'UnknownType'");
     });
   });
 
   describe('Missing Reporter Email Handling', () => {
-    it('should throw when both reporter email fields are absent', () => {
+    it('should throw when both reporter email fields are absent', async () => {
       const v3Report = {
         Version: '3',
         ReporterInfo: {},
@@ -390,10 +390,10 @@ describe('XARFv3 Conversion', () => {
         },
       } as XARFv3Report;
 
-      expect(() => convertV3toV4(v3Report)).toThrow('missing reporter email');
+      await expect(convertV3toV4(v3Report)).rejects.toThrow('missing reporter email');
     });
 
-    it('should throw when reporter email has no domain part', () => {
+    it('should throw when reporter email has no domain part', async () => {
       const v3Report = {
         Version: '3',
         ReporterInfo: {
@@ -406,10 +406,10 @@ describe('XARFv3 Conversion', () => {
         },
       } as XARFv3Report;
 
-      expect(() => convertV3toV4(v3Report)).toThrow('not a valid email address');
+      await expect(convertV3toV4(v3Report)).rejects.toThrow('not a valid email address');
     });
 
-    it('should warn when ReporterOrg is missing', () => {
+    it('should warn when ReporterOrg is missing', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -424,7 +424,7 @@ describe('XARFv3 Conversion', () => {
       };
 
       const warnings: string[] = [];
-      const v4Report = convertV3toV4(v3Report, warnings);
+      const v4Report = await convertV3toV4(v3Report, warnings);
 
       expect(warnings.some((w) => w.includes('No ReporterOrg found'))).toBe(true);
       expect(v4Report.reporter.org).toBe('Unknown Organization');
@@ -432,7 +432,7 @@ describe('XARFv3 Conversion', () => {
   });
 
   describe('Missing Source Identifier Handling', () => {
-    it('should throw when no source identifier can be extracted', () => {
+    it('should throw when no source identifier can be extracted', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -445,10 +445,10 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      expect(() => convertV3toV4(v3Report)).toThrow('no source identifier found');
+      await expect(convertV3toV4(v3Report)).rejects.toThrow('no source identifier found');
     });
 
-    it('should extract source identifier from Source.URL when no IP is present', () => {
+    it('should extract source identifier from Source.URL when no IP is present', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -463,12 +463,12 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.source_identifier).toBe('https://malicious-example.net/banking-login/');
       expect((v4Report as any).url).toBe('https://malicious-example.net/banking-login/');
     });
 
-    it('should extract source identifier from Url when no Source is present', () => {
+    it('should extract source identifier from Url when no Source is present', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -482,13 +482,13 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      const v4Report = convertV3toV4(v3Report);
+      const v4Report = await convertV3toV4(v3Report);
       expect(v4Report.source_identifier).toBe('http://malware.example/payload.exe');
     });
   });
 
   describe('Missing Protocol Handling', () => {
-    it('should throw when messaging report has no protocol', () => {
+    it('should throw when messaging report has no protocol', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -502,10 +502,10 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      expect(() => convertV3toV4(v3Report)).toThrow('missing protocol for messaging type');
+      await expect(convertV3toV4(v3Report)).rejects.toThrow('missing protocol for messaging type');
     });
 
-    it('should throw when connection report has no protocol', () => {
+    it('should throw when connection report has no protocol', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -519,12 +519,12 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      expect(() => convertV3toV4(v3Report)).toThrow('missing protocol for connection type');
+      await expect(convertV3toV4(v3Report)).rejects.toThrow('missing protocol for connection type');
     });
   });
 
   describe('Missing URL Handling', () => {
-    it('should throw when content report has no URL', () => {
+    it('should throw when content report has no URL', async () => {
       const v3Report: XARFv3Report = {
         Version: '3',
         ReporterInfo: {
@@ -538,7 +538,7 @@ describe('XARFv3 Conversion', () => {
         },
       };
 
-      expect(() => convertV3toV4(v3Report)).toThrow('missing URL for content type');
+      await expect(convertV3toV4(v3Report)).rejects.toThrow('missing URL for content type');
     });
   });
 });
@@ -553,7 +553,7 @@ describe('XARFParser v3 Integration', () => {
     jest.restoreAllMocks();
   });
 
-  it('should parse v3 spam report automatically', () => {
+  it('should parse v3 spam report automatically', async () => {
     const v3Report = {
       Version: '3',
       ReporterInfo: {
@@ -570,7 +570,7 @@ describe('XARFParser v3 Integration', () => {
       },
     };
 
-    const { report, warnings } = parse(v3Report);
+    const { report, warnings } = await parse(v3Report);
 
     expect(report.xarf_version).toBe('4.2.0');
     expect(report.category).toBe('messaging');
@@ -581,7 +581,7 @@ describe('XARFParser v3 Integration', () => {
     expect(warnings[0]).toContain('DEPRECATION WARNING');
   });
 
-  it('should validate v3 report as valid', () => {
+  it('should validate v3 report as valid', async () => {
     const v3Report = {
       Version: '3',
       ReporterInfo: {
@@ -597,13 +597,13 @@ describe('XARFParser v3 Integration', () => {
       },
     };
 
-    const { errors, warnings } = parse(v3Report);
+    const { errors, warnings } = await parse(v3Report);
     expect(errors).toHaveLength(0);
 
     expect(warnings.length).toBeGreaterThan(0);
   });
 
-  it('should provide warnings when parsing v3 report', () => {
+  it('should provide warnings when parsing v3 report', async () => {
     const v3Report = {
       Version: '3',
       ReporterInfo: {
@@ -617,7 +617,7 @@ describe('XARFParser v3 Integration', () => {
       },
     };
 
-    const { warnings } = parse(v3Report);
+    const { warnings } = await parse(v3Report);
 
     expect(warnings.length).toBeGreaterThan(0);
     expect(warnings.some((w: string) => w.includes('v3 format'))).toBe(true);

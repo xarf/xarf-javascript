@@ -77,8 +77,8 @@ const validContentReport = {
 
 describe('parse', () => {
   describe('valid reports', () => {
-    it('should parse messaging report and cast to MessagingReport', () => {
-      const { report, errors } = parse(validMessagingReport);
+    it('should parse messaging report and cast to MessagingReport', async () => {
+      const { report, errors } = await parse(validMessagingReport);
       const messaging = report as MessagingReport;
 
       expect(errors).toHaveLength(0);
@@ -87,8 +87,8 @@ describe('parse', () => {
       expect(messaging.smtp_from).toBe('spammer@example.com');
     });
 
-    it('should parse connection report and cast to ConnectionReport', () => {
-      const { report, errors } = parse(validConnectionReport);
+    it('should parse connection report and cast to ConnectionReport', async () => {
+      const { report, errors } = await parse(validConnectionReport);
       const connection = report as ConnectionReport;
 
       expect(errors).toHaveLength(0);
@@ -97,8 +97,8 @@ describe('parse', () => {
       expect(connection.destination_ip).toBe('203.0.113.10');
     });
 
-    it('should parse content report and cast to ContentReport', () => {
-      const { report, errors } = parse(validContentReport);
+    it('should parse content report and cast to ContentReport', async () => {
+      const { report, errors } = await parse(validContentReport);
       const content = report as ContentReport;
 
       expect(errors).toHaveLength(0);
@@ -107,59 +107,59 @@ describe('parse', () => {
       expect(content.url).toBe('http://phishing.example.com');
     });
 
-    it('should accept JSON string input', () => {
-      const { report, errors } = parse(JSON.stringify(validConnectionReport));
+    it('should accept JSON string input', async () => {
+      const { report, errors } = await parse(JSON.stringify(validConnectionReport));
 
       expect(errors).toHaveLength(0);
       expect(report.category).toBe('connection');
     });
 
-    it('should accept spam without subject (recommended, not required)', () => {
+    it('should accept spam without subject (recommended, not required)', async () => {
       const data = { ...validMessagingReport } as any;
       delete data.subject;
 
-      const { errors } = parse(data);
+      const { errors } = await parse(data);
 
       expect(errors).toHaveLength(0);
     });
   });
 
   describe('JSON parsing errors', () => {
-    it('should throw XARFParseError for malformed JSON string', () => {
-      expect(() => parse('{"invalid": json}')).toThrow(XARFParseError);
-      expect(() => parse('{"invalid": json}')).toThrow('Invalid JSON');
+    it('should throw XARFParseError for malformed JSON string', async () => {
+      await expect(parse('{"invalid": json}')).rejects.toThrow(XARFParseError);
+      await expect(parse('{"invalid": json}')).rejects.toThrow('Invalid JSON');
     });
 
-    it('should throw XARFParseError for non-JSON string', () => {
-      expect(() => parse('invalid json string')).toThrow(XARFParseError);
+    it('should throw XARFParseError for non-JSON string', async () => {
+      await expect(parse('invalid json string')).rejects.toThrow(XARFParseError);
     });
   });
 
   describe('validation errors', () => {
-    it('should return errors for invalid xarf_version', () => {
-      const { errors } = parse({ ...validMessagingReport, xarf_version: '3.0.0' });
+    it('should return errors for invalid xarf_version', async () => {
+      const { errors } = await parse({ ...validMessagingReport, xarf_version: '3.0.0' });
 
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some((e) => e.includes('xarf_version'))).toBe(true);
     });
 
-    it('should return errors for invalid xarf_version in JSON string input', () => {
+    it('should return errors for invalid xarf_version in JSON string input', async () => {
       const data = JSON.stringify({ ...validMessagingReport, xarf_version: '3.0.0' });
-      const { errors } = parse(data);
+      const { errors } = await parse(data);
 
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some((e) => e.includes('xarf_version'))).toBe(true);
     });
 
-    it('should return errors for missing required fields', () => {
-      const { errors } = parse({ xarf_version: '4.2.0' });
+    it('should return errors for missing required fields', async () => {
+      const { errors } = await parse({ xarf_version: '4.2.0' });
 
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some((e) => e.includes('required'))).toBe(true);
     });
 
-    it('should return errors for invalid reporter contact email', () => {
-      const { errors } = parse({
+    it('should return errors for invalid reporter contact email', async () => {
+      const { errors } = await parse({
         ...validMessagingReport,
         reporter: { org: 'Test', contact: 'invalid-email', domain: 'example.com' },
       });
@@ -170,15 +170,15 @@ describe('parse', () => {
       ).toBe(true);
     });
 
-    it('should return errors for null reporter', () => {
-      const { errors } = parse({ ...validMessagingReport, reporter: null });
+    it('should return errors for null reporter', async () => {
+      const { errors } = await parse({ ...validMessagingReport, reporter: null });
 
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some((e) => e.includes('reporter'))).toBe(true);
     });
 
-    it('should return errors for missing reporter.contact and reporter.domain', () => {
-      const { errors } = parse({
+    it('should return errors for missing reporter.contact and reporter.domain', async () => {
+      const { errors } = await parse({
         ...validMessagingReport,
         reporter: { org: 'Test' },
       });
@@ -187,8 +187,8 @@ describe('parse', () => {
       expect(errors.some((e) => e.includes('reporter') && e.includes('required'))).toBe(true);
     });
 
-    it('should return errors for invalid timestamp format', () => {
-      const { report, errors } = parse({
+    it('should return errors for invalid timestamp format', async () => {
+      const { report, errors } = await parse({
         ...validMessagingReport,
         timestamp: 'invalid-timestamp-format',
       });
@@ -198,16 +198,16 @@ describe('parse', () => {
       expect(errors.some((e) => e.includes('timestamp'))).toBe(true);
     });
 
-    it('should return errors in strict mode for missing fields', () => {
-      const { errors } = parse({ xarf_version: '4.2.0' }, { strict: true });
+    it('should return errors in strict mode for missing fields', async () => {
+      const { errors } = await parse({ xarf_version: '4.2.0' }, { strict: true });
 
       expect(errors.length).toBeGreaterThan(0);
     });
   });
 
   describe('category and type validation', () => {
-    it('should return errors for invalid category', () => {
-      const { report, errors } = parse({
+    it('should return errors for invalid category', async () => {
+      const { report, errors } = await parse({
         ...validMessagingReport,
         category: 'invalid_category',
         type: 'test',
@@ -219,8 +219,8 @@ describe('parse', () => {
       expect(report.category).toBe('invalid_category');
     });
 
-    it('should return errors for unknown type within valid category', () => {
-      const { errors } = parse({
+    it('should return errors for unknown type within valid category', async () => {
+      const { errors } = await parse({
         ...validMessagingReport,
         type: 'invalid_type',
       });
@@ -228,17 +228,17 @@ describe('parse', () => {
       expect(errors.length).toBeGreaterThan(0);
     });
 
-    it('should require protocol for connection reports', () => {
+    it('should require protocol for connection reports', async () => {
       const data = { ...validConnectionReport } as any;
       delete data.protocol;
 
-      const { errors } = parse(data);
+      const { errors } = await parse(data);
 
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some((e) => e.includes('protocol') && e.includes('required'))).toBe(true);
     });
 
-    it('should accept bulk_messaging without subject', () => {
+    it('should accept bulk_messaging without subject', async () => {
       const data = {
         ...validMessagingReport,
         type: 'bulk_messaging',
@@ -247,15 +247,15 @@ describe('parse', () => {
       } as any;
       delete data.subject;
 
-      const { errors } = parse(data);
+      const { errors } = await parse(data);
 
       expect(errors).toHaveLength(0);
     });
   });
 
   describe('warnings', () => {
-    it('should warn about unknown fields', () => {
-      const { warnings } = parse({
+    it('should warn about unknown fields', async () => {
+      const { warnings } = await parse({
         ...validContentReport,
         severety: 'high',
         sourcePort: 443,
@@ -265,8 +265,8 @@ describe('parse', () => {
       expect(warnings.some((w) => w.includes('severety') || w.includes('unknown'))).toBe(true);
     });
 
-    it('should warn about camelCase field names (not in XARF spec)', () => {
-      const { warnings } = parse({
+    it('should warn about camelCase field names (not in XARF spec)', async () => {
+      const { warnings } = await parse({
         ...validContentReport,
         contentType: 'text/html',
       });
