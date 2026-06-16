@@ -1,9 +1,9 @@
 # XARF JavaScript/TypeScript Library
 
 ![XARF Spec](https://img.shields.io/badge/XARF%20Spec-v4.2.0-blue)
-[![npm version](https://badge.fury.io/js/xarf.svg)](https://www.npmjs.com/package/xarf)
+[![npm version](https://badge.fury.io/js/@xarf%2Fxarf.svg)](https://www.npmjs.com/package/@xarf/xarf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Test](https://github.com/xarf/xarf-javascript/actions/workflows/test.yml/badge.svg)](https://github.com/xarf/xarf-javascript/actions/workflows/test.yml)
+[![CI](https://github.com/xarf/xarf-javascript/actions/workflows/ci.yml/badge.svg)](https://github.com/xarf/xarf-javascript/actions/workflows/ci.yml)
 
 A JavaScript/TypeScript library for parsing, validating, and generating [XARF v4](https://xarf.org) (eXtended Abuse Reporting Format) reports.
 
@@ -272,7 +272,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
 
 - [XARF Specification](https://xarf.org)
 - [GitHub Repository](https://github.com/xarf/xarf-javascript)
-- [npm Package](https://www.npmjs.com/package/xarf)
+- [npm Package](https://www.npmjs.com/package/@xarf/xarf)
 - [Issue Tracker](https://github.com/xarf/xarf-javascript/issues)
 - [Migration Guide (v3 → v4)](docs/MIGRATION_V3_TO_V4.md)
 - [License (MIT)](LICENSE)
