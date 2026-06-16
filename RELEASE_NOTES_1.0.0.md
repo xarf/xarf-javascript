@@ -9,12 +9,14 @@ We are excited to announce the production release of the XARF JavaScript/TypeScr
 ## What's New in v1.0.0
 
 ### Production Ready
+
 - **Stable API**: Production-quality implementation with comprehensive testing
 - **Full Category Support**: All 7 XARF categories fully implemented and validated
 - **Enhanced Security**: Improved input validation and XSS prevention
 - **Complete Documentation**: Comprehensive guides for all use cases
 
 ### Specification Compliance
+
 - **Exact Category Match**: Corrected to support exactly 7 XARF categories as per specification
   - messaging
   - connection
@@ -28,16 +30,18 @@ We are excited to announce the production release of the XARF JavaScript/TypeScr
 ### Key Features
 
 #### 1. XARF v4.0.0 Parser
+
 ```typescript
-import { XARFParser } from 'xarf';
+import { XARFParser } from '@xarf/xarf';
 
 const parser = new XARFParser();
 const report = parser.parse(jsonData);
 ```
 
 #### 2. Report Generator
+
 ```typescript
-import { XARFGenerator } from 'xarf';
+import { XARFGenerator } from '@xarf/xarf';
 
 const generator = new XARFGenerator();
 const report = generator.generateReport({
@@ -45,13 +49,14 @@ const report = generator.generateReport({
   reportType: 'spam',
   sourceIdentifier: '192.0.2.100',
   reporterContact: 'abuse@example.com',
-  reporterOrg: 'Security Operations'
+  reporterOrg: 'Security Operations',
 });
 ```
 
 #### 3. Comprehensive Validator
+
 ```typescript
-import { XARFValidator } from 'xarf';
+import { XARFValidator } from '@xarf/xarf';
 
 const validator = new XARFValidator();
 const result = validator.validate(report);
@@ -63,12 +68,17 @@ if (!result.valid) {
 ```
 
 #### 4. Backward Compatibility (v3 Legacy Support)
+
 ```typescript
 // Automatic v3 to v4 conversion
 const v3Report = {
   Version: '3',
-  ReporterInfo: { /* ... */ },
-  Report: { /* ... */ }
+  ReporterInfo: {
+    /* ... */
+  },
+  Report: {
+    /* ... */
+  },
 };
 
 const parser = new XARFParser();
@@ -103,13 +113,14 @@ import type {
   CopyrightReport,
   VulnerabilityReport,
   ReputationReport,
-  AnyXARFReport
-} from 'xarf';
+  AnyXARFReport,
+} from '@xarf/xarf';
 ```
 
 ### All 7 XARF Categories
 
 #### 1. Messaging
+
 Report types: `spam`, `phishing`, `social_engineering`, `bulk_messaging`
 
 ```typescript
@@ -119,12 +130,13 @@ const report = generator.generateReport({
   additionalFields: {
     protocol: 'smtp',
     smtp_from: 'spammer@evil.example',
-    subject: 'Spam email'
-  }
+    subject: 'Spam email',
+  },
 });
 ```
 
 #### 2. Connection
+
 Report types: `ddos`, `port_scan`, `login_attack`, `ip_spoofing`, `compromised`, `botnet`, etc.
 
 ```typescript
@@ -134,12 +146,13 @@ const report = generator.generateReport({
   additionalFields: {
     destination_ip: '203.0.113.10',
     protocol: 'tcp',
-    attack_type: 'syn_flood'
-  }
+    attack_type: 'syn_flood',
+  },
 });
 ```
 
 #### 3. Content
+
 Report types: `phishing_site`, `malware_distribution`, `defacement`, `web_hack`, etc.
 
 ```typescript
@@ -148,27 +161,31 @@ const report = generator.generateReport({
   reportType: 'phishing_site',
   additionalFields: {
     url: 'http://phishing.example.com',
-    content_type: 'text/html'
-  }
+    content_type: 'text/html',
+  },
 });
 ```
 
 #### 4. Infrastructure
+
 Report types: `botnet`, `compromised_server`
 
 #### 5. Copyright
+
 Report types: `infringement`, `dmca`, `trademark`, `p2p`
 
 #### 6. Vulnerability
+
 Report types: `cve`, `misconfiguration`, `open_service`
 
 #### 7. Reputation
+
 Report types: `blocklist`, `threat_intelligence`
 
 ## Installation
 
 ```bash
-npm install xarf
+npm install @xarf/xarf
 ```
 
 ## Upgrade Guide
@@ -176,17 +193,20 @@ npm install xarf
 ### From v1.0.0-alpha.2
 
 1. **Update package.json**:
+
    ```bash
-   npm install xarf@1.0.0
+   npm install @xarf/xarf@1.0.0
    ```
 
 2. **Check for "other" category usage**:
+
    ```bash
    # Search your codebase
    grep -r "category.*other" .
    ```
 
 3. **Replace "other" with "content"**:
+
    ```typescript
    // Before (alpha)
    { category: 'other', type: 'unclassified' }
@@ -210,7 +230,7 @@ const v4Report = parser.parse(v3Report);
 
 // Check for conversion warnings
 const warnings = parser.getWarnings();
-warnings.forEach(warning => console.warn(warning));
+warnings.forEach((warning) => console.warn(warning));
 ```
 
 See [docs/MIGRATION_V3_TO_V4.md](docs/MIGRATION_V3_TO_V4.md) for detailed migration guide.
@@ -256,6 +276,7 @@ Security is a top priority:
 - **No Known Vulnerabilities**: Clean security scan
 
 Run security audit:
+
 ```bash
 npm audit
 ```
@@ -273,8 +294,9 @@ See [SECURITY.md](SECURITY.md) for security policy and reporting guidelines.
 ## Examples
 
 ### Basic Spam Report
+
 ```typescript
-import { XARFGenerator } from 'xarf';
+import { XARFGenerator } from '@xarf/xarf';
 
 const generator = new XARFGenerator();
 const report = generator.generateReport({
@@ -285,13 +307,14 @@ const report = generator.generateReport({
   reporterOrg: 'Security Team',
   evidenceSource: 'spamtrap',
   severity: 'low',
-  tags: ['spam', 'email']
+  tags: ['spam', 'email'],
 });
 
 console.log(JSON.stringify(report, null, 2));
 ```
 
 ### DDoS Attack Report
+
 ```typescript
 const report = generator.generateReport({
   category: 'connection',
@@ -304,14 +327,15 @@ const report = generator.generateReport({
     protocol: 'tcp',
     destination_port: 80,
     attack_type: 'syn_flood',
-    packet_count: 1000000
+    packet_count: 1000000,
   },
   severity: 'critical',
-  confidence: 0.95
+  confidence: 0.95,
 });
 ```
 
 ### Phishing Site Report
+
 ```typescript
 const report = generator.generateReport({
   category: 'content',
@@ -321,11 +345,11 @@ const report = generator.generateReport({
   reporterOrg: 'Phishing Response Team',
   additionalFields: {
     url: 'http://phishing.example.com',
-    content_type: 'text/html'
+    content_type: 'text/html',
   },
   description: 'Phishing site mimicking banking portal',
   tags: ['phishing', 'banking', 'credential-theft'],
-  severity: 'high'
+  severity: 'high',
 });
 ```
 
@@ -359,7 +383,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Links
 
 - **GitHub**: https://github.com/xarf/xarf-javascript
-- **npm**: https://www.npmjs.com/package/xarf
+- **npm**: https://www.npmjs.com/package/@xarf/xarf
 - **XARF Specification**: https://xarf.org
 - **Issue Tracker**: https://github.com/xarf/xarf-javascript/issues
 

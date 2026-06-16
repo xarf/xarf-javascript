@@ -10,6 +10,7 @@ All tasks completed successfully. The xarf-javascript library has been upgraded 
 ## 🎯 Changes Made
 
 ### 1. **Category Correction (CRITICAL)**
+
 - ✅ Removed "other" category from `src/types.ts`
 - ✅ Updated to exactly 7 categories per XARF v4.0.0 specification:
   1. messaging
@@ -25,10 +26,12 @@ All tasks completed successfully. The xarf-javascript library has been upgraded 
 - ✅ Removed `OtherReport` interface and export
 
 ### 2. **Version Updates**
+
 - ✅ Updated `package.json` version: `1.0.0-alpha.2` → `1.0.0`
 - ✅ Updated `src/index.ts` VERSION constant: `1.0.0-alpha.1` → `1.0.0`
 
 ### 3. **Documentation Updates**
+
 - ✅ Updated `README.md`:
   - Changed "8 categories" to "7 categories"
   - Removed "Other" from category list
@@ -47,6 +50,7 @@ All tasks completed successfully. The xarf-javascript library has been upgraded 
   - Added note about 7 categories and unknown type mapping
 
 ### 4. **New Documentation**
+
 - ✅ Created `RELEASE_NOTES_1.0.0.md`:
   - Comprehensive release notes
   - Feature highlights
@@ -56,6 +60,7 @@ All tasks completed successfully. The xarf-javascript library has been upgraded 
   - Installation and upgrade instructions
 
 ### 5. **CI/CD Enhancements**
+
 - ✅ Enhanced `.github/workflows/ci.yml`:
   - Added Node.js 16 support (now tests: 16, 18, 20, 22)
   - Added security audit job
@@ -63,6 +68,7 @@ All tasks completed successfully. The xarf-javascript library has been upgraded 
   - Added format checking
 
 ### 6. **Test Updates**
+
 - ✅ Fixed all tests to use 7 categories instead of 8
 - ✅ Updated `tests/generator.test.ts`: Changed size check from 8 to 7
 - ✅ Updated `tests/generator.edge-cases.test.ts`: Removed 'other' references
@@ -73,12 +79,14 @@ All tasks completed successfully. The xarf-javascript library has been upgraded 
 ## 📊 Verification Results
 
 ### Build Status
+
 ```
 ✅ TypeScript compilation: SUCCESS
 ✅ No build errors
 ```
 
 ### Test Status
+
 ```
 ✅ Test Suites: 8 passed, 8 total
 ✅ Tests: 142 passed, 142 total
@@ -86,12 +94,14 @@ All tasks completed successfully. The xarf-javascript library has been upgraded 
 ```
 
 ### Security Audit
+
 ```
 ✅ npm audit (production): 0 vulnerabilities
 ✅ No security issues found
 ```
 
 ### Code Quality
+
 ```
 ✅ TypeScript type checking: PASSED
 ✅ Linting: PASSED (only test warnings for 'any' types, acceptable)
@@ -105,6 +115,7 @@ All tasks completed successfully. The xarf-javascript library has been upgraded 
 **Critical**: The "other" category has been removed.
 
 **Migration Required**:
+
 ```typescript
 // Before (alpha)
 { category: 'other', type: 'unclassified' }
@@ -114,6 +125,7 @@ All tasks completed successfully. The xarf-javascript library has been upgraded 
 ```
 
 **Search Your Codebase**:
+
 ```bash
 grep -r "category.*other" .
 ```
@@ -146,25 +158,30 @@ xarf-javascript/
 ## 🚀 Next Steps for Users
 
 ### 1. Update Package
+
 ```bash
-npm install xarf@1.0.0
+npm install @xarf/xarf@1.0.0
 ```
 
 ### 2. Search for Breaking Changes
+
 ```bash
 grep -r "category.*'other'" .
 grep -r 'category.*"other"' .
 ```
 
 ### 3. Update Code
+
 Replace all `category: 'other'` with `category: 'content'`
 
 ### 4. Run Tests
+
 ```bash
 npm test
 ```
 
 ### 5. Verify Build
+
 ```bash
 npm run build
 ```
@@ -180,6 +197,7 @@ npm run build
 ## ✨ Features
 
 All 7 XARF v4.0.0 categories fully supported:
+
 - ✅ Messaging (spam, phishing, social_engineering, bulk_messaging)
 - ✅ Connection (ddos, port_scan, login_attack, etc.)
 - ✅ Content (phishing_site, malware_distribution, defacement, etc.)

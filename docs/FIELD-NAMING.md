@@ -11,16 +11,17 @@ The XARF v4.0.0 specification uses **snake_case** for all field names. This is t
 ### Example (Preferred)
 
 ```typescript
-import { XARFGenerator } from '@xarf/xarf-javascript';
+import { XARFGenerator } from '@xarf/xarf';
 
 const generator = new XARFGenerator();
 
 const report = generator.generateReport({
   category: 'connection',
-  type: 'ddos',                          // XARF spec field name
-  source_identifier: '192.0.2.100',      // XARF spec field name
-  evidence_source: 'honeypot',           // XARF spec field name
-  on_behalf_of: {                        // XARF spec field name
+  type: 'ddos', // XARF spec field name
+  source_identifier: '192.0.2.100', // XARF spec field name
+  evidence_source: 'honeypot', // XARF spec field name
+  on_behalf_of: {
+    // XARF spec field name
     org: 'Client Company',
     contact: 'abuse@client.com',
     domain: 'client.com',
@@ -51,16 +52,21 @@ For backward compatibility, the library still accepts **camelCase** field names.
 ```typescript
 const report = generator.generateReport({
   category: 'connection',
-  reportType: 'ddos',                    // Deprecated: use "type"
-  sourceIdentifier: '192.0.2.100',       // Deprecated: use "source_identifier"
-  evidenceSource: 'honeypot',            // Deprecated: use "evidence_source"
-  onBehalfOf: {                          // Deprecated: use "on_behalf_of"
+  reportType: 'ddos', // Deprecated: use "type"
+  sourceIdentifier: '192.0.2.100', // Deprecated: use "source_identifier"
+  evidenceSource: 'honeypot', // Deprecated: use "evidence_source"
+  onBehalfOf: {
+    // Deprecated: use "on_behalf_of"
     org: 'Client Company',
     contact: 'abuse@client.com',
     domain: 'client.com',
   },
-  reporter: { /* ... */ },
-  sender: { /* ... */ },
+  reporter: {
+    /* ... */
+  },
+  sender: {
+    /* ... */
+  },
   additionalFields: {
     destination_ip: '203.0.113.50',
     protocol: 'tcp',
@@ -71,7 +77,7 @@ const report = generator.generateReport({
 ## Field Name Mapping
 
 | XARF Spec (snake_case) | Deprecated (camelCase) | Required |
-|------------------------|------------------------|----------|
+| ---------------------- | ---------------------- | -------- |
 | `type`                 | `reportType`           | Yes      |
 | `source_identifier`    | `sourceIdentifier`     | Yes      |
 | `evidence_source`      | `evidenceSource`       | No       |
@@ -84,8 +90,8 @@ When both naming conventions are provided, **snake_case takes precedence**:
 ```typescript
 const report = generator.generateReport({
   category: 'connection',
-  type: 'port_scan',              // ✓ This value is used
-  reportType: 'ddos',             // ✗ This value is ignored
+  type: 'port_scan', // ✓ This value is used
+  reportType: 'ddos', // ✗ This value is ignored
   source_identifier: '192.0.2.50', // ✓ This value is used
   sourceIdentifier: '192.0.2.100', // ✗ This value is ignored
   // ...
@@ -107,10 +113,10 @@ const report = generator.generateReport({
 });
 
 // Output: ALWAYS snake_case
-console.log(report.type);              // 'ddos'
+console.log(report.type); // 'ddos'
 console.log(report.source_identifier); // '192.0.2.100'
-console.log(report.reportType);        // undefined
-console.log(report.sourceIdentifier);  // undefined
+console.log(report.reportType); // undefined
+console.log(report.sourceIdentifier); // undefined
 ```
 
 ## Migration Guide
@@ -126,7 +132,9 @@ generator.generateReport({
   reportType: 'spam',
   sourceIdentifier: '192.0.2.100',
   evidenceSource: 'spamtrap',
-  onBehalfOf: { /* ... */ },
+  onBehalfOf: {
+    /* ... */
+  },
   // ...
 });
 
@@ -136,7 +144,9 @@ generator.generateReport({
   type: 'spam',
   source_identifier: '192.0.2.100',
   evidence_source: 'spamtrap',
-  on_behalf_of: { /* ... */ },
+  on_behalf_of: {
+    /* ... */
+  },
   // ...
 });
 ```
@@ -180,8 +190,12 @@ try {
   generator.generateReport({
     category: 'connection',
     // Missing type/reportType
-    reporter: { /* ... */ },
-    sender: { /* ... */ },
+    reporter: {
+      /* ... */
+    },
+    sender: {
+      /* ... */
+    },
   });
 } catch (error) {
   console.error(error.message);
@@ -197,9 +211,9 @@ The `additionalFields` object should always use snake_case field names to match 
 generator.generateReport({
   // ...
   additionalFields: {
-    destination_ip: '203.0.113.50',    // ✓ Correct
-    destination_port: 80,               // ✓ Correct
-    packet_count: 1500,                 // ✓ Correct
+    destination_ip: '203.0.113.50', // ✓ Correct
+    destination_port: 80, // ✓ Correct
+    packet_count: 1500, // ✓ Correct
     // destinationIp: '203.0.113.50',   // ✗ Incorrect
   },
 });

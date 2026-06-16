@@ -9,7 +9,7 @@ XARF v4 introduces a category-based architecture that improves upon the v3 forma
 The library automatically detects and converts v3 reports to v4 format:
 
 ```typescript
-import { XARFParser } from 'xarf';
+import { XARFParser } from '@xarf/xarf';
 
 const parser = new XARFParser();
 
@@ -22,6 +22,7 @@ const report = parser.parse(v3JsonData);
 ### Structure Changes
 
 **v3 Format:**
+
 ```json
 {
   "Version": "3",
@@ -38,6 +39,7 @@ const report = parser.parse(v3JsonData);
 ```
 
 **v4 Format (after conversion):**
+
 ```json
 {
   "xarf_version": "4.0.0",
@@ -62,31 +64,31 @@ const report = parser.parse(v3JsonData);
 
 ### Field Mappings
 
-| v3 Field | v4 Field | Notes |
-|----------|----------|-------|
-| `Version` | `xarf_version` | Set to "4.0.0" |
-| N/A | `report_id` | Auto-generated UUID |
-| `ReporterInfo.ReporterOrg` | `reporter.org` | Direct mapping |
-| `ReporterInfo.ReporterOrgEmail` | `reporter.contact` | Direct mapping |
-| N/A | `reporter.type` | Set to "manual" for v3 |
-| `Report.Date` | `timestamp` | Direct mapping |
+| v3 Field                                | v4 Field            | Notes                       |
+| --------------------------------------- | ------------------- | --------------------------- |
+| `Version`                               | `xarf_version`      | Set to "4.0.0"              |
+| N/A                                     | `report_id`         | Auto-generated UUID         |
+| `ReporterInfo.ReporterOrg`              | `reporter.org`      | Direct mapping              |
+| `ReporterInfo.ReporterOrgEmail`         | `reporter.contact`  | Direct mapping              |
+| N/A                                     | `reporter.type`     | Set to "manual" for v3      |
+| `Report.Date`                           | `timestamp`         | Direct mapping              |
 | `Report.SourceIp` or `Report.Source.IP` | `source_identifier` | Uses Source.IP if available |
-| `Report.ReportType` | `category` + `type` | Mapped per table below |
-| `Report.Attachment` or `Report.Samples` | `evidence` | Structure converted |
-| N/A | `evidence_source` | Default: "manual_analysis" |
+| `Report.ReportType`                     | `category` + `type` | Mapped per table below      |
+| `Report.Attachment` or `Report.Samples` | `evidence`          | Structure converted         |
+| N/A                                     | `evidence_source`   | Default: "manual_analysis"  |
 
 ### Report Type Mappings
 
-| v3 ReportType | v4 Category | v4 Type |
-|---------------|-------------|---------|
-| `Spam` | `messaging` | `spam` |
-| `Login-Attack` | `connection` | `login_attack` |
-| `Port-Scan` | `connection` | `port_scan` |
-| `DDoS` | `connection` | `ddos` |
-| `Phishing` | `content` | `phishing` |
-| `Malware` | `content` | `malware` |
-| `Botnet` | `infrastructure` | `botnet` |
-| `Copyright` | `copyright` | `copyright` |
+| v3 ReportType  | v4 Category      | v4 Type        |
+| -------------- | ---------------- | -------------- |
+| `Spam`         | `messaging`      | `spam`         |
+| `Login-Attack` | `connection`     | `login_attack` |
+| `Port-Scan`    | `connection`     | `port_scan`    |
+| `DDoS`         | `connection`     | `ddos`         |
+| `Phishing`     | `content`        | `phishing`     |
+| `Malware`      | `content`        | `malware`      |
+| `Botnet`       | `infrastructure` | `botnet`       |
+| `Copyright`    | `copyright`      | `copyright`    |
 
 ## Deprecation Warnings
 
@@ -145,7 +147,7 @@ function trackLegacyUsage(jsonData: unknown) {
 Update your report generators to produce v4 format:
 
 ```typescript
-import { XARFGenerator } from 'xarf';
+import { XARFGenerator } from '@xarf/xarf';
 
 const generator = new XARFGenerator();
 
@@ -164,7 +166,7 @@ const report = generator.generateReport({
 Test your v3 reports with the converter:
 
 ```typescript
-import { convertV3toV4, isXARFv3 } from 'xarf';
+import { convertV3toV4, isXARFv3 } from '@xarf/xarf';
 
 describe('v3 Migration', () => {
   it('should convert our v3 reports', () => {
@@ -180,7 +182,7 @@ describe('v3 Migration', () => {
     expect(v4Report.type).toBeDefined();
 
     // Review any conversion warnings
-    warnings.forEach(warning => console.log(warning));
+    warnings.forEach((warning) => console.log(warning));
   });
 });
 ```
@@ -209,7 +211,7 @@ const v4Report = convertV3toV4(v3Report);
 v4Report._internal = {
   ...v4Report._internal,
   v3_disclosure: v3Report.Disclosure,
-  v3_contact_name: v3Report.ReporterInfo.ReporterContactName
+  v3_contact_name: v3Report.ReporterInfo.ReporterContactName,
 };
 ```
 

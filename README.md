@@ -1,9 +1,9 @@
 # XARF JavaScript/TypeScript Library
 
 ![XARF Spec](https://img.shields.io/badge/XARF%20Spec-v4.1.0-blue)
-[![npm version](https://badge.fury.io/js/xarf.svg)](https://www.npmjs.com/package/xarf)
+[![npm version](https://badge.fury.io/js/@xarf%2Fxarf.svg)](https://www.npmjs.com/package/@xarf/xarf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Test](https://github.com/xarf/xarf-javascript/actions/workflows/test.yml/badge.svg)](https://github.com/xarf/xarf-javascript/actions/workflows/test.yml)
+[![CI](https://github.com/xarf/xarf-javascript/actions/workflows/ci.yml/badge.svg)](https://github.com/xarf/xarf-javascript/actions/workflows/ci.yml)
 
 A comprehensive JavaScript/TypeScript library for parsing, validating, and generating XARF v4.0.0 (eXtended Abuse Reporting Format) reports.
 
@@ -26,7 +26,7 @@ A comprehensive JavaScript/TypeScript library for parsing, validating, and gener
 ## Installation
 
 ```bash
-npm install xarf
+npm install @xarf/xarf
 ```
 
 ## Quick Start
@@ -34,7 +34,7 @@ npm install xarf
 ### Parsing a Report
 
 ```typescript
-import { XARFParser } from 'xarf';
+import { XARFParser } from '@xarf/xarf';
 
 const parser = new XARFParser();
 const report = parser.parse({
@@ -44,19 +44,19 @@ const report = parser.parse({
   reporter: {
     org: 'Security Team',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   sender: {
     org: 'Security Team',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   source_identifier: '192.0.2.100',
   category: 'connection',
   type: 'ddos',
   evidence_source: 'honeypot',
   destination_ip: '203.0.113.10',
-  protocol: 'tcp'
+  protocol: 'tcp',
 });
 
 console.log(report.category); // 'connection'
@@ -65,29 +65,29 @@ console.log(report.category); // 'connection'
 ### Generating a Report
 
 ```typescript
-import { XARFGenerator } from 'xarf';
+import { XARFGenerator } from '@xarf/xarf';
 
 const generator = new XARFGenerator();
 const report = generator.generateReport({
   category: 'messaging',
-  type: 'spam',  // Using XARF spec field name
-  source_identifier: '192.0.2.100',  // snake_case matches XARF spec
+  type: 'spam', // Using XARF spec field name
+  source_identifier: '192.0.2.100', // snake_case matches XARF spec
   reporter: {
     org: 'Example Security',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   sender: {
     org: 'Example Security',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
-  evidence_source: 'automated_scan',  // snake_case matches XARF spec
+  evidence_source: 'automated_scan', // snake_case matches XARF spec
   description: 'Spam email detected from source',
   tags: ['spam', 'email'],
   // Category-specific fields can be passed directly (union types)
   protocol: 'smtp',
-  smtp_from: 'spammer@evil.example.com'
+  smtp_from: 'spammer@evil.example.com',
 });
 
 console.log(JSON.stringify(report, null, 2));
@@ -96,7 +96,7 @@ console.log(JSON.stringify(report, null, 2));
 ### Validating a Report
 
 ```typescript
-import { XARFValidator } from 'xarf';
+import { XARFValidator } from '@xarf/xarf';
 
 const validator = new XARFValidator();
 const result = validator.validate(report);
@@ -163,7 +163,7 @@ const messagingReport = generator.generateReport({
   // Messaging-specific fields directly on options
   protocol: 'smtp',
   smtp_from: 'spammer@evil.example.com',
-  subject: 'You won!'
+  subject: 'You won!',
 });
 
 // Connection report with direct fields
@@ -177,11 +177,12 @@ const connectionReport = generator.generateReport({
   // Connection-specific fields directly on options
   destination_ip: '203.0.113.10',
   protocol: 'tcp',
-  destination_port: 80
+  destination_port: 80,
 });
 ```
 
 **Base Options** (all categories):
+
 ```typescript
 {
   category: XARFCategory;                    // Required: Report category
@@ -216,11 +217,13 @@ const validator = new XARFValidator();
 - `validate(report: XARFReport, strict?: boolean, showMissingOptional?: boolean): ValidationResult` - Validate a report
 
 Parameters:
+
 - `report` - The XARF report to validate
 - `strict` - If `true`, throw `XARFValidationError` on validation failures (default: `false`)
 - `showMissingOptional` - If `true`, include info about missing optional fields (default: `false`)
 
 Returns:
+
 ```typescript
 {
   valid: boolean;
@@ -237,7 +240,7 @@ The validator automatically warns about unknown fields in reports:
 ```typescript
 const report = {
   // ... valid fields ...
-  unknownField: 'value'  // Will trigger a warning
+  unknownField: 'value', // Will trigger a warning
 };
 
 const result = validator.validate(report);
@@ -267,7 +270,7 @@ if (result.info) {
 Access schema-derived validation rules programmatically:
 
 ```typescript
-import { schemaRegistry } from 'xarf';
+import { schemaRegistry } from '@xarf/xarf';
 
 // Get all valid categories
 const categories = schemaRegistry.getCategories();
@@ -292,24 +295,31 @@ const metadata = schemaRegistry.getFieldMetadata('confidence');
 ## Categories and Types
 
 ### Messaging
+
 - `spam`, `phishing`, `social_engineering`, `bulk_messaging`
 
 ### Connection
+
 - `ddos`, `port_scan`, `login_attack`, `ip_spoofing`, `compromised`, `botnet`, `malicious_traffic`, and more
 
 ### Content
+
 - `phishing_site`, `malware_distribution`, `defacement`, `spamvertised`, `web_hack`, and more
 
 ### Infrastructure
+
 - `botnet`, `compromised_server`
 
 ### Copyright
+
 - `infringement`, `dmca`, `trademark`, `p2p`, and more
 
 ### Vulnerability
+
 - `cve`, `misconfiguration`, `open_service`
 
 ### Reputation
+
 - `blocklist`, `threat_intelligence`
 
 ## Examples
@@ -324,12 +334,12 @@ const report = generator.generateReport({
   reporter: {
     org: 'Security Operations',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   sender: {
     org: 'Security Operations',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   evidence_source: 'honeypot',
   // Category-specific fields directly (union types)
@@ -337,7 +347,7 @@ const report = generator.generateReport({
   protocol: 'tcp',
   destination_port: 80,
   attack_type: 'syn_flood',
-  confidence: 0.95
+  confidence: 0.95,
 });
 ```
 
@@ -351,19 +361,19 @@ const report = generator.generateReport({
   reporter: {
     org: 'Phishing Response Team',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   sender: {
     org: 'Phishing Response Team',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   evidence_source: 'user_report',
   // Category-specific fields directly (union types)
   url: 'http://phishing.example.com',
   content_type: 'text/html',
   description: 'Phishing site mimicking banking portal',
-  tags: ['phishing', 'banking', 'credential-theft']
+  tags: ['phishing', 'banking', 'credential-theft'],
 });
 ```
 
@@ -377,12 +387,12 @@ const report = generator.generateReport({
   reporter: {
     org: 'Example Security',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   sender: {
     org: 'Example Security',
     contact: 'abuse@example.com',
-    domain: 'example.com'
+    domain: 'example.com',
   },
   evidence_source: 'spamtrap',
   // Category-specific fields directly (union types)
@@ -390,7 +400,7 @@ const report = generator.generateReport({
   smtp_from: 'spammer@evil.example.com',
   smtp_to: 'victim@example.com',
   subject: 'You won the lottery!',
-  message_id: '<123456@evil.example.com>'
+  message_id: '<123456@evil.example.com>',
 });
 ```
 
@@ -404,8 +414,8 @@ import type {
   ConnectionReport,
   MessagingReport,
   XARFCategory,
-  ReporterType
-} from 'xarf';
+  ReporterType,
+} from '@xarf/xarf';
 
 const report: ConnectionReport = {
   // TypeScript will enforce correct structure
@@ -450,6 +460,7 @@ npm run check-schema-updates -- --all
 ```
 
 Example output:
+
 ```
 [xarf] Checking for schema updates...
 
@@ -465,6 +476,7 @@ Example output:
 To update to a newer version of the XARF specification:
 
 1. Edit `package.json` and update the version:
+
    ```json
    "xarfSpec": {
      "version": "v4.2.0"
@@ -518,7 +530,7 @@ MIT License - see LICENSE file for details
 
 - [XARF Specification](https://xarf.org)
 - [GitHub Repository](https://github.com/xarf/xarf-javascript)
-- [npm Package](https://www.npmjs.com/package/xarf)
+- [npm Package](https://www.npmjs.com/package/@xarf/xarf)
 - [Issue Tracker](https://github.com/xarf/xarf-javascript/issues)
 
 ## Backward Compatibility (v3 Legacy Support)
@@ -526,7 +538,7 @@ MIT License - see LICENSE file for details
 This library automatically detects and converts XARF v3 format reports to v4:
 
 ```typescript
-import { XARFParser } from 'xarf';
+import { XARFParser } from '@xarf/xarf';
 
 const parser = new XARFParser();
 
@@ -535,15 +547,15 @@ const v3Report = {
   Version: '3',
   ReporterInfo: {
     ReporterOrg: 'Security Team',
-    ReporterOrgEmail: 'abuse@example.com'
+    ReporterOrgEmail: 'abuse@example.com',
   },
   Report: {
     ReportType: 'Spam',
     Date: '2024-01-15T10:00:00Z',
     SourceIp: '192.0.2.100',
     Protocol: 'smtp',
-    SmtpMailFromAddress: 'spammer@evil.example'
-  }
+    SmtpMailFromAddress: 'spammer@evil.example',
+  },
 };
 
 // Automatically converted to v4 format
@@ -563,7 +575,7 @@ console.log(warnings); // Contains deprecation notice
 The parser automatically detects v3 reports by checking for the `Version` field:
 
 ```typescript
-import { isXARFv3 } from 'xarf';
+import { isXARFv3 } from '@xarf/xarf';
 
 if (isXARFv3(jsonData)) {
   console.log('This is a legacy v3 report');
@@ -575,7 +587,7 @@ if (isXARFv3(jsonData)) {
 You can also manually convert v3 reports:
 
 ```typescript
-import { convertV3toV4, getV3DeprecationWarning } from 'xarf';
+import { convertV3toV4, getV3DeprecationWarning } from '@xarf/xarf';
 
 const warnings: string[] = [];
 const v4Report = convertV3toV4(v3Report, warnings);
@@ -588,16 +600,16 @@ console.log(getV3DeprecationWarning());
 
 The following v3 report types are automatically mapped to v4 categories:
 
-| v3 ReportType | v4 Category | v4 Type |
-|---------------|-------------|---------|
-| Spam | messaging | spam |
-| Login-Attack | connection | login_attack |
-| Port-Scan | connection | port_scan |
-| DDoS | connection | ddos |
-| Phishing | content | phishing |
-| Malware | content | malware |
-| Botnet | infrastructure | botnet |
-| Copyright | copyright | copyright |
+| v3 ReportType | v4 Category    | v4 Type      |
+| ------------- | -------------- | ------------ |
+| Spam          | messaging      | spam         |
+| Login-Attack  | connection     | login_attack |
+| Port-Scan     | connection     | port_scan    |
+| DDoS          | connection     | ddos         |
+| Phishing      | content        | phishing     |
+| Malware       | content        | malware      |
+| Botnet        | infrastructure | botnet       |
+| Copyright     | copyright      | copyright    |
 
 Unknown v3 report types are mapped to category `content` with type `unclassified`.
 
