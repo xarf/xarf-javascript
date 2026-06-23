@@ -25,6 +25,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The committed src/schemas.generated.ts is the source of truth and is
+      # built/published as-is (no network fetch at publish time). `npm test`
+      # asserts BUNDLED_SPEC_VERSION matches package.json's xarfSpec.version
+      # (see tests/bundle.test.ts), so a stale bundle fails here, offline.
       - name: Run tests
         run: npm test
 

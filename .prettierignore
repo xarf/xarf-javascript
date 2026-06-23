@@ -1,0 +1,10 @@
+# Build output
+dist/
+coverage/
+
+# Auto-generated (intentionally minified) bundled schemas
+src/schemas.generated.ts
+
+# Fetched schemas (gitignored, but excluded here for completeness)
+schemas/
+.xarf-temp/

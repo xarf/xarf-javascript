@@ -5,7 +5,8 @@
  * (eXtended Abuse Reporting Format) reports.
  */
 
-export { SPEC_VERSION } from './version';
+export { SPEC_VERSION, VERSION } from './version';
+export { BUNDLED_SPEC_VERSION } from './schemas.generated';
 export { parse, type ParseOptions, type ParseResult } from './parser';
 export {
   createReport,
@@ -124,5 +125,3 @@ export {
   type XARFv3ReporterInfo,
   type XARFv3Attachment,
 } from './v3-legacy';
-
-export const VERSION = '1.0.0';
