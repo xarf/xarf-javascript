@@ -1,47 +1,65 @@
 /**
- * Shared schema utilities
+ * Shared schema utilities.
  *
- * Provides common schema loading and discovery functions used by
- * SchemaRegistry, SchemaValidator, and XARFValidator.
+ * The XARF JSON schemas are bundled into the package at build time (see
+ * `schemas.generated.ts`, produced by `scripts/generate-schemas.js`). Reading
+ * them from this in-memory bundle — rather than from disk — keeps the library
+ * working in bundled, serverless, and edge environments where `fs`/`__dirname`
+ * are unreliable, and removes the install-time network fetch entirely.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import { bundledSchemas } from './schemas.generated';
 
 /**
- * Find the schemas directory by searching common locations
- * @returns Path to schemas directory
+ * A parsed JSON Schema object.
  */
-export function findSchemasDir(): string {
-  const possiblePaths = [
-    path.join(__dirname, 'schemas'),
-    path.join(__dirname, '..', 'schemas'),
-    path.join(__dirname, '..', '..', 'schemas'),
-    path.join(process.cwd(), 'schemas'),
-  ];
+export type SchemaObject = Record<string, unknown>;
 
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p) && fs.existsSync(path.join(p, 'xarf-core.json'))) {
-      return p;
-    }
-  }
-
-  return possiblePaths[0];
+/**
+ * Get a bundled schema by its relative path.
+ * @param relativePath - Relative path used as the bundle key, e.g.
+ *   "xarf-core.json" or "types/messaging-spam.json"
+ * @returns The schema object, or null if not bundled
+ */
+export function getBundledSchema(relativePath: string): SchemaObject | null {
+  const schema = bundledSchemas[relativePath];
+  return schema ? (schema as SchemaObject) : null;
 }
 
 /**
- * Load and parse a JSON schema file
- * @param schemaPath - Path to schema file
- * @returns Parsed schema object or null if not found/invalid
+ * Get the core XARF schema.
+ * @returns The core schema, or null if not bundled
  */
-export function loadSchemaFile<T = Record<string, unknown>>(schemaPath: string): T | null {
-  try {
-    if (!fs.existsSync(schemaPath)) {
-      return null;
-    }
-    const content = fs.readFileSync(schemaPath, 'utf-8');
-    return JSON.parse(content) as T;
-  } catch {
-    return null;
-  }
+export function getCoreSchema(): SchemaObject | null {
+  return getBundledSchema('xarf-core.json');
+}
+
+/**
+ * Get the master XARF schema (all category+type combinations).
+ * @returns The master schema, or null if not bundled
+ */
+export function getMasterSchema(): SchemaObject | null {
+  return getBundledSchema('xarf-v4-master.json');
+}
+
+/**
+ * List the relative paths of all type-specific schemas.
+ * @returns Array of relative paths, e.g. ["types/messaging-spam.json", ...]
+ */
+export function listTypeSchemaPaths(): string[] {
+  return Object.keys(bundledSchemas).filter((key) => key.startsWith('types/'));
+}
+
+/**
+ * Resolve a relative `$ref` to a base schema (e.g. "./content-base.json" or
+ * "../content-base.json") to its bundled schema.
+ *
+ * Base schemas live under `types/`, so the leading relative segments are
+ * stripped and the filename is looked up there.
+ * @param ref - The `$ref` string from a schema
+ * @returns The referenced base schema, or null if not found
+ */
+export function resolveBaseSchemaRef(ref: string): SchemaObject | null {
+  const filename = ref.replace(/^(\.\.?\/)+/, '');
+  return getBundledSchema(`types/${filename}`);
 }

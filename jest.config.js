@@ -6,14 +6,16 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
-    '!src/index.ts'
+    '!src/index.ts',
+    // Generated data module (inlined JSON schemas), not logic to test.
+    '!src/schemas.generated.ts'
   ],
   coverageThreshold: {
     global: {
-      branches: 71,
-      functions: 80,
-      lines: 77,
-      statements: 77
+      branches: 78,
+      functions: 90,
+      lines: 88,
+      statements: 88
     }
   },
   coverageDirectory: 'coverage',

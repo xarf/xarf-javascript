@@ -5,13 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- **Removed the `postinstall` schema fetch.** The package no longer runs a
+  network download on install, which previously failed `npm install` in
+  offline/air-gapped/proxied environments and was an install-time supply-chain
+  surface. Schemas are now bundled into the package at build time.
+- **Patched `fast-uri`** (the only runtime-tree advisory) via an `ajv` bump and
+  a dependency override; the production dependency tree now audits clean.
+- **Hardened `scripts/fetch-schemas.js`** (a maintainer-only tool): host
+  allowlist, redirect-depth cap, and download size cap.
+- Added an optional `maxInputBytes` guard to `parse()` to bound untrusted input.
+
+### Added
+
+- `BUNDLED_SPEC_VERSION` export — the xarf-spec version bundled into the build.
+- `VERSION` export now derived from `package.json` (no longer hardcoded).
+- Dual **ESM + CommonJS** build with an `exports` map and type declarations.
+
+### Changed
+
+- Schemas are read from an in-memory bundle (`src/schemas.generated.ts`,
+  produced by `scripts/generate-schemas.js`) instead of from the filesystem at
+  runtime. This removes the `findSchemasDir()` discovery logic and makes the
+  library work in bundled, serverless, and edge environments.
+- `tar` moved from runtime `dependencies` to `devDependencies`.
+- Minimum Node version raised to `>=18`.
+
+### Removed
+
+- Dead, unreachable recursive `$ref` loader in `SchemaValidator`.
+
+### Fixed
+
+- Documentation: `parse()`/`createReport()` `strict` mode does **not** throw —
+  it reports warnings and `x-recommended` fields as errors in the returned
+  result. The README and JSDoc previously claimed it threw.
+
 ## [1.0.0] - 2025-11-30
 
 ### Breaking Changes
 
 - **Category Correction**: Removed "other" category to align with XARF v4.0.0 specification
   - XARF spec defines exactly 7 categories (not 8)
-  - Unknown v3 report types now map to `content` category with type `unclassified`
+  - Unknown v3 report types now throw `XARFParseError` listing the supported types
   - Migration: Replace any usage of `category: 'other'` with `category: 'content'`
 
 ### Added
@@ -27,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Version**: Updated from v1.0.0-alpha.2 to v1.0.0 (production release)
 - **Category Validation**: Stricter validation for all 7 official categories
-- **v3 Legacy Mapping**: Unknown v3 types now map to `content/unclassified` instead of `other/unclassified`
+- **v3 Legacy Mapping**: Unknown v3 types now throw `XARFParseError` (the removed `other/unclassified` fallback no longer exists)
 - **Documentation**: Updated all references from 8 to 7 categories
 
 ### Fixed

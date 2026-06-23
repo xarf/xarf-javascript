@@ -7,8 +7,7 @@
 import type { XARFReport } from './types';
 import { validator as schemaValidator } from './schema-validator';
 import { schemaRegistry } from './schema-registry';
-import { findSchemasDir, loadSchemaFile } from './schema-utils';
-import * as path from 'path';
+import { getCoreSchema as getBundledCoreSchema, resolveBaseSchemaRef } from './schema-utils';
 
 /**
  * Validation result with detailed error information
@@ -84,7 +83,6 @@ export class XARFValidator {
   private warnings: ValidationWarning[] = [];
   private info: ValidationInfo[] = [];
   private useSchemaValidation: boolean;
-  private schemasDir: string;
   private coreSchemaCache: SchemaDefinition | null = null;
 
   /**
@@ -93,7 +91,6 @@ export class XARFValidator {
    */
   constructor(useSchemaValidation = true) {
     this.useSchemaValidation = useSchemaValidation;
-    this.schemasDir = findSchemasDir();
   }
 
   /**
@@ -104,9 +101,7 @@ export class XARFValidator {
     if (this.coreSchemaCache) {
       return this.coreSchemaCache;
     }
-    this.coreSchemaCache = loadSchemaFile<SchemaDefinition>(
-      path.join(this.schemasDir, 'xarf-core.json')
-    );
+    this.coreSchemaCache = getBundledCoreSchema() as SchemaDefinition | null;
     return this.coreSchemaCache;
   }
 
@@ -150,8 +145,7 @@ export class XARFValidator {
     if (!ref.includes('-base.json')) {
       return null;
     }
-    const filename = ref.replace(/^\.\//, '').replace(/^\.\.\//, '');
-    return loadSchemaFile<SchemaDefinition>(path.join(this.schemasDir, 'types', filename));
+    return resolveBaseSchemaRef(ref) as SchemaDefinition | null;
   }
 
   /**
@@ -249,10 +243,10 @@ export class XARFValidator {
   /**
    * Validate a XARF report comprehensively
    * @param report - The XARF report to validate
-   * @param strict - If true, warnings are treated as errors
+   * @param strict - If true, warnings (e.g. unknown fields) are reported as errors
    * @param showMissingOptional - If true, includes info about missing optional fields
-   * @returns Validation result with errors, warnings, and optionally info
-   * @throws {XARFValidationError} If strict mode and validation fails
+   * @returns Validation result with errors, warnings, and optionally info. Does
+   *   not throw on validation failures — inspect `result.valid`/`result.errors`.
    */
   validate(report: XARFReport, strict = false, showMissingOptional = false): ValidationResult {
     this.errors = [];
@@ -305,7 +299,7 @@ export class XARFValidator {
   /**
    * Validate report using JSON schema
    * @param report - The XARF report to validate
-   * @param strict
+   * @param strict - If true, `x-recommended` fields are treated as required
    * @returns Validation result from schema validation
    */
   validateWithSchema(report: XARFReport, strict = false): ValidationResult {

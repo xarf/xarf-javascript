@@ -274,4 +274,74 @@ describe('parse', () => {
       expect(warnings.some((w) => w.includes('contentType') || w.includes('unknown'))).toBe(true);
     });
   });
+
+  describe('maxInputBytes guard', () => {
+    it('should parse string input within the limit', () => {
+      const json = JSON.stringify(validMessagingReport);
+      const { errors } = parse(json, { maxInputBytes: json.length + 100 });
+      expect(errors).toHaveLength(0);
+    });
+
+    it('should throw XARFParseError when string input exceeds the limit', () => {
+      const json = JSON.stringify(validMessagingReport);
+      expect(() => parse(json, { maxInputBytes: 10 })).toThrow(XARFParseError);
+      expect(() => parse(json, { maxInputBytes: 10 })).toThrow(/maxInputBytes/);
+    });
+
+    it('should not apply the limit to already-parsed object input', () => {
+      // Object inputs are not measured — the guard only protects string parsing.
+      expect(() => parse(validMessagingReport, { maxInputBytes: 1 })).not.toThrow();
+    });
+
+    it('should impose no limit when maxInputBytes is omitted', () => {
+      const json = JSON.stringify(validMessagingReport);
+      expect(() => parse(json)).not.toThrow();
+    });
+
+    it('should count UTF-8 bytes, not characters, for multibyte input', () => {
+      // A multibyte emoji makes the UTF-8 byte length exceed the UTF-16 length.
+      const report = { ...validMessagingReport, subject: '😀😀😀' };
+      const json = JSON.stringify(report);
+      const byteLen = Buffer.byteLength(json, 'utf8');
+      expect(byteLen).toBeGreaterThan(json.length);
+      expect(() => parse(json, { maxInputBytes: byteLen - 1 })).toThrow(/maxInputBytes/);
+      expect(() => parse(json, { maxInputBytes: byteLen })).not.toThrow();
+    });
+
+    it('should enforce the size guard BEFORE JSON.parse (oversized + malformed)', () => {
+      // The guard's whole purpose is to reject oversized untrusted input without
+      // parsing it. An oversized malformed payload must fail with maxInputBytes,
+      // NOT "Invalid JSON" — proving the size check runs first.
+      const oversizedMalformed = '{' + 'x'.repeat(200);
+      expect(() => parse(oversizedMalformed, { maxInputBytes: 10 })).toThrow(/maxInputBytes/);
+      expect(() => parse(oversizedMalformed, { maxInputBytes: 10 })).not.toThrow(/Invalid JSON/);
+    });
+
+    it('should use the TextEncoder fallback when Buffer is unavailable (edge runtime)', () => {
+      const originalBuffer = globalThis.Buffer;
+      // Simulate a Buffer-less runtime (e.g. an edge/serverless environment).
+      (globalThis as any).Buffer = undefined;
+      try {
+        const json = JSON.stringify(validMessagingReport);
+        expect(() => parse(json, { maxInputBytes: 5 })).toThrow(/maxInputBytes/);
+        expect(() => parse(json, { maxInputBytes: json.length + 100 })).not.toThrow();
+      } finally {
+        (globalThis as any).Buffer = originalBuffer;
+      }
+    });
+  });
+
+  describe('showMissingOptional info channel', () => {
+    it('surfaces missing-optional info through parse() when enabled', () => {
+      const { info } = parse(validMessagingReport, { showMissingOptional: true });
+      expect(info).toBeDefined();
+      expect(Array.isArray(info)).toBe(true);
+      expect(info!.length).toBeGreaterThan(0);
+    });
+
+    it('omits info when showMissingOptional is not set', () => {
+      const { info } = parse(validMessagingReport);
+      expect(info).toBeUndefined();
+    });
+  });
 });

@@ -22,6 +22,13 @@ import { isXARFv3, convertV3toV4, getV3DeprecationWarning, type XARFv3Report } f
 export interface ParseOptions {
   strict?: boolean;
   showMissingOptional?: boolean;
+  /**
+   * Maximum size, in bytes, of a string `jsonData` input. When set, inputs
+   * larger than this are rejected with an `XARFParseError` before `JSON.parse`
+   * runs. Use this to bound untrusted input (abuse reports are adversarial by
+   * nature and may carry large base64 evidence payloads). Defaults to no limit.
+   */
+  maxInputBytes?: number;
 }
 
 /**
@@ -37,16 +44,41 @@ export interface ParseResult {
 const validator = new XARFValidator();
 
 /**
- * Parse JSON data into object
- * @param jsonData
- * @throws {XARFParseError} If JSON parsing fails
+ * Compute the UTF-8 byte length of a string, working in both Node and
+ * Buffer-less (e.g. edge) runtimes.
+ * @param value - The string to measure
+ * @returns Byte length in UTF-8
  */
-function parseJSON(jsonData: string | Record<string, unknown>): Record<string, unknown> {
-  try {
-    if (typeof jsonData === 'string') {
-      return JSON.parse(jsonData) as Record<string, unknown>;
-    }
+function utf8ByteLength(value: string): number {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.byteLength(value, 'utf8');
+  }
+  return new TextEncoder().encode(value).length;
+}
+
+/**
+ * Parse JSON data into object
+ * @param jsonData - JSON string or already-parsed object
+ * @param maxInputBytes - Optional maximum byte size for string input
+ * @throws {XARFParseError} If JSON parsing fails or input exceeds maxInputBytes
+ */
+function parseJSON(
+  jsonData: string | Record<string, unknown>,
+  maxInputBytes?: number
+): Record<string, unknown> {
+  if (typeof jsonData !== 'string') {
     return jsonData;
+  }
+
+  if (maxInputBytes !== undefined) {
+    const bytes = utf8ByteLength(jsonData);
+    if (bytes > maxInputBytes) {
+      throw new XARFParseError(`Input exceeds maxInputBytes (${bytes} > ${maxInputBytes} bytes)`);
+    }
+  }
+
+  try {
+    return JSON.parse(jsonData) as Record<string, unknown>;
   } catch (error) {
     throw new XARFParseError(
       `Invalid JSON: ${error instanceof Error ? error.message : String(error)}`
@@ -121,7 +153,7 @@ export function parse(
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  let data = parseJSON(jsonData);
+  let data = parseJSON(jsonData, options?.maxInputBytes);
   data = handleV3Conversion(data, warnings);
 
   const result = validator.validate(data as XARFReport, strict, showMissingOptional);

@@ -5,10 +5,13 @@
  * eliminating hardcoded validation lists throughout the codebase.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
 import type { XARFCategory } from './types';
-import { findSchemasDir, loadSchemaFile } from './schema-utils';
+import {
+  getCoreSchema,
+  listTypeSchemaPaths,
+  getBundledSchema,
+  resolveBaseSchemaRef,
+} from './schema-utils';
 
 /**
  * Schema property definition
@@ -64,7 +67,6 @@ export interface FieldMetadata {
  */
 export class SchemaRegistry {
   private static instance: SchemaRegistry | null = null;
-  private schemasDir: string;
   private coreSchema: SchemaDefinition | null = null;
   private typeSchemas: Map<string, SchemaDefinition> = new Map();
 
@@ -78,7 +80,6 @@ export class SchemaRegistry {
    * Private constructor - use getInstance() instead
    */
   private constructor() {
-    this.schemasDir = findSchemasDir();
     this.loadCoreSchema();
     this.scanTypeSchemas();
   }
@@ -105,38 +106,28 @@ export class SchemaRegistry {
    * Load the core schema
    */
   private loadCoreSchema(): void {
-    this.coreSchema = loadSchemaFile<SchemaDefinition>(
-      path.join(this.schemasDir, 'xarf-core.json')
-    );
+    this.coreSchema = getCoreSchema() as SchemaDefinition | null;
   }
 
   /**
-   * Scan type schemas directory and build category->types map
+   * Scan bundled type schemas and build the category->types map
    */
   private scanTypeSchemas(): void {
-    const typesDir = path.join(this.schemasDir, 'types');
-    if (!fs.existsSync(typesDir)) {
-      return;
-    }
-
-    try {
-      const files = fs.readdirSync(typesDir);
-      for (const file of files) {
-        if (file.endsWith('.json') && file !== 'content-base.json') {
-          // Parse filename: {category}-{type}.json
-          const match = file.match(/^([^-]+)-(.+)\.json$/);
-          if (match) {
-            const schemaPath = path.join(typesDir, file);
-            const schema = loadSchemaFile<SchemaDefinition>(schemaPath);
-            if (schema) {
-              const normalizedType = match[2].replace(/-/g, '_');
-              this.typeSchemas.set(`${match[1]}/${normalizedType}`, schema);
-            }
-          }
-        }
+    for (const relativePath of listTypeSchemaPaths()) {
+      const file = relativePath.slice('types/'.length);
+      if (file === 'content-base.json') {
+        continue;
       }
-    } catch {
-      // Directory read failed, continue with empty type schemas
+      // Parse filename: {category}-{type}.json
+      const match = file.match(/^([^-]+)-(.+)\.json$/);
+      if (!match) {
+        continue;
+      }
+      const schema = getBundledSchema(relativePath) as SchemaDefinition | null;
+      if (schema) {
+        const normalizedType = match[2].replace(/-/g, '_');
+        this.typeSchemas.set(`${match[1]}/${normalizedType}`, schema);
+      }
     }
   }
 
@@ -414,10 +405,7 @@ export class SchemaRegistry {
    * @returns Schema definition or null
    */
   private loadBaseSchema(ref: string): SchemaDefinition | null {
-    // Extract filename from ref
-    const filename = ref.replace(/^\.\//, '').replace(/^\.\.\//, '');
-    const schemaPath = path.join(this.schemasDir, 'types', filename);
-    return loadSchemaFile<SchemaDefinition>(schemaPath);
+    return resolveBaseSchemaRef(ref) as SchemaDefinition | null;
   }
 
   /**

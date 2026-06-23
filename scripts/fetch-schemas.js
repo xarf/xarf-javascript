@@ -11,13 +11,37 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const zlib = require('zlib');
 const tar = require('tar');
 
 // Configuration
 const GITHUB_REPO = 'xarf/xarf-spec';
 const SCHEMAS_DIR = path.join(__dirname, '..', 'schemas');
 const PACKAGE_JSON = path.join(__dirname, '..', 'package.json');
+
+// Download hardening. This script is a maintainer-only tool (run via
+// `npm run sync-schemas` when bumping the spec version) and is NOT executed on
+// consumer installs, but we still constrain it defensively.
+const ALLOWED_HOSTS = new Set(['github.com', 'codeload.github.com', 'objects.githubusercontent.com']);
+const MAX_REDIRECTS = 5;
+const MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024; // 25 MB
+// Accept only tagged semver-ish versions to avoid building an arbitrary URL.
+const VERSION_PATTERN = /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+
+/**
+ * Assert a URL is HTTPS and targets an allowlisted host.
+ * @param {string} url - URL to validate
+ * @returns {URL} Parsed URL
+ */
+function assertSafeUrl(url) {
+  const parsed = new URL(url);
+  if (parsed.protocol !== 'https:') {
+    throw new Error(`Refusing non-HTTPS URL: ${url}`);
+  }
+  if (!ALLOWED_HOSTS.has(parsed.hostname)) {
+    throw new Error(`Refusing download from non-allowlisted host: ${parsed.hostname}`);
+  }
+  return parsed;
+}
 
 /**
  * Get the xarf-spec version from package.json
@@ -34,32 +58,62 @@ function getConfiguredVersion() {
     );
   }
 
+  if (!VERSION_PATTERN.test(version)) {
+    throw new Error(
+      `Invalid xarfSpec.version "${version}" — expected a tagged version like "v4.2.0".`
+    );
+  }
+
   return version;
 }
 
 /**
- * Download a file from a URL, following redirects
- * @param {string} url - URL to download
+ * Download a file over HTTPS from an allowlisted host, following a bounded
+ * number of redirects and enforcing a maximum response size.
+ * @param {string} url - HTTPS URL to download
+ * @param {number} [redirectsLeft] - Remaining redirects allowed
  * @returns {Promise<Buffer>} Downloaded content
  */
-function download(url) {
+function download(url, redirectsLeft = MAX_REDIRECTS) {
   return new Promise((resolve, reject) => {
-    const protocol = url.startsWith('https') ? https : require('http');
+    let parsed;
+    try {
+      parsed = assertSafeUrl(url);
+    } catch (error) {
+      reject(error);
+      return;
+    }
 
-    const request = protocol.get(url, (response) => {
-      // Handle redirects
+    const request = https.get(parsed, (response) => {
+      // Handle redirects (bounded, and re-validated against the allowlist)
       if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-        download(response.headers.location).then(resolve).catch(reject);
+        response.resume(); // discard body
+        if (redirectsLeft <= 0) {
+          reject(new Error(`Too many redirects while downloading ${url}`));
+          return;
+        }
+        const next = new URL(response.headers.location, parsed).toString();
+        download(next, redirectsLeft - 1).then(resolve).catch(reject);
         return;
       }
 
       if (response.statusCode !== 200) {
+        response.resume();
         reject(new Error(`HTTP ${response.statusCode}: ${url}`));
         return;
       }
 
       const chunks = [];
-      response.on('data', (chunk) => chunks.push(chunk));
+      let total = 0;
+      response.on('data', (chunk) => {
+        total += chunk.length;
+        if (total > MAX_DOWNLOAD_BYTES) {
+          request.destroy();
+          reject(new Error(`Download exceeded ${MAX_DOWNLOAD_BYTES} bytes: ${url}`));
+          return;
+        }
+        chunks.push(chunk);
+      });
       response.on('end', () => resolve(Buffer.concat(chunks)));
       response.on('error', reject);
     });

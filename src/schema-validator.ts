@@ -1,15 +1,26 @@
 /**
  * XARF Schema Validator
- * Production-ready validation using AJV with JSON Schema support
+ * Production-ready validation using AJV with JSON Schema support.
+ *
+ * Schemas are read from the in-memory bundle (see `schema-utils.ts`), so no
+ * filesystem or network access is required at runtime.
  */
 
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 import type { XARFReport } from './types';
-import * as fs from 'fs';
-import * as path from 'path';
-import { findSchemasDir } from './schema-utils';
+import {
+  getCoreSchema,
+  getMasterSchema,
+  listTypeSchemaPaths,
+  getBundledSchema,
+  type SchemaObject,
+} from './schema-utils';
 import { schemaRegistry } from './schema-registry';
+
+const SCHEMA_BASE_URL = 'https://xarf.org/schemas/v4';
+const MASTER_SCHEMA_ID = `${SCHEMA_BASE_URL}/xarf-v4-master.json`;
+const CORE_SCHEMA_ID = `${SCHEMA_BASE_URL}/xarf-core.json`;
 
 /**
  * Validation result containing status and error details
@@ -20,33 +31,23 @@ export interface ValidationResult {
 }
 
 /**
- * Schema validation error with detailed context
- */
-export interface ValidationError {
-  field?: string;
-  message: string;
-  value?: unknown;
-}
-
-/**
  * SchemaValidator class for validating XARF reports against JSON schemas
  *
  * Features:
- * - Validates against xarf-core.json base schema
- * - Applies type-specific validation based on category+type
- * - Proper $ref resolution for nested schemas
- * - Comprehensive error handling and reporting
- * - Singleton pattern for easy reuse
+ * - Validates against the bundled xarf-v4-master schema (core + type-specific)
+ * - Registers every schema under its canonical `$id` so AJV resolves all `$ref`s
+ * - Optional strict mode that promotes `x-recommended` fields to required
+ * - Comprehensive error formatting
+ * - Singleton instance for easy reuse
  */
 export class SchemaValidator {
   private ajv: Ajv;
   private strictAjv: Ajv;
-  private coreSchemaLoaded = false;
   private masterSchemaLoaded = false;
-  private schemasDir: string;
 
   /**
    * Create a configured AJV instance
+   * @returns A configured AJV instance with formats registered
    */
   private static createAjvInstance(): Ajv {
     const ajv = new Ajv({
@@ -68,10 +69,6 @@ export class SchemaValidator {
   constructor() {
     this.ajv = SchemaValidator.createAjvInstance();
     this.strictAjv = SchemaValidator.createAjvInstance();
-
-    // Determine schemas directory path
-    // Schemas are fetched from xarf-spec to project_root/schemas/ and copied to dist/schemas/ on build
-    this.schemasDir = findSchemasDir();
   }
 
   /**
@@ -89,45 +86,56 @@ export class SchemaValidator {
   /**
    * Recursively walk a schema node and add x-recommended properties to required arrays.
    * Mutates the node in place.
-   * @param node
+   * @param node - The schema node to walk
    */
   private promoteRecommendedToRequired(node: unknown): void {
-    if (typeof node !== 'object' || node === null) return;
+    if (typeof node !== 'object' || node === null) {
+      return;
+    }
 
     if (Array.isArray(node)) {
-      for (const item of node) {
-        this.promoteRecommendedToRequired(item);
-      }
+      node.forEach((item) => this.promoteRecommendedToRequired(item));
       return;
     }
 
     const obj = node as Record<string, unknown>;
+    this.promoteNodeProperties(obj);
+    this.recurseIntoSubSchemas(obj);
+  }
 
-    // Promote x-recommended properties to required
-    if (obj.properties && typeof obj.properties === 'object' && !Array.isArray(obj.properties)) {
-      const properties = obj.properties as Record<string, Record<string, unknown>>;
-      const required = new Set<string>(
-        Array.isArray(obj.required) ? (obj.required as string[]) : []
-      );
-
-      for (const [propName, propDef] of Object.entries(properties)) {
-        if (
-          propDef &&
-          typeof propDef === 'object' &&
-          !Array.isArray(propDef) &&
-          propDef['x-recommended'] === true
-        ) {
-          required.add(propName);
-        }
-      }
-
-      obj.required = Array.from(required);
+  /**
+   * Add this node's `x-recommended` properties to its `required` array.
+   * @param obj - The schema node to mutate
+   */
+  private promoteNodeProperties(obj: Record<string, unknown>): void {
+    const properties = obj.properties;
+    if (typeof properties !== 'object' || properties === null || Array.isArray(properties)) {
+      return;
     }
 
-    // Recurse into schema-relevant sub-structures only
-    const schemaKeys = [
-      'properties',
-      '$defs',
+    const required = new Set<string>(Array.isArray(obj.required) ? (obj.required as string[]) : []);
+
+    for (const [propName, propDef] of Object.entries(properties as Record<string, unknown>)) {
+      if (
+        propDef &&
+        typeof propDef === 'object' &&
+        !Array.isArray(propDef) &&
+        (propDef as Record<string, unknown>)['x-recommended'] === true
+      ) {
+        required.add(propName);
+      }
+    }
+
+    obj.required = Array.from(required);
+  }
+
+  /**
+   * Recurse into the schema-relevant sub-structures of a node.
+   * @param obj - The schema node whose children should be walked
+   */
+  private recurseIntoSubSchemas(obj: Record<string, unknown>): void {
+    const dictionaryKeys = ['properties', '$defs'];
+    const nestedKeys = [
       'allOf',
       'anyOf',
       'oneOf',
@@ -138,306 +146,81 @@ export class SchemaValidator {
       'not',
       'additionalProperties',
     ];
-    for (const key of schemaKeys) {
-      if (!obj[key] || typeof obj[key] !== 'object') continue;
 
-      if (key === 'properties' || key === '$defs') {
-        // These are dictionaries — recurse into each value
-        for (const value of Object.values(obj[key] as Record<string, unknown>)) {
-          this.promoteRecommendedToRequired(value);
-        }
-      } else {
-        this.promoteRecommendedToRequired(obj[key]);
-      }
-    }
-  }
-
-  /**
-   * Load a schema file from the schemas directory
-   * Helper method to load schemas synchronously
-   * @param relativePath - Relative path to schema file within schemas directory
-   * @returns Parsed schema object
-   */
-  private loadSchemaFile(relativePath: string): object {
-    const schemaPath = path.join(this.schemasDir, relativePath);
-
-    if (!fs.existsSync(schemaPath)) {
-      throw new Error(`Schema file not found: ${schemaPath}`);
-    }
-
-    const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
-    return JSON.parse(schemaContent);
-  }
-
-  /**
-   * Recursively load all referenced schemas from a base schema
-   * This manually handles $ref resolution for nested schemas
-   * @param schema - Schema object to scan for $ref references
-   * @param basePath - Base path for resolving relative schema references
-   */
-  private loadReferencedSchemas(schema: unknown, basePath: string = ''): void {
-    const schemaObj = schema as Record<string, unknown>;
-
-    // Process $ref if present
-    if (schemaObj.$ref && typeof schemaObj.$ref === 'string') {
-      this.processSchemaRef(schemaObj.$ref, basePath);
-    }
-
-    // Recursively process nested structures
-    this.processNestedSchemas(schemaObj, basePath);
-  }
-
-  /**
-   * Process a schema $ref and load it if needed
-   * @param ref - Schema reference string
-   * @param basePath - Base path for resolving relative references
-   */
-  private processSchemaRef(ref: string, basePath: string): void {
-    // Skip meta-schemas and anchor references
-    if (this.shouldSkipRef(ref)) {
-      return;
-    }
-
-    const relativePath = this.normalizeRelativePath(ref, basePath);
-    const schemaId = this.buildSchemaId(relativePath);
-
-    // Load and add schema if not already loaded
-    if (!this.ajv.getSchema(schemaId)) {
-      this.loadAndAddSchema(relativePath);
-    }
-  }
-
-  /**
-   * Check if a schema reference should be skipped
-   * @param ref - Schema reference string
-   * @returns True if ref should be skipped (handled by AJV internally)
-   */
-  private shouldSkipRef(ref: string): boolean {
-    return ref.includes('json-schema.org') || ref.startsWith('#');
-  }
-
-  /**
-   * Normalize a relative path based on context
-   * @param ref - Schema reference string
-   * @param basePath - Base path for resolving relative references
-   * @returns Normalized relative path
-   */
-  private normalizeRelativePath(ref: string, basePath: string): string {
-    let relativePath = ref;
-
-    // Remove leading "./" for same-directory references
-    if (relativePath.startsWith('./')) {
-      relativePath = relativePath.substring(2);
-
-      // If we have a basePath (e.g., we're in "types/content-phishing.json"),
-      // prepend the directory from basePath
-      if (basePath) {
-        const baseDir = path.dirname(basePath);
-        if (baseDir && baseDir !== '.') {
-          relativePath = `${baseDir}/${relativePath}`;
+    for (const key of dictionaryKeys) {
+      const value = obj[key];
+      if (value && typeof value === 'object') {
+        for (const child of Object.values(value as Record<string, unknown>)) {
+          this.promoteRecommendedToRequired(child);
         }
       }
     }
 
-    // If it's a full URL, extract the relative path
-    if (ref.includes('schemas/v4/')) {
-      const match = ref.match(/schemas\/v4\/(.+\.json)/);
-      if (match) {
-        relativePath = match[1];
+    for (const key of nestedKeys) {
+      const value = obj[key];
+      if (value && typeof value === 'object') {
+        this.promoteRecommendedToRequired(value);
       }
     }
-
-    return relativePath;
   }
 
   /**
-   * Build schema ID from relative path
-   * @param relativePath - Relative path to schema file
-   * @returns Full schema ID URL
+   * Register a schema under the given `$id` in both the lenient and strict AJV
+   * instances, unless it is already registered.
+   * @param schema - The schema object to register
+   * @param id - The canonical `$id` to register it under
    */
-  private buildSchemaId(relativePath: string): string {
-    return relativePath.startsWith('http')
-      ? relativePath
-      : `https://xarf.org/schemas/v4/${relativePath}`;
-  }
-
-  /**
-   * Load and add a schema file
-   * @param relativePath - Relative path to schema file (also used as basePath for nested schemas)
-   */
-  private loadAndAddSchema(relativePath: string): void {
-    try {
-      const referencedSchema = this.loadSchemaFile(relativePath);
-      this.ajv.addSchema(referencedSchema);
-      this.strictAjv.addSchema(
-        this.transformSchemaForStrict(referencedSchema) as Record<string, unknown>
-      );
-
-      // Recursively load any schemas referenced by this schema
-      this.loadReferencedSchemas(referencedSchema, relativePath);
-    } catch (error) {
-      // Ignore errors for already-loaded or missing schemas
-      // Explicitly acknowledge error to satisfy linter
-      void error;
+  private addSchemaUnderId(schema: SchemaObject, id: string): void {
+    if (!this.ajv.getSchema(id)) {
+      this.ajv.addSchema({ ...schema, $id: id });
+    }
+    if (!this.strictAjv.getSchema(id)) {
+      const strict = this.transformSchemaForStrict(schema) as SchemaObject;
+      this.strictAjv.addSchema({ ...strict, $id: id });
     }
   }
 
   /**
-   * Recursively process nested schemas (objects and arrays)
-   * @param schemaObj - Schema object to process
-   * @param basePath - Base path for resolving relative references
-   */
-  private processNestedSchemas(schemaObj: Record<string, unknown>, basePath: string): void {
-    // Recursively check all object properties
-    if (typeof schemaObj === 'object' && schemaObj !== null) {
-      for (const key in schemaObj) {
-        if (typeof schemaObj[key] === 'object') {
-          this.loadReferencedSchemas(schemaObj[key], basePath);
-        }
-      }
-    }
-
-    // Check array items
-    if (Array.isArray(schemaObj)) {
-      schemaObj.forEach((item) => this.loadReferencedSchemas(item, basePath));
-    }
-  }
-
-  /**
-   * Load and compile the core XARF schema
-   * This must be called before validation can occur
-   */
-  private loadCoreSchema(): void {
-    if (this.coreSchemaLoaded) {
-      return;
-    }
-
-    try {
-      const coreSchemaPath = path.join(this.schemasDir, 'xarf-core.json');
-      if (!fs.existsSync(coreSchemaPath)) {
-        throw new Error(`Core schema not found at: ${coreSchemaPath}`);
-      }
-
-      const coreSchema = JSON.parse(fs.readFileSync(coreSchemaPath, 'utf-8')) as Record<
-        string,
-        unknown
-      >;
-      const strictCoreSchema = this.transformSchemaForStrict(coreSchema) as Record<string, unknown>;
-
-      // Register core schema under BOTH the relative path and full URL
-      // Master schema uses relative path "xarf-core.json"
-      const relativePath = 'xarf-core.json';
-      if (!this.ajv.getSchema(relativePath)) {
-        this.ajv.addSchema({ ...coreSchema, $id: relativePath });
-        this.strictAjv.addSchema({ ...strictCoreSchema, $id: relativePath });
-      }
-
-      // Also register under full URL for completeness
-      const fullUrl = 'https://xarf.org/schemas/v4/xarf-core.json';
-      if (!this.ajv.getSchema(fullUrl)) {
-        this.ajv.addSchema({ ...coreSchema, $id: fullUrl });
-        this.strictAjv.addSchema({ ...strictCoreSchema, $id: fullUrl });
-      }
-
-      this.coreSchemaLoaded = true;
-    } catch (error) {
-      throw new Error(
-        `Failed to load core schema: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  /**
-   * Pre-load all type-specific schemas into AJV
-   * This ensures all $refs can be resolved during compilation
-   */
-  private preloadAllTypeSchemas(): void {
-    const typesDir = path.join(this.schemasDir, 'types');
-
-    if (!fs.existsSync(typesDir)) {
-      return;
-    }
-
-    const files = fs.readdirSync(typesDir);
-
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        try {
-          const schemaPath = path.join(typesDir, file);
-          const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf-8')) as Record<
-            string,
-            unknown
-          >;
-
-          // Build the FULL URL that AJV will resolve
-          // Master schema id is https://xarf.org/schemas/v4/xarf-v4-master.json
-          // When it references "types/messaging-spam.json", AJV resolves to full URL
-          const relativePath = `types/${file}`;
-          const fullUrl = `https://xarf.org/schemas/v4/${relativePath}`;
-
-          // Add schema under the FULL URL (what AJV resolves to)
-          if (!this.ajv.getSchema(fullUrl)) {
-            this.ajv.addSchema({ ...schema, $id: fullUrl });
-            const strictSchema = this.transformSchemaForStrict(schema) as Record<string, unknown>;
-            this.strictAjv.addSchema({ ...strictSchema, $id: fullUrl });
-          }
-        } catch (error) {
-          // Ignore errors loading individual schemas
-          // Explicitly acknowledge error to satisfy linter
-          void error;
-        }
-      }
-    }
-  }
-
-  /**
-   * Load and compile the master XARF schema with type-specific validation
-   * This includes all category+type combinations
-   *
-   * Note: Some type-specific schemas may be missing from the master schema.
-   * In that case, we create a filtered version that only includes existing schemas.
+   * Load and compile the master XARF schema together with the core and all
+   * type-specific schemas, so AJV can resolve every `$ref`. Idempotent.
    */
   private loadMasterSchema(): void {
     if (this.masterSchemaLoaded) {
       return;
     }
 
-    try {
-      // First ensure core schema is loaded
-      this.loadCoreSchema();
-
-      // Pre-load all type-specific schemas
-      this.preloadAllTypeSchemas();
-
-      // Load the master schema
-      const masterSchema = this.loadSchemaFile('xarf-v4-master.json') as Record<string, unknown>;
-
-      // Add the master schema to both AJV instances
-      const masterSchemaId = 'https://xarf.org/schemas/v4/xarf-v4-master.json';
-      if (!this.ajv.getSchema(masterSchemaId)) {
-        this.ajv.addSchema(masterSchema);
-      }
-      if (!this.strictAjv.getSchema(masterSchemaId)) {
-        const strictMasterSchema = this.transformSchemaForStrict(masterSchema) as Record<
-          string,
-          unknown
-        >;
-        this.strictAjv.addSchema(strictMasterSchema);
-      }
-
-      this.masterSchemaLoaded = true;
-    } catch (error) {
-      throw new Error(
-        `Failed to load master schema: ${error instanceof Error ? error.message : String(error)}`
-      );
+    const coreSchema = getCoreSchema();
+    if (!coreSchema) {
+      throw new Error('Core schema (xarf-core.json) is missing from the bundle');
     }
+    const masterSchema = getMasterSchema();
+    if (!masterSchema) {
+      throw new Error('Master schema (xarf-v4-master.json) is missing from the bundle');
+    }
+
+    // Register core under both its full URL and the relative id the master uses.
+    this.addSchemaUnderId(coreSchema, CORE_SCHEMA_ID);
+    this.addSchemaUnderId(coreSchema, 'xarf-core.json');
+
+    // Register every type schema under its canonical full URL.
+    for (const relativePath of listTypeSchemaPaths()) {
+      const schema = getBundledSchema(relativePath);
+      if (schema) {
+        this.addSchemaUnderId(schema, `${SCHEMA_BASE_URL}/${relativePath}`);
+      }
+    }
+
+    // Finally register the master schema itself.
+    this.addSchemaUnderId(masterSchema, MASTER_SCHEMA_ID);
+
+    this.masterSchemaLoaded = true;
   }
 
   /**
    * Validate a XARF report against the appropriate schema
    * Validates against both the core schema and the type-specific schema
    * @param report - The XARF report to validate
-   * @param strict
+   * @param strict - When true, `x-recommended` fields are treated as required
    * @returns ValidationResult with status and any error messages
    * @example
    * ```typescript
@@ -454,8 +237,7 @@ export class SchemaValidator {
       this.loadMasterSchema();
 
       const ajvInstance = strict ? this.strictAjv : this.ajv;
-      const masterSchemaId = 'https://xarf.org/schemas/v4/xarf-v4-master.json';
-      const masterValidate = ajvInstance.getSchema(masterSchemaId);
+      const masterValidate = ajvInstance.getSchema(MASTER_SCHEMA_ID);
 
       if (!masterValidate) {
         return { valid: false, errors: ['Master schema not found after loading'] };
@@ -597,7 +379,7 @@ export class SchemaValidator {
  * ```typescript
  * import { validator } from './schema-validator';
  *
- * const result = await validator.validate(report);
+ * const result = validator.validate(report);
  * if (!result.valid) {
  *   console.error(result.errors);
  * }

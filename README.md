@@ -112,8 +112,10 @@ const { report, errors, warnings, info } = parse(jsonData, options?);
 **Parameters:**
 
 - `jsonData: string | Record<string, unknown>` — JSON string or object containing a XARF report
-- `options.strict?: boolean` — Throw `XARFValidationError` on validation failures (default: `false`)
+- `options.strict?: boolean` — Treat warnings (e.g. unknown fields) and `x-recommended` fields as errors (default: `false`)
 - `options.showMissingOptional?: boolean` — Include info about missing optional fields (default: `false`)
+
+> `parse()` does not throw on validation failures — inspect the returned `errors` array. It only throws `XARFParseError` when `jsonData` is a malformed JSON string.
 
 **Returns `ParseResult`:**
 
@@ -135,8 +137,10 @@ const { report, errors, warnings } = createReport(input, options?);
 **Parameters:**
 
 - `input: ReportInput` — Report data. A discriminated union on `category` that narrows type-safe fields per category (e.g., `MessagingReportInput`, `ConnectionReportInput`, etc.)
-- `options.strict?: boolean` — Throw on validation failures (default: `false`)
+- `options.strict?: boolean` — Treat warnings and `x-recommended` fields as errors (default: `false`)
 - `options.showMissingOptional?: boolean` — Include info about missing optional fields (default: `false`)
+
+> Like `parse()`, `createReport()` does not throw on validation failures — the report is always returned alongside any `errors`.
 
 **Returns `CreateReportResult`:**
 
@@ -237,7 +241,9 @@ Unknown v3 report types cause a parse error listing the supported types. See [MI
 
 ## Schema Management
 
-This library validates against the official [xarf-spec](https://github.com/xarf/xarf-spec) JSON schemas. Schemas are fetched automatically on `npm install` based on the version configured in `package.json`:
+This library validates against the official [xarf-spec](https://github.com/xarf/xarf-spec) JSON schemas. The schemas are **bundled into the package** at build time, so installation requires no network access and the library works in any environment (Node, bundlers, serverless, edge) with zero filesystem dependency. The bundled spec version is exposed as `BUNDLED_SPEC_VERSION`.
+
+The schema version is configured in `package.json`:
 
 ```json
 "xarfSpec": {
@@ -245,15 +251,17 @@ This library validates against the official [xarf-spec](https://github.com/xarf/
 }
 ```
 
+For **maintainers**, updating to a newer spec version is a two-step, network-only-at-build-time process:
+
 ```bash
 # Check if a newer version of xarf-spec is available
 npm run check-schema-updates
 
-# Re-fetch schemas (e.g., if missing or to force a refresh)
-npm run fetch-schemas
+# Bump "xarfSpec.version" in package.json, then refresh the bundled schemas:
+npm run sync-schemas   # fetch-schemas + generate-schemas (regenerates src/schemas.generated.ts)
 ```
 
-To update to a newer spec version, change the version in `package.json` and run `npm install`.
+Consumers never run these scripts — they receive the pre-bundled schemas with the published package.
 
 ## Development
 
