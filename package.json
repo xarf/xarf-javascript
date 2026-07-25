@@ -106,7 +106,7 @@
     "ajv-formats": "^3.0.1"
   },
   "overrides": {
-    "fast-uri": "^3.1.2",
+    "fast-uri": "^3.1.4",
     "esbuild": "^0.28.1",
     "js-yaml": "^4.2.0",
     "eslint-plugin-sonarjs": {
